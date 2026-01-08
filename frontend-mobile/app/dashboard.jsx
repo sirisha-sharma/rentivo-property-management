@@ -1,7 +1,9 @@
 import React, { useContext } from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import { AuthContext } from "../context/AuthContext";
+import { Ionicons } from "@expo/vector-icons";
+import { COLORS } from "../constants/theme";
 
 export default function DashboardScreen() {
   const { user, logout } = useContext(AuthContext);
@@ -13,57 +15,224 @@ export default function DashboardScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Welcome, {user?.name}!</Text>
-      <Text style={styles.subtitle}>Role: {user?.role?.toUpperCase()}</Text>
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.content}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.greeting}>Welcome,</Text>
+            <Text style={styles.userName}>{user?.name}</Text>
+          </View>
+          <TouchableOpacity style={styles.profileButton}>
+            <Ionicons name="person-circle-outline" size={40} color={COLORS.mutedForeground} />
+          </TouchableOpacity>
+        </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>📊 Dashboard Summary</Text>
-        <Text style={styles.cardText}>• Total Properties: 0</Text>
-        <Text style={styles.cardText}>• Active Tenants: 0</Text>
-        <Text style={styles.cardText}>• Pending Invoices: 0</Text>
-      </View>
+        {/* Role Badge */}
+        <View style={styles.roleBadge}>
+          <Ionicons name="shield-checkmark-outline" size={14} color={COLORS.primary} />
+          <Text style={styles.roleText}>{user?.role?.toUpperCase()}</Text>
+        </View>
 
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
-    </View>
+        {/* Overview Card */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Overview</Text>
+          <View style={styles.statsRow}>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>-</Text>
+              <Text style={styles.statLabel}>Properties</Text>
+            </View>
+            <View style={styles.dividerVertical} />
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>-</Text>
+              <Text style={styles.statLabel}>Tenants</Text>
+            </View>
+            <View style={styles.dividerVertical} />
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>0</Text>
+              <Text style={styles.statLabel}>Open Issues</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Menu Grid */}
+        <Text style={styles.sectionTitle}>Quick Actions</Text>
+
+        {user?.role === "landlord" && (
+          <View style={styles.menuGrid}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push("/landlord/properties")}
+            >
+              <View style={[styles.iconBox, { backgroundColor: "#DBEAFE" }]}>
+                <Ionicons name="home" size={24} color={COLORS.primary} />
+              </View>
+              <Text style={styles.menuText}>Properties</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push("/landlord/tenants")}
+            >
+              <View style={[styles.iconBox, { backgroundColor: "#DCFCE7" }]}>
+                <Ionicons name="people" size={24} color={COLORS.success} />
+              </View>
+              <Text style={styles.menuText}>Tenants</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => { }}
+            >
+              <View style={[styles.iconBox, { backgroundColor: "#FFEDD5" }]}>
+                <Ionicons name="alert-circle" size={24} color={COLORS.warning} />
+              </View>
+              <Text style={styles.menuText}>Issues</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => { }}
+            >
+              <View style={[styles.iconBox, { backgroundColor: "#F3E8FF" }]}>
+                <Ionicons name="document-text" size={24} color="#9333EA" />
+              </View>
+              <Text style={styles.menuText}>Invoices</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: "#f5f5f5",
-    paddingTop: 60,
+    backgroundColor: COLORS.background,
   },
-  title: { fontSize: 28, fontWeight: "bold", color: "#333" },
-  subtitle: { fontSize: 16, color: "#4A90E2", marginTop: 5, fontWeight: "600" },
+  content: {
+    padding: 24,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  greeting: {
+    fontSize: 16,
+    color: COLORS.mutedForeground,
+  },
+  userName: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: COLORS.foreground,
+  },
+  roleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: COLORS.muted,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+    marginBottom: 32,
+  },
+  roleText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.foreground,
+  },
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
     padding: 20,
-    borderRadius: 15,
-    marginTop: 30,
+    marginBottom: 32,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   cardTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: COLORS.foreground,
+    marginBottom: 16,
+  },
+  statsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  statItem: {
+    alignItems: "center",
+    flex: 1,
+  },
+  statNumber: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: COLORS.foreground,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: COLORS.mutedForeground,
+  },
+  dividerVertical: {
+    width: 1,
+    backgroundColor: COLORS.border,
+    height: "100%",
+  },
+  sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    marginBottom: 15,
-    color: "#333",
+    color: COLORS.foreground,
+    marginBottom: 16,
   },
-  cardText: { fontSize: 15, color: "#555", marginVertical: 5 },
-  logoutButton: {
-    backgroundColor: "#E74C3C",
-    padding: 15,
-    borderRadius: 10,
-    marginTop: 40,
+  menuGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 16,
+    marginBottom: 32,
+  },
+  menuItem: {
+    width: "47%",
+    backgroundColor: COLORS.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: 16,
     alignItems: "center",
   },
-  logoutText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+  iconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  menuText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: COLORS.foreground,
+  },
+  logoutButton: {
+    backgroundColor: "#FEE2E2",
+    padding: 16,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  logoutText: {
+    color: "#EF4444",
+    fontSize: 16,
+    fontWeight: "600",
+  },
 });
