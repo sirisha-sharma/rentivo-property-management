@@ -3,6 +3,8 @@ import dotenv from "dotenv";
 import cors from "cors";
 import connectDatabase from "./config/database.js";
 import authRoutes from "./routes/authRoutes.js";
+import propertyRoutes from "./routes/propertyRoutes.js";
+import tenantRoutes from "./routes/tenantRoutes.js";
 
 dotenv.config();
 
@@ -17,6 +19,8 @@ app.use(cors());
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/properties", propertyRoutes);
+app.use("/api/tenants", tenantRoutes);
 
 // Basic route
 app.get("/", (req, res) => {

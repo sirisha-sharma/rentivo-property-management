@@ -1,0 +1,11 @@
+# Documentation
+docs/
+
+# System
+.DS_Store
+
+# Dependencies
+node_modules/
+
+# Env
+.env
