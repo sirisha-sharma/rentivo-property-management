@@ -7,22 +7,49 @@ import { COLORS } from "../constants/theme";
 import axios from "axios";
 import { API_BASE_URL } from "../constants/config";
 
+// Dashboard Screen Component
+// This is the main dashboard screen that displays different content based on user role
+// Landlords see property/tenant/invoice stats, Tenants see rental/invitation/invoice stats
 export default function DashboardScreen() {
+  // Get user data and logout function from AuthContext
   const { user, logout } = useContext(AuthContext);
   const router = useRouter();
-  const [stats, setStats] = useState({ propertiesCount: 0, tenantsCount: 0, pendingTenantsCount: 0 });
-  const [tenantStats, setTenantStats] = useState({ activeProperties: 0, pendingInvitations: 0 });
+
+  // State for landlord statistics
+  const [stats, setStats] = useState({
+    propertiesCount: 0,
+    tenantsCount: 0,
+    pendingTenantsCount: 0,
+    totalInvoices: 0,
+    pendingInvoices: 0,
+    paidInvoices: 0,
+    overdueInvoices: 0
+  });
+
+  // State for tenant statistics
+  const [tenantStats, setTenantStats] = useState({
+    activeProperties: 0,
+    pendingInvitations: 0,
+    totalInvoices: 0,
+    pendingInvoices: 0,
+    paidInvoices: 0
+  });
+
+  // Loading state for API calls
   const [loading, setLoading] = useState(true);
 
+  // Fetch dashboard statistics based on user role
   useEffect(() => {
     const fetchStats = async () => {
       try {
         if (user?.role === "landlord") {
+          // Fetch landlord stats from API
           const response = await axios.get(`${API_BASE_URL}/dashboard/stats`, {
             headers: { Authorization: `Bearer ${user.token}` },
           });
           setStats(response.data);
         } else {
+          // Fetch tenant stats from API
           const response = await axios.get(`${API_BASE_URL}/dashboard/tenant-stats`, {
             headers: { Authorization: `Bearer ${user.token}` },
           });
@@ -39,6 +66,7 @@ export default function DashboardScreen() {
     }
   }, [user]);
 
+  // Handle user logout
   const handleLogout = async () => {
     await logout();
     router.replace("/");
@@ -47,7 +75,7 @@ export default function DashboardScreen() {
   return (
     <SafeAreaView className="flex-1 bg-background">
       <ScrollView contentContainerClassName="p-6">
-        {/* Header */}
+        {/* Header Section - Shows welcome message and user name */}
         <View className="flex-row justify-between items-center mb-4">
           <View>
             <Text className="text-base text-mutedForeground">Welcome,</Text>
@@ -58,14 +86,14 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Role Badge */}
+        {/* Role Badge - Displays user's role */}
         <View className="flex-row items-center gap-1.5 bg-muted px-3 py-1.5 rounded-full self-start mb-8">
           <Ionicons name="shield-checkmark-outline" size={14} color={COLORS.primary} />
           <Text className="text-sm font-semibold text-foreground">{user?.role?.toUpperCase()}</Text>
         </View>
 
-        {/* Overview Card */}
-        <View className="bg-card rounded-2xl border border-border p-5 mb-8 shadow-sm">
+        {/* Overview Card - Shows key statistics based on user role */}
+        <View className="bg-card rounded-2xl border border-border p-5 mb-4 shadow-sm">
           <Text className="text-base font-semibold text-foreground mb-4">Overview</Text>
           {loading ? (
             <ActivityIndicator size="small" color={COLORS.primary} />
@@ -73,6 +101,7 @@ export default function DashboardScreen() {
             <View className="flex-row justify-between">
               {user?.role === "landlord" ? (
                 <>
+                  {/* Landlord Overview Stats */}
                   <View className="items-center flex-1">
                     <Text className="text-xl font-bold text-foreground">{stats.propertiesCount}</Text>
                     <Text className="text-xs text-mutedForeground">Properties</Text>
@@ -90,6 +119,7 @@ export default function DashboardScreen() {
                 </>
               ) : (
                 <>
+                  {/* Tenant Overview Stats */}
                   <View className="items-center flex-1">
                     <Text className="text-xl font-bold text-foreground">{tenantStats.activeProperties}</Text>
                     <Text className="text-xs text-mutedForeground">Active Rentals</Text>
@@ -105,7 +135,60 @@ export default function DashboardScreen() {
           )}
         </View>
 
-        {/* Menu Grid */}
+        {/* Invoice Stats Card - Shows invoice statistics */}
+        <View className="bg-card rounded-2xl border border-border p-5 mb-8 shadow-sm">
+          <Text className="text-base font-semibold text-foreground mb-4">Invoice Summary</Text>
+          {loading ? (
+            <ActivityIndicator size="small" color={COLORS.primary} />
+          ) : (
+            <View className="flex-row justify-between">
+              {user?.role === "landlord" ? (
+                <>
+                  {/* Landlord Invoice Stats */}
+                  <View className="items-center flex-1">
+                    <Text className="text-xl font-bold text-foreground">{stats.totalInvoices}</Text>
+                    <Text className="text-xs text-mutedForeground">Total</Text>
+                  </View>
+                  <View className="w-px bg-border h-full" />
+                  <View className="items-center flex-1">
+                    <Text className="text-xl font-bold text-warning">{stats.pendingInvoices}</Text>
+                    <Text className="text-xs text-mutedForeground">Pending</Text>
+                  </View>
+                  <View className="w-px bg-border h-full" />
+                  <View className="items-center flex-1">
+                    <Text className="text-xl font-bold text-success">{stats.paidInvoices}</Text>
+                    <Text className="text-xs text-mutedForeground">Paid</Text>
+                  </View>
+                  <View className="w-px bg-border h-full" />
+                  <View className="items-center flex-1">
+                    <Text className="text-xl font-bold text-destructive">{stats.overdueInvoices}</Text>
+                    <Text className="text-xs text-mutedForeground">Overdue</Text>
+                  </View>
+                </>
+              ) : (
+                <>
+                  {/* Tenant Invoice Stats */}
+                  <View className="items-center flex-1">
+                    <Text className="text-xl font-bold text-foreground">{tenantStats.totalInvoices}</Text>
+                    <Text className="text-xs text-mutedForeground">Total</Text>
+                  </View>
+                  <View className="w-px bg-border h-full" />
+                  <View className="items-center flex-1">
+                    <Text className="text-xl font-bold text-warning">{tenantStats.pendingInvoices}</Text>
+                    <Text className="text-xs text-mutedForeground">Pending</Text>
+                  </View>
+                  <View className="w-px bg-border h-full" />
+                  <View className="items-center flex-1">
+                    <Text className="text-xl font-bold text-success">{tenantStats.paidInvoices}</Text>
+                    <Text className="text-xs text-mutedForeground">Paid</Text>
+                  </View>
+                </>
+              )}
+            </View>
+          )}
+        </View>
+
+        {/* Quick Actions Section - Navigation buttons */}
         <Text className="text-lg font-bold text-foreground mb-4">Quick Actions</Text>
 
         {user?.role === "landlord" && (

@@ -3,17 +3,26 @@ import axios from "axios";
 import { AuthContext } from "./AuthContext";
 import { API_BASE_URL } from "../constants/config";
 
+// Create the InvoiceContext for state management
 export const InvoiceContext = createContext();
 
+// InvoiceProvider component that wraps the app and provides invoice state
+// This provider handles all invoice-related API calls and state management
 export const InvoiceProvider = ({ children }) => {
+    // State for storing list of invoices
     const [invoices, setInvoices] = useState([]);
+    // Loading state for API operations
     const [loading, setLoading] = useState(false);
+    // Error state for handling API errors
     const [error, setError] = useState(null);
 
+    // Get user from AuthContext for authentication
     const { user } = useContext(AuthContext);
 
+    // Base URL for invoice API endpoints
     const API_URL = `${API_BASE_URL}/invoices`;
 
+    // Helper function to get authorization header with JWT token
     const getAuthHeader = () => {
         return {
             headers: {
@@ -22,6 +31,9 @@ export const InvoiceProvider = ({ children }) => {
         };
     };
 
+    // Fetch all invoices from API
+    // For landlords: returns invoices they created
+    // For tenants: returns invoices issued to them
     const fetchInvoices = async () => {
         setLoading(true);
         try {
@@ -36,6 +48,8 @@ export const InvoiceProvider = ({ children }) => {
         }
     };
 
+    // Create a new invoice (landlord only)
+    // Adds the new invoice to the local state after creation
     const createInvoice = async (invoiceData) => {
         setLoading(true);
         try {
@@ -52,6 +66,8 @@ export const InvoiceProvider = ({ children }) => {
         }
     };
 
+    // Update invoice status (landlord only)
+    // Allowed statuses: Pending, Paid, Overdue
     const updateInvoiceStatus = async (id, status) => {
         try {
             const response = await axios.put(`${API_URL}/${id}/status`, { status }, getAuthHeader());
@@ -65,6 +81,8 @@ export const InvoiceProvider = ({ children }) => {
         }
     };
 
+    // Delete an invoice (landlord only)
+    // Removes the invoice from local state after deletion
     const deleteInvoice = async (id) => {
         try {
             await axios.delete(`${API_URL}/${id}`, getAuthHeader());
@@ -77,6 +95,7 @@ export const InvoiceProvider = ({ children }) => {
         }
     };
 
+    // Provide invoice state and methods to child components
     return (
         <InvoiceContext.Provider
             value={{
