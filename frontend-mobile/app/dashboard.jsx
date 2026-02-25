@@ -215,12 +215,12 @@ export default function DashboardScreen() {
 
             <TouchableOpacity
               className="w-[47%] bg-card rounded-2xl border border-border p-4 items-center"
-              onPress={() => { }}
+              onPress={() => router.push("/landlord/maintenance")}
             >
               <View className="w-12 h-12 rounded-xl items-center justify-center mb-3 bg-orange-100">
-                <Ionicons name="alert-circle" size={24} color={COLORS.warning} />
+                <Ionicons name="construct" size={24} color={COLORS.warning} />
               </View>
-              <Text className="text-sm font-semibold text-foreground">Issues</Text>
+              <Text className="text-sm font-semibold text-foreground">Maintenance</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -265,6 +265,16 @@ export default function DashboardScreen() {
                 <Ionicons name="document-text" size={24} color={COLORS.warning} />
               </View>
               <Text className="text-sm font-semibold text-foreground">Invoices</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              className="w-[47%] bg-card rounded-2xl border border-border p-4 items-center"
+              onPress={() => router.push("/tenant/maintenance")}
+            >
+              <View className="w-12 h-12 rounded-xl items-center justify-center mb-3 bg-red-100">
+                <Ionicons name="construct" size={24} color={COLORS.destructive} />
+              </View>
+              <Text className="text-sm font-semibold text-foreground">Maintenance</Text>
             </TouchableOpacity>
           </View>
         )}
