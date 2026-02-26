@@ -7,6 +7,7 @@ import propertyRoutes from "./routes/propertyRoutes.js";
 import tenantRoutes from "./routes/tenantRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import invoiceRoutes from "./routes/invoiceRoutes.js";
+import maintenanceRoutes from "./routes/maintenanceRoutes.js";
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.use("/api/properties", propertyRoutes);
 app.use("/api/tenants", tenantRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/invoices", invoiceRoutes);
+app.use("/api/maintenance", maintenanceRoutes);
 
 // Basic route
 app.get("/", (req, res) => {

@@ -43,11 +43,11 @@ export const createInvoice = async (req, res) => {
 export const getInvoices = async (req, res) => {
     try {
         let invoices;
-        if (req.user.role === "Landlord") {
+        if (req.user.role === "landlord") {
             invoices = await Invoice.find({ landlordId: req.user._id })
                 .populate("tenantId")
                 .populate("propertyId");
-        } else if (req.user.role === "Tenant") {
+        } else if (req.user.role === "tenant") {
             // Find the tenant record for this user to match invoice.tenantId
             // Ideally we should look up all tenant records for this user (user can be tenant in multiple places)
             // But for invoice lookup, we can look for invoices where tenantId matches any of the user's tenant records.
@@ -88,9 +88,9 @@ export const getInvoiceById = async (req, res) => {
         // Tenant can view if it is for them (requires checking tenantId ownership)
 
         let isAuthorized = false;
-        if (req.user.role === "Landlord" && invoice.landlordId._id.toString() === req.user._id.toString()) {
+        if (req.user.role === "landlord" && invoice.landlordId._id.toString() === req.user._id.toString()) {
             isAuthorized = true;
-        } else if (req.user.role === "Tenant") {
+        } else if (req.user.role === "tenant") {
             const tenantRecord = await Tenant.findById(invoice.tenantId);
             if (tenantRecord && tenantRecord.userId.toString() === req.user._id.toString()) {
                 isAuthorized = true;

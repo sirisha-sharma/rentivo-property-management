@@ -1,9 +1,18 @@
 import Property from "../models/propertyModel.js";
+import Tenant from "../models/tenantModel.js";
 
-// Get all properties for the logged-in landlord
+// Get properties (landlord sees owned, tenant sees rented)
 export const getProperties = async (req, res) => {
     try {
-        const properties = await Property.find({ landlordId: req.user._id });
+        let properties;
+        if (req.user.role === "landlord") {
+            properties = await Property.find({ landlordId: req.user._id });
+        } else {
+            // Get properties the tenant is actively renting
+            const tenantRecords = await Tenant.find({ userId: req.user._id, status: "Active" });
+            const propertyIds = tenantRecords.map(t => t.propertyId);
+            properties = await Property.find({ _id: { $in: propertyIds } });
+        }
         res.status(200).json(properties);
     } catch (error) {
         res.status(500).json({ message: error.message });
