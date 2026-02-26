@@ -232,6 +232,16 @@ export default function DashboardScreen() {
               </View>
               <Text className="text-sm font-semibold text-foreground">Invoices</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              className="w-[47%] bg-card rounded-2xl border border-border p-4 items-center"
+              onPress={() => router.push("/landlord/documents")}
+            >
+              <View className="w-12 h-12 rounded-xl items-center justify-center mb-3 bg-teal-100">
+                <Ionicons name="folder-open" size={24} color="#0D9488" />
+              </View>
+              <Text className="text-sm font-semibold text-foreground">Documents</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -275,6 +285,16 @@ export default function DashboardScreen() {
                 <Ionicons name="construct" size={24} color={COLORS.destructive} />
               </View>
               <Text className="text-sm font-semibold text-foreground">Maintenance</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              className="w-[47%] bg-card rounded-2xl border border-border p-4 items-center"
+              onPress={() => router.push("/tenant/documents")}
+            >
+              <View className="w-12 h-12 rounded-xl items-center justify-center mb-3 bg-teal-100">
+                <Ionicons name="folder-open" size={24} color="#0D9488" />
+              </View>
+              <Text className="text-sm font-semibold text-foreground">Documents</Text>
             </TouchableOpacity>
           </View>
         )}
