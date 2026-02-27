@@ -8,6 +8,7 @@ import tenantRoutes from "./routes/tenantRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import invoiceRoutes from "./routes/invoiceRoutes.js";
 import maintenanceRoutes from "./routes/maintenanceRoutes.js";
+import documentRoutes from "./routes/documentRoutes.js";
 
 dotenv.config();
 
@@ -27,6 +28,10 @@ app.use("/api/tenants", tenantRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/invoices", invoiceRoutes);
 app.use("/api/maintenance", maintenanceRoutes);
+app.use("/api/documents", documentRoutes);
+
+// Serve uploaded files
+app.use("/uploads", express.static("uploads"));
 
 // Basic route
 app.get("/", (req, res) => {

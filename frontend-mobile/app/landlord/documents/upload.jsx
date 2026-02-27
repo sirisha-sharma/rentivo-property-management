@@ -8,9 +8,11 @@ import {
     ScrollView,
     Alert,
     ActivityIndicator,
+    Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import * as DocumentPicker from "expo-document-picker";
 import { TopBar } from "../../../components/TopBar";
 import { DocumentContext } from "../../../context/DocumentContext";
 import { PropertyContext } from "../../../context/PropertyContext";
@@ -18,39 +20,65 @@ import { COLORS } from "../../../constants/theme";
 
 export default function UploadDocument() {
     const router = useRouter();
-    const { addDocument } = useContext(DocumentContext);
+    const { uploadDocument, loading } = useContext(DocumentContext);
     const { properties, fetchProperties } = useContext(PropertyContext);
 
     const [selectedProperty, setSelectedProperty] = useState(null);
     const [name, setName] = useState("");
     const [type, setType] = useState("Lease Agreement");
-    const [loading, setLoading] = useState(false);
+    const [pickedFile, setPickedFile] = useState(null);
 
     useEffect(() => {
         fetchProperties();
     }, []);
 
-    const handleSubmit = () => {
-        if (!selectedProperty || !name.trim()) {
-            Alert.alert("Error", "Please fill in all required fields");
+    const handlePickFile = async () => {
+        try {
+            const result = await DocumentPicker.getDocumentAsync({
+                type: ["application/pdf", "image/*", "application/msword",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+                copyToCacheDirectory: true,
+            });
+
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+                setPickedFile(result.assets[0]);
+            }
+        } catch (err) {
+            Alert.alert("Error", "Failed to pick file");
+        }
+    };
+
+    const handleSubmit = async () => {
+        if (!selectedProperty || !name.trim() || !pickedFile) {
+            Alert.alert("Error", "Please fill all fields and pick a file");
             return;
         }
 
-        setLoading(true);
         try {
-            addDocument({
-                propertyId: selectedProperty._id,
-                propertyName: selectedProperty.title,
-                name: name.trim(),
-                type,
-            });
+            const formData = new FormData();
+            formData.append("propertyId", selectedProperty._id);
+            formData.append("name", name.trim());
+            formData.append("type", type);
+
+            // Handle file for both web and native
+            if (Platform.OS === "web") {
+                const response = await fetch(pickedFile.uri);
+                const blob = await response.blob();
+                formData.append("file", blob, pickedFile.name);
+            } else {
+                formData.append("file", {
+                    uri: pickedFile.uri,
+                    name: pickedFile.name,
+                    type: pickedFile.mimeType || "application/octet-stream",
+                });
+            }
+
+            await uploadDocument(formData);
             Alert.alert("Success", "Document uploaded successfully", [
                 { text: "OK", onPress: () => router.back() },
             ]);
         } catch (err) {
             Alert.alert("Error", "Failed to upload document");
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -110,6 +138,19 @@ export default function UploadDocument() {
                         </TouchableOpacity>
                     ))}
                 </View>
+
+                {/* File Picker */}
+                <Text style={styles.label}>File *</Text>
+                <TouchableOpacity style={styles.filePickerBtn} onPress={handlePickFile}>
+                    <Ionicons
+                        name={pickedFile ? "document-attach" : "cloud-upload-outline"}
+                        size={20}
+                        color={pickedFile ? COLORS.primary : COLORS.mutedForeground}
+                    />
+                    <Text style={[styles.filePickerText, pickedFile && { color: COLORS.foreground }]}>
+                        {pickedFile ? pickedFile.name : "Tap to select a file"}
+                    </Text>
+                </TouchableOpacity>
 
                 {/* Submit */}
                 <TouchableOpacity
@@ -200,6 +241,22 @@ const styles = StyleSheet.create({
     typeChipTextActive: {
         color: "#fff",
         fontWeight: "600",
+    },
+    filePickerBtn: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+        backgroundColor: COLORS.input,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        borderRadius: 10,
+        borderStyle: "dashed",
+        padding: 16,
+    },
+    filePickerText: {
+        fontSize: 14,
+        color: COLORS.mutedForeground,
+        flex: 1,
     },
     submitBtn: {
         flexDirection: "row",

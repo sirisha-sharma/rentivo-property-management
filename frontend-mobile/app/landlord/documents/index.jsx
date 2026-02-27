@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { DocumentContext } from "../../../context/DocumentContext";
 import { useRouter } from "expo-router";
@@ -7,9 +7,13 @@ import { TopBar } from "../../../components/TopBar";
 import { COLORS } from "../../../constants/theme";
 
 export default function DocumentList() {
-    const { documents, deleteDocument } = useContext(DocumentContext);
+    const { documents, fetchDocuments, deleteDocument, loading } = useContext(DocumentContext);
     const router = useRouter();
     const [filter, setFilter] = useState("all");
+
+    useEffect(() => {
+        fetchDocuments();
+    }, []);
 
     const filteredDocs = documents.filter((doc) => {
         if (filter === "all") return true;
@@ -22,7 +26,13 @@ export default function DocumentList() {
             {
                 text: "Delete",
                 style: "destructive",
-                onPress: () => deleteDocument(doc._id),
+                onPress: async () => {
+                    try {
+                        await deleteDocument(doc._id);
+                    } catch (e) {
+                        Alert.alert("Error", "Failed to delete document");
+                    }
+                },
             },
         ]);
     };
@@ -52,7 +62,11 @@ export default function DocumentList() {
                         <Text style={styles.cardTitle}>{item.name}</Text>
                         <View style={styles.subtextContainer}>
                             <Ionicons name="home-outline" size={12} color={COLORS.mutedForeground} />
-                            <Text style={styles.cardSubtitle}>{item.propertyName || "Unknown Property"}</Text>
+                            <Text style={styles.cardSubtitle}>{item.propertyId?.title || "Unknown Property"}</Text>
+                        </View>
+                        <View style={styles.subtextContainer}>
+                            <Ionicons name="attach-outline" size={12} color={COLORS.mutedForeground} />
+                            <Text style={styles.cardSubtitle}>{item.fileName}</Text>
                         </View>
                     </View>
                     <View style={[styles.typeBadge, { backgroundColor: typeColor.bg }]}>
@@ -102,6 +116,8 @@ export default function DocumentList() {
                         <Text style={styles.emptyText}>Upload lease agreements and ID proofs for your properties.</Text>
                     </View>
                 }
+                refreshing={loading}
+                onRefresh={fetchDocuments}
             />
 
             <TouchableOpacity

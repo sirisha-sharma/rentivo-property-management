@@ -1,0 +1,38 @@
+import mongoose from "mongoose";
+
+const documentSchema = mongoose.Schema(
+    {
+        propertyId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Property",
+            required: true,
+        },
+        uploadedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true,
+        },
+        name: {
+            type: String,
+            required: true,
+        },
+        type: {
+            type: String,
+            enum: ["Lease Agreement", "ID Proof", "Other"],
+            required: true,
+        },
+        fileName: {
+            type: String,
+            required: true,
+        },
+        filePath: {
+            type: String,
+            required: true,
+        },
+    },
+    {
+        timestamps: true,
+    }
+);
+
+export default mongoose.model("Document", documentSchema);
