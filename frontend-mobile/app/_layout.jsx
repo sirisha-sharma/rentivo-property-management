@@ -6,6 +6,7 @@ import { TenantProvider } from "../context/TenantContext";
 import { InvoiceProvider } from "../context/InvoiceContext";
 import { MaintenanceProvider } from "../context/MaintenanceContext";
 import { DocumentProvider } from "../context/DocumentContext";
+import { NotificationProvider } from "../context/NotificationContext";
 
 export default function RootLayout() {
   return (
@@ -15,10 +16,12 @@ export default function RootLayout() {
           <InvoiceProvider>
             <MaintenanceProvider>
               <DocumentProvider>
-                <Stack screenOptions={{ headerShown: false }}>
-                  <Stack.Screen name="index" />
-                  <Stack.Screen name="dashboard" />
-                </Stack>
+                <NotificationProvider>
+                  <Stack screenOptions={{ headerShown: false }}>
+                    <Stack.Screen name="index" />
+                    <Stack.Screen name="dashboard" />
+                  </Stack>
+                </NotificationProvider>
               </DocumentProvider>
             </MaintenanceProvider>
           </InvoiceProvider>

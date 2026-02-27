@@ -6,6 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../constants/theme";
 import axios from "axios";
 import { API_BASE_URL } from "../constants/config";
+import { NotificationContext } from "../context/NotificationContext";
 
 // Dashboard Screen Component
 // This is the main dashboard screen that displays different content based on user role
@@ -14,6 +15,8 @@ export default function DashboardScreen() {
   // Get user data and logout function from AuthContext
   const { user, logout } = useContext(AuthContext);
   const router = useRouter();
+
+  const { unreadCount } = useContext(NotificationContext);
 
   // State for landlord statistics
   const [stats, setStats] = useState({
@@ -81,8 +84,20 @@ export default function DashboardScreen() {
             <Text className="text-base text-mutedForeground">Welcome,</Text>
             <Text className="text-2xl font-bold text-foreground">{user?.name}</Text>
           </View>
-          <TouchableOpacity>
-            <Ionicons name="person-circle-outline" size={40} color={COLORS.mutedForeground} />
+          <TouchableOpacity onPress={() => router.push("/notifications")}>
+            <Ionicons name="notifications-outline" size={28} color={COLORS.foreground} />
+            {unreadCount > 0 && (
+              <View style={{
+                position: "absolute", top: -4, right: -4,
+                backgroundColor: COLORS.destructive, borderRadius: 10,
+                minWidth: 18, height: 18, alignItems: "center", justifyContent: "center",
+                paddingHorizontal: 4,
+              }}>
+                <Text style={{ color: "#fff", fontSize: 10, fontWeight: "700" }}>
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
 
