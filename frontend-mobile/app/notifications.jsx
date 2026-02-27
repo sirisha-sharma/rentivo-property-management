@@ -1,9 +1,9 @@
 import React, { useContext } from "react";
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert } from "react-native";
-import { NotificationContext } from "../../context/NotificationContext";
+import { NotificationContext } from "../context/NotificationContext";
 import { Ionicons } from "@expo/vector-icons";
-import { TopBar } from "../../components/TopBar";
-import { COLORS } from "../../constants/theme";
+import { TopBar } from "../components/TopBar";
+import { COLORS } from "../constants/theme";
 
 export default function NotificationsScreen() {
     const { notifications, markAsRead, markAllAsRead, deleteNotification } =
