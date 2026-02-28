@@ -2,6 +2,7 @@ import Document from "../models/documentModel.js";
 import Property from "../models/propertyModel.js";
 import Tenant from "../models/tenantModel.js";
 import fs from "fs";
+import { createNotification } from "./notificationController.js";
 
 // Upload a new document (landlord only)
 export const uploadDocument = async (req, res) => {
@@ -26,6 +27,16 @@ export const uploadDocument = async (req, res) => {
             fileName: req.file.originalname,
             filePath: req.file.path,
         });
+
+        // Notify active tenants of this property
+        const tenants = await Tenant.find({ propertyId, status: "Active" });
+        for (const t of tenants) {
+            await createNotification(
+                t.userId,
+                "document",
+                `New document uploaded: "${name}" for ${property.title}`
+            );
+        }
 
         res.status(201).json(document);
     } catch (error) {

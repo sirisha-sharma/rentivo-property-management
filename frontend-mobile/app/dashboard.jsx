@@ -16,7 +16,7 @@ export default function DashboardScreen() {
   const { user, logout } = useContext(AuthContext);
   const router = useRouter();
 
-  const { unreadCount } = useContext(NotificationContext);
+  const { unreadCount, fetchNotifications } = useContext(NotificationContext);
 
   // State for landlord statistics
   const [stats, setStats] = useState({
@@ -66,6 +66,7 @@ export default function DashboardScreen() {
     };
     if (user?.token) {
       fetchStats();
+      fetchNotifications();
     }
   }, [user]);
 

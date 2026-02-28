@@ -1,6 +1,7 @@
 import Maintenance from "../models/maintenanceModel.js";
 import Property from "../models/propertyModel.js";
 import Tenant from "../models/tenantModel.js";
+import { createNotification } from "./notificationController.js";
 
 // Create a new maintenance request
 export const createRequest = async (req, res) => {
@@ -19,6 +20,16 @@ export const createRequest = async (req, res) => {
             description,
             priority: priority || "Medium",
         });
+
+        // Notify the landlord about the new request
+        const property = await Property.findById(propertyId);
+        if (property) {
+            await createNotification(
+                property.landlordId,
+                "maintenance",
+                `New maintenance request: "${title}" for ${property.title}`
+            );
+        }
 
         res.status(201).json(request);
     } catch (error) {
@@ -99,6 +110,16 @@ export const updateRequestStatus = async (req, res) => {
 
         request.status = status;
         const updatedRequest = await request.save();
+
+        // Notify the tenant about the status update
+        const tenant = await Tenant.findById(request.tenantId);
+        if (tenant) {
+            await createNotification(
+                tenant.userId,
+                "maintenance",
+                `Your maintenance request has been updated to "${status}"`
+            );
+        }
 
         res.json(updatedRequest);
     } catch (error) {

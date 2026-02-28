@@ -1,6 +1,7 @@
 import Invoice from "../models/invoiceModel.js";
 import Property from "../models/propertyModel.js";
 import Tenant from "../models/tenantModel.js";
+import { createNotification } from "./notificationController.js";
 
 // @desc    Create a new invoice
 // @route   POST /api/invoices
@@ -30,6 +31,15 @@ export const createInvoice = async (req, res) => {
             dueDate,
             description,
         });
+
+        // Notify the tenant about the new invoice
+        if (tenant) {
+            await createNotification(
+                tenant.userId,
+                "invoice",
+                `New invoice of NPR ${amount} for ${property.title}`
+            );
+        }
 
         res.status(201).json(invoice);
     } catch (error) {

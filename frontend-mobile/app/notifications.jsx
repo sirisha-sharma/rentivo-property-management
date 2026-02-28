@@ -1,4 +1,4 @@
-import React, { useContext } from "react";
+import React, { useContext, useEffect } from "react";
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { NotificationContext } from "../context/NotificationContext";
 import { Ionicons } from "@expo/vector-icons";
@@ -6,8 +6,12 @@ import { TopBar } from "../components/TopBar";
 import { COLORS } from "../constants/theme";
 
 export default function NotificationsScreen() {
-    const { notifications, markAsRead, markAllAsRead, deleteNotification } =
+    const { notifications, loading, fetchNotifications, markAsRead, markAllAsRead, deleteNotification } =
         useContext(NotificationContext);
+
+    useEffect(() => {
+        fetchNotifications();
+    }, []);
 
     const getIcon = (type) => {
         switch (type) {
@@ -86,6 +90,8 @@ export default function NotificationsScreen() {
                         <Text style={styles.emptyText}>You're all caught up!</Text>
                     </View>
                 }
+                refreshing={loading}
+                onRefresh={fetchNotifications}
             />
         </View>
     );
