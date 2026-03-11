@@ -38,6 +38,45 @@ const invoiceSchema = mongoose.Schema(
         description: {
             type: String,
         },
+        breakdown: {
+            baseRent: {
+                type: Number,
+                default: 0
+            },
+            utilities: {
+                electricity: {
+                    type: Number,
+                    default: 0
+                },
+                water: {
+                    type: Number,
+                    default: 0
+                },
+                internet: {
+                    type: Number,
+                    default: 0
+                },
+                gas: {
+                    type: Number,
+                    default: 0
+                },
+                waste: {
+                    type: Number,
+                    default: 0
+                },
+                other: {
+                    type: Number,
+                    default: 0
+                }
+            },
+            totalUtilities: {
+                type: Number,
+                default: 0
+            }
+        },
+        paidDate: {
+            type: Date,
+        },
     },
     {
         timestamps: true,
