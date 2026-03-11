@@ -5,12 +5,12 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   Alert
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
@@ -131,25 +131,33 @@ export default function RegisterScreen() {
               <Text className="text-sm font-medium text-foreground mb-0.5">I am a</Text>
               <View className="flex-row bg-muted p-1 rounded-xl gap-1">
                 <TouchableOpacity
-                  className={`flex-1 py-2.5 items-center rounded-lg ${role === "landlord" ? "bg-card shadow-sm" : ""
-                    }`}
+                  style={[
+                    { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 8 },
+                    role === "landlord" ? { backgroundColor: COLORS.card, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 } : {}
+                  ]}
                   onPress={() => setRole("landlord")}
                 >
                   <Text
-                    className={`text-sm font-medium ${role === "landlord" ? "text-foreground font-semibold" : "text-mutedForeground"
-                      }`}
+                    style={[
+                      { fontSize: 14, fontWeight: "500" },
+                      role === "landlord" ? { color: COLORS.foreground, fontWeight: "600" } : { color: COLORS.mutedForeground }
+                    ]}
                   >
                     Landlord
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  className={`flex-1 py-2.5 items-center rounded-lg ${role === "tenant" ? "bg-card shadow-sm" : ""
-                    }`}
+                  style={[
+                    { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 8 },
+                    role === "tenant" ? { backgroundColor: COLORS.card, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 1 } : {}
+                  ]}
                   onPress={() => setRole("tenant")}
                 >
                   <Text
-                    className={`text-sm font-medium ${role === "tenant" ? "text-foreground font-semibold" : "text-mutedForeground"
-                      }`}
+                    style={[
+                      { fontSize: 14, fontWeight: "500" },
+                      role === "tenant" ? { color: COLORS.foreground, fontWeight: "600" } : { color: COLORS.mutedForeground }
+                    ]}
                   >
                     Tenant
                   </Text>
