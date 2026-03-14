@@ -10,6 +10,7 @@ import invoiceRoutes from "./routes/invoiceRoutes.js";
 import maintenanceRoutes from "./routes/maintenanceRoutes.js";
 import documentRoutes from "./routes/documentRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
+import utilityRoutes from "./routes/utilityRoutes.js";
 
 dotenv.config();
 
@@ -31,6 +32,7 @@ app.use("/api/invoices", invoiceRoutes);
 app.use("/api/maintenance", maintenanceRoutes);
 app.use("/api/documents", documentRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/utilities", utilityRoutes);
 
 // Serve uploaded files
 app.use("/uploads", express.static("uploads"));
