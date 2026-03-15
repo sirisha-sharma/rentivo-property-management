@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import connectDatabase from "./config/database.js";
+import { startScheduler } from "./jobs/invoiceScheduler.js";
 import authRoutes from "./routes/authRoutes.js";
 import propertyRoutes from "./routes/propertyRoutes.js";
 import tenantRoutes from "./routes/tenantRoutes.js";
@@ -16,6 +17,9 @@ dotenv.config();
 
 // Connect to database
 connectDatabase();
+
+// Start automated schedulers (invoice generation, overdue updates)
+startScheduler();
 
 const app = express();
 
