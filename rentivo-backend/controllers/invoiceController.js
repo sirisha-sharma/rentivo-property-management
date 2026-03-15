@@ -8,7 +8,7 @@ import { createNotification } from "./notificationController.js";
 // @access  Private (Landlord only)
 export const createInvoice = async (req, res) => {
     try {
-        const { tenantId, propertyId, amount, type, dueDate, description } = req.body;
+        const { tenantId, propertyId, amount, type, dueDate, description, breakdown } = req.body;
 
         // Verify property ownership
         const property = await Property.findOne({ _id: propertyId, landlordId: req.user._id });
@@ -22,7 +22,36 @@ export const createInvoice = async (req, res) => {
             return res.status(404).json({ message: "Tenant not found in this property" });
         }
 
-        const invoice = await Invoice.create({
+        // Validate breakdown if provided
+        if (breakdown) {
+            const { baseRent, utilities, totalUtilities } = breakdown;
+
+            // Calculate total utilities from breakdown
+            const calculatedUtilities = Object.values(utilities || {}).reduce(
+                (sum, val) => sum + (parseFloat(val) || 0),
+                0
+            );
+
+            // Validate totalUtilities matches calculated sum
+            if (totalUtilities !== undefined && Math.abs(totalUtilities - calculatedUtilities) > 0.01) {
+                return res.status(400).json({
+                    message: "Total utilities doesn't match sum of individual utilities"
+                });
+            }
+
+            // Auto-calculate totalUtilities if not provided
+            breakdown.totalUtilities = calculatedUtilities;
+
+            // Validate total amount matches baseRent + totalUtilities
+            const expectedAmount = (baseRent || 0) + calculatedUtilities;
+            if (Math.abs(amount - expectedAmount) > 0.01) {
+                return res.status(400).json({
+                    message: `Total amount (${amount}) must equal base rent (${baseRent || 0}) + utilities (${calculatedUtilities})`
+                });
+            }
+        }
+
+        const invoiceData = {
             tenantId,
             propertyId,
             landlordId: req.user._id,
@@ -30,14 +59,28 @@ export const createInvoice = async (req, res) => {
             type,
             dueDate,
             description,
-        });
+        };
+
+        // Add breakdown if provided
+        if (breakdown) {
+            invoiceData.breakdown = breakdown;
+        }
+
+        const invoice = await Invoice.create(invoiceData);
 
         // Notify the tenant about the new invoice
         if (tenant) {
+            let notificationMessage = `New invoice of NPR ${amount} for ${property.title}`;
+
+            // Enhanced message if breakdown is provided
+            if (breakdown) {
+                notificationMessage = `New invoice: Rent NPR ${breakdown.baseRent || 0} + Utilities NPR ${breakdown.totalUtilities || 0} for ${property.title}`;
+            }
+
             await createNotification(
                 tenant.userId,
                 "invoice",
-                `New invoice of NPR ${amount} for ${property.title}`
+                notificationMessage
             );
         }
 
@@ -134,6 +177,17 @@ export const updateInvoiceStatus = async (req, res) => {
         }
 
         invoice.status = status;
+
+        // Set paidDate when status is changed to "Paid"
+        if (status === "Paid" && !invoice.paidDate) {
+            invoice.paidDate = new Date();
+        }
+
+        // Clear paidDate if status is changed from "Paid" to something else
+        if (status !== "Paid" && invoice.paidDate) {
+            invoice.paidDate = null;
+        }
+
         const updatedInvoice = await invoice.save();
 
         res.json(updatedInvoice);
