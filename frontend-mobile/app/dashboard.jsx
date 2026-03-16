@@ -276,7 +276,7 @@ export default function DashboardScreen() {
 
             <TouchableOpacity
               className="w-[47%] bg-card rounded-2xl border border-border p-4 items-center"
-              onPress={() => { }}
+              onPress={() => router.push("/tenant/rentals")}
             >
               <View className="w-12 h-12 rounded-xl items-center justify-center mb-3 bg-green-100">
                 <Ionicons name="home" size={24} color={COLORS.success} />
