@@ -42,22 +42,48 @@ export const getPropertyById = async (req, res) => {
 
 // Create a new property
 export const createProperty = async (req, res) => {
-    const { title, address, type, units, splitMethod, roomSizes, amenities, images } = req.body;
+    const { title, address, type, units, splitMethod, roomSizes, amenities } = req.body;
 
     if (!title || !address || !type || !units) {
         return res.status(400).json({ message: "Please fill in all required fields" });
     }
 
     try {
+        // Handle uploaded images
+        let imagePaths = [];
+        if (req.files && req.files.length > 0) {
+            imagePaths = req.files.map(file => `/uploads/properties/${file.filename}`);
+        }
+
+        // Parse roomSizes if it comes as a JSON string
+        let parsedRoomSizes = roomSizes;
+        if (typeof roomSizes === 'string') {
+            try {
+                parsedRoomSizes = JSON.parse(roomSizes);
+            } catch (e) {
+                parsedRoomSizes = [];
+            }
+        }
+
+        // Parse amenities if it comes as a JSON string
+        let parsedAmenities = amenities;
+        if (typeof amenities === 'string') {
+            try {
+                parsedAmenities = JSON.parse(amenities);
+            } catch (e) {
+                parsedAmenities = [];
+            }
+        }
+
         const property = await Property.create({
             title,
             address,
             type,
             units,
             splitMethod,
-            roomSizes,
-            amenities,
-            images,
+            roomSizes: parsedRoomSizes,
+            amenities: parsedAmenities,
+            images: imagePaths,
             landlordId: req.user._id,
         });
         res.status(201).json(property);
@@ -85,9 +111,41 @@ export const updateProperty = async (req, res) => {
             return res.status(401).json({ message: "User not authorized" });
         }
 
+        // Handle uploaded images
+        let updatedImages = [...property.images]; // Keep existing images
+        if (req.files && req.files.length > 0) {
+            const newImagePaths = req.files.map(file => `/uploads/properties/${file.filename}`);
+            updatedImages = [...updatedImages, ...newImagePaths]; // Add new images
+        }
+
+        // Parse roomSizes if it comes as a JSON string
+        let parsedRoomSizes = req.body.roomSizes;
+        if (typeof req.body.roomSizes === 'string') {
+            try {
+                parsedRoomSizes = JSON.parse(req.body.roomSizes);
+            } catch (e) {
+                parsedRoomSizes = property.roomSizes; // Keep existing if parse fails
+            }
+        }
+
+        // Parse amenities if it comes as a JSON string
+        let parsedAmenities = req.body.amenities;
+        if (typeof req.body.amenities === 'string') {
+            try {
+                parsedAmenities = JSON.parse(req.body.amenities);
+            } catch (e) {
+                parsedAmenities = property.amenities; // Keep existing if parse fails
+            }
+        }
+
         const updatedProperty = await Property.findByIdAndUpdate(
             req.params.id,
-            req.body,
+            {
+                ...req.body,
+                images: updatedImages,
+                roomSizes: parsedRoomSizes,
+                amenities: parsedAmenities,
+            },
             { new: true }
         );
 
