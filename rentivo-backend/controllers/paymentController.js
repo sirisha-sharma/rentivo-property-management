@@ -3,6 +3,7 @@ import Invoice from "../models/invoiceModel.js";
 import Tenant from "../models/tenantModel.js";
 import { initializeEsewaPayment } from "../payment/gateways/esewaGateway.js";
 import { initializeKhaltiPayment } from "../payment/gateways/khaltiGateway.js";
+import { initializeFonepayPayment } from "../payment/gateways/fonepayGateway.js";
 
 /**
  * @desc    Initiate payment for an invoice
@@ -14,10 +15,10 @@ export const initiatePayment = async (req, res) => {
         const { invoiceId, gateway } = req.body;
 
         // Validate gateway
-        if (!["esewa", "khalti"].includes(gateway)) {
+        if (!["esewa", "khalti", "fonepay"].includes(gateway)) {
             return res.status(400).json({
                 success: false,
-                message: "Invalid payment gateway. Choose: esewa or khalti"
+                message: "Invalid payment gateway. Choose: esewa, khalti, or fonepay"
             });
         }
 
@@ -55,6 +56,11 @@ export const initiatePayment = async (req, res) => {
 
         // Initialize payment with selected gateway
         let gatewayResponse;
+        const customerInfo = {
+            name: req.user.name,
+            email: req.user.email,
+            phone: req.user.phone || "9800000000",
+        };
 
         if (gateway === "esewa") {
             gatewayResponse = initializeEsewaPayment(
@@ -63,12 +69,14 @@ export const initiatePayment = async (req, res) => {
                 invoiceId
             );
         } else if (gateway === "khalti") {
-            const customerInfo = {
-                name: req.user.name,
-                email: req.user.email,
-                phone: req.user.phone || "9800000000",
-            };
             gatewayResponse = await initializeKhaltiPayment(
+                invoice.amount,
+                transactionId,
+                invoiceId,
+                customerInfo
+            );
+        } else if (gateway === "fonepay") {
+            gatewayResponse = initializeFonepayPayment(
                 invoice.amount,
                 transactionId,
                 invoiceId,
@@ -117,7 +125,7 @@ export const getPaymentConfig = async (req, res) => {
     try {
         res.status(200).json({
             success: true,
-            availableGateways: ["esewa", "khalti"],
+            availableGateways: ["esewa", "khalti", "fonepay"],
             defaultGateway: "esewa",
         });
     } catch (error) {
@@ -244,5 +252,17 @@ export const verifyKhaltiPayment = async (req, res) => {
     res.status(501).json({
         success: false,
         message: "Khalti verification - To be implemented in Payment Processing & Verification step"
+    });
+};
+
+/**
+ * @desc    Verify Fonepay payment (Placeholder for next step)
+ * @route   GET /api/payments/fonepay/verify
+ * @access  Public (Payment gateway callback)
+ */
+export const verifyFonepayPayment = async (req, res) => {
+    res.status(501).json({
+        success: false,
+        message: "Fonepay verification - To be implemented in Payment Processing & Verification step"
     });
 };
