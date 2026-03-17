@@ -2,6 +2,7 @@ import Payment from "../models/paymentModel.js";
 import Invoice from "../models/invoiceModel.js";
 import Tenant from "../models/tenantModel.js";
 import { initializeEsewaPayment } from "../payment/gateways/esewaGateway.js";
+import { initializeKhaltiPayment } from "../payment/gateways/khaltiGateway.js";
 
 /**
  * @desc    Initiate payment for an invoice
@@ -13,10 +14,10 @@ export const initiatePayment = async (req, res) => {
         const { invoiceId, gateway } = req.body;
 
         // Validate gateway
-        if (gateway !== "esewa") {
+        if (!["esewa", "khalti"].includes(gateway)) {
             return res.status(400).json({
                 success: false,
-                message: "Only eSewa payment gateway is currently supported"
+                message: "Invalid payment gateway. Choose: esewa or khalti"
             });
         }
 
@@ -52,12 +53,28 @@ export const initiatePayment = async (req, res) => {
         // Generate unique transaction ID
         const transactionId = `RENTIVO_${Date.now()}_${invoiceId.toString().slice(-6)}`;
 
-        // Initialize payment with eSewa gateway
-        const gatewayResponse = initializeEsewaPayment(
-            invoice.amount,
-            transactionId,
-            invoiceId
-        );
+        // Initialize payment with selected gateway
+        let gatewayResponse;
+
+        if (gateway === "esewa") {
+            gatewayResponse = initializeEsewaPayment(
+                invoice.amount,
+                transactionId,
+                invoiceId
+            );
+        } else if (gateway === "khalti") {
+            const customerInfo = {
+                name: req.user.name,
+                email: req.user.email,
+                phone: req.user.phone || "9800000000",
+            };
+            gatewayResponse = await initializeKhaltiPayment(
+                invoice.amount,
+                transactionId,
+                invoiceId,
+                customerInfo
+            );
+        }
 
         // Create payment record in database
         const payment = await Payment.create({
@@ -100,7 +117,7 @@ export const getPaymentConfig = async (req, res) => {
     try {
         res.status(200).json({
             success: true,
-            availableGateways: ["esewa"],
+            availableGateways: ["esewa", "khalti"],
             defaultGateway: "esewa",
         });
     } catch (error) {
@@ -215,5 +232,17 @@ export const verifyEsewaPayment = async (req, res) => {
     res.status(501).json({
         success: false,
         message: "eSewa verification - To be implemented in Payment Processing & Verification step"
+    });
+};
+
+/**
+ * @desc    Verify Khalti payment (Placeholder for next step)
+ * @route   POST /api/payments/khalti/verify
+ * @access  Public (Payment gateway callback)
+ */
+export const verifyKhaltiPayment = async (req, res) => {
+    res.status(501).json({
+        success: false,
+        message: "Khalti verification - To be implemented in Payment Processing & Verification step"
     });
 };
