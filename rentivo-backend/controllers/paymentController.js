@@ -1,7 +1,7 @@
 import Payment from "../models/paymentModel.js";
 import Invoice from "../models/invoiceModel.js";
 import Tenant from "../models/tenantModel.js";
-import { initializeEsewaPayment } from "../payment/gateways/esewaGateway.js";
+import { initializeEsewaPayment, verifyEsewaSignature } from "../payment/gateways/esewaGateway.js";
 import { initializeKhaltiPayment } from "../payment/gateways/khaltiGateway.js";
 import { initializeFonepayPayment } from "../payment/gateways/fonepayGateway.js";
 
@@ -232,15 +232,156 @@ export const handlePaymentFailure = async (req, res) => {
 };
 
 /**
- * @desc    Verify eSewa payment (Placeholder for next step)
+ * @desc    Verify eSewa payment
  * @route   GET /api/payments/esewa/verify
  * @access  Public (Payment gateway callback)
  */
 export const verifyEsewaPayment = async (req, res) => {
-    res.status(501).json({
-        success: false,
-        message: "eSewa verification - To be implemented in Payment Processing & Verification step"
-    });
+    try {
+        // eSewa sends these parameters as query params
+        const { data } = req.query;
+
+        if (!data) {
+            console.error("eSewa verification failed: No data parameter");
+            return res.status(400).json({
+                success: false,
+                message: "Invalid verification data"
+            });
+        }
+
+        // Decode base64 data from eSewa
+        let decodedData;
+        try {
+            decodedData = JSON.parse(Buffer.from(data, "base64").toString("utf-8"));
+        } catch (error) {
+            console.error("eSewa verification failed: Invalid base64 data", error);
+            return res.status(400).json({
+                success: false,
+                message: "Invalid payment data format"
+            });
+        }
+
+        const {
+            transaction_code,
+            status,
+            total_amount,
+            transaction_uuid,
+            product_code,
+            signed_field_names,
+            signature
+        } = decodedData;
+
+        console.log("eSewa callback received:", {
+            transaction_code,
+            status,
+            total_amount,
+            transaction_uuid,
+        });
+
+        // Check if payment was successful on eSewa side
+        if (status !== "COMPLETE") {
+            console.log(`eSewa payment not complete. Status: ${status}`);
+            return res.redirect(`/payment-failed?status=${status}&txn=${transaction_uuid}`);
+        }
+
+        // Find the payment record
+        const payment = await Payment.findOne({ transactionId: transaction_uuid })
+            .populate("invoiceId")
+            .populate("userId");
+
+        if (!payment) {
+            console.error(`Payment record not found for transaction: ${transaction_uuid}`);
+            return res.status(404).json({
+                success: false,
+                message: "Payment record not found"
+            });
+        }
+
+        // Check if payment is already processed
+        if (payment.status === "completed") {
+            console.log(`Payment already processed: ${transaction_uuid}`);
+            return res.redirect(`/payment-success?txn=${transaction_uuid}&amount=${total_amount}`);
+        }
+
+        // Verify signature to ensure authenticity
+        try {
+            const expectedSignature = verifyEsewaSignature(
+                transaction_code,
+                total_amount,
+                transaction_uuid
+            );
+
+            if (signature !== expectedSignature) {
+                console.error("eSewa signature verification failed", {
+                    received: signature,
+                    expected: expectedSignature,
+                });
+
+                // Update payment status to failed
+                payment.status = "failed";
+                payment.gatewayResponse = decodedData;
+                await payment.save();
+
+                return res.status(400).json({
+                    success: false,
+                    message: "Payment verification failed. Signature mismatch."
+                });
+            }
+        } catch (error) {
+            console.error("Error verifying eSewa signature:", error);
+            payment.status = "failed";
+            payment.gatewayResponse = decodedData;
+            await payment.save();
+
+            return res.status(500).json({
+                success: false,
+                message: "Payment verification error"
+            });
+        }
+
+        // Verify amount matches
+        if (parseFloat(total_amount) !== payment.amount) {
+            console.error("Amount mismatch", {
+                expected: payment.amount,
+                received: total_amount,
+            });
+
+            payment.status = "failed";
+            payment.gatewayResponse = decodedData;
+            await payment.save();
+
+            return res.status(400).json({
+                success: false,
+                message: "Payment amount mismatch"
+            });
+        }
+
+        // All verifications passed - update payment status
+        payment.status = "completed";
+        payment.gatewayResponse = decodedData;
+        await payment.save();
+
+        // Update invoice status to Paid
+        const invoice = await Invoice.findById(payment.invoiceId);
+        if (invoice) {
+            invoice.status = "Paid";
+            invoice.paidDate = new Date();
+            await invoice.save();
+            console.log(`Invoice ${invoice.invoiceNumber} marked as Paid`);
+        }
+
+        console.log(`✓ eSewa payment verified successfully: ${transaction_uuid}`);
+
+        // Redirect to success page (will be implemented in frontend)
+        return res.redirect(`/payment-success?txn=${transaction_uuid}&amount=${total_amount}`);
+
+    } catch (error) {
+        console.error("eSewa verification error:", error);
+        res.status(500).json({
+            success: false,
+            message: error.message || "Payment verification failed"
+        });
+    }
 };
 
 /**
