@@ -2,7 +2,7 @@ import Payment from "../models/paymentModel.js";
 import Invoice from "../models/invoiceModel.js";
 import Tenant from "../models/tenantModel.js";
 import { initializeEsewaPayment, verifyEsewaSignature } from "../payment/gateways/esewaGateway.js";
-import { initializeKhaltiPayment } from "../payment/gateways/khaltiGateway.js";
+import { initializeKhaltiPayment, verifyKhaltiPayment as khaltiLookup } from "../payment/gateways/khaltiGateway.js";
 import { initializeFonepayPayment } from "../payment/gateways/fonepayGateway.js";
 
 /**
@@ -385,15 +385,130 @@ export const verifyEsewaPayment = async (req, res) => {
 };
 
 /**
- * @desc    Verify Khalti payment (Placeholder for next step)
- * @route   POST /api/payments/khalti/verify
+ * @desc    Verify Khalti payment
+ * @route   POST /api/payments/khalti/verify (or GET with query params)
  * @access  Public (Payment gateway callback)
  */
 export const verifyKhaltiPayment = async (req, res) => {
-    res.status(501).json({
-        success: false,
-        message: "Khalti verification - To be implemented in Payment Processing & Verification step"
-    });
+    try {
+        // Khalti can send data via query params (GET) or body (POST)
+        const { pidx, txnId, amount, mobile, purchase_order_id, purchase_order_name, transaction_id } =
+            req.method === 'GET' ? req.query : req.body;
+
+        if (!pidx) {
+            console.error("Khalti verification failed: No pidx parameter");
+            return res.status(400).json({
+                success: false,
+                message: "Invalid verification data - missing pidx"
+            });
+        }
+
+        console.log("Khalti callback received:", {
+            pidx,
+            txnId: txnId || transaction_id,
+            amount,
+            purchase_order_id,
+        });
+
+        // Use Khalti lookup API to verify payment
+        let lookupResult;
+        try {
+            lookupResult = await khaltiLookup(pidx);
+        } catch (error) {
+            console.error("Khalti lookup API failed:", error.message);
+            return res.status(500).json({
+                success: false,
+                message: "Failed to verify payment with Khalti"
+            });
+        }
+
+        console.log("Khalti lookup result:", lookupResult);
+
+        // Extract transaction ID from purchase_order_id or lookup result
+        const transactionId = purchase_order_id || lookupResult.purchase_order_id;
+
+        if (!transactionId) {
+            console.error("Transaction ID not found in Khalti response");
+            return res.status(400).json({
+                success: false,
+                message: "Transaction ID not found"
+            });
+        }
+
+        // Find the payment record
+        const payment = await Payment.findOne({ transactionId })
+            .populate("invoiceId")
+            .populate("userId");
+
+        if (!payment) {
+            console.error(`Payment record not found for transaction: ${transactionId}`);
+            return res.status(404).json({
+                success: false,
+                message: "Payment record not found"
+            });
+        }
+
+        // Check if payment is already processed
+        if (payment.status === "completed") {
+            console.log(`Payment already processed: ${transactionId}`);
+            return res.redirect(`/payment-success?txn=${transactionId}&amount=${lookupResult.total_amount / 100}`);
+        }
+
+        // Check Khalti payment status
+        if (lookupResult.status !== "Completed") {
+            console.log(`Khalti payment not completed. Status: ${lookupResult.status}`);
+
+            payment.status = lookupResult.status === "Pending" ? "pending" : "failed";
+            payment.gatewayResponse = lookupResult;
+            await payment.save();
+
+            return res.redirect(`/payment-failed?status=${lookupResult.status}&txn=${transactionId}`);
+        }
+
+        // Verify amount matches (Khalti returns amount in paisa, convert to NPR)
+        const paidAmount = lookupResult.total_amount / 100;
+        if (paidAmount !== payment.amount) {
+            console.error("Amount mismatch", {
+                expected: payment.amount,
+                received: paidAmount,
+            });
+
+            payment.status = "failed";
+            payment.gatewayResponse = lookupResult;
+            await payment.save();
+
+            return res.status(400).json({
+                success: false,
+                message: "Payment amount mismatch"
+            });
+        }
+
+        // All verifications passed - update payment status
+        payment.status = "completed";
+        payment.gatewayResponse = lookupResult;
+        await payment.save();
+
+        // Update invoice status to Paid
+        const invoice = await Invoice.findById(payment.invoiceId);
+        if (invoice) {
+            invoice.status = "Paid";
+            invoice.paidDate = new Date();
+            await invoice.save();
+            console.log(`Invoice ${invoice.invoiceNumber} marked as Paid`);
+        }
+
+        console.log(`✓ Khalti payment verified successfully: ${transactionId}`);
+
+        // Redirect to success page
+        return res.redirect(`/payment-success?txn=${transactionId}&amount=${paidAmount}`);
+
+    } catch (error) {
+        console.error("Khalti verification error:", error);
+        res.status(500).json({
+            success: false,
+            message: error.message || "Payment verification failed"
+        });
+    }
 };
 
 /**
