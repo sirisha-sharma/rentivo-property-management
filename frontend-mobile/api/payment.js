@@ -6,7 +6,19 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
  * Get authentication headers
  */
 const getAuthHeaders = async () => {
-    const token = await AsyncStorage.getItem("token");
+    const userData = await AsyncStorage.getItem("user");
+
+    if (!userData) {
+        throw new Error("No authentication data found. Please login again.");
+    }
+
+    const user = JSON.parse(userData);
+    const token = user?.token;
+
+    if (!token) {
+        throw new Error("No authentication token found. Please login again.");
+    }
+
     return {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,

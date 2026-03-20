@@ -140,17 +140,31 @@ export const getInvoiceById = async (req, res) => {
         // Landlord can view if they created it
         // Tenant can view if it is for them (requires checking tenantId ownership)
 
+        console.log("Authorization check:", {
+            userRole: req.user.role,
+            userId: req.user._id.toString(),
+            invoiceTenantId: invoice.tenantId?._id?.toString() || invoice.tenantId?.toString(),
+        });
+
         let isAuthorized = false;
         if (req.user.role === "landlord" && invoice.landlordId._id.toString() === req.user._id.toString()) {
             isAuthorized = true;
+            console.log("✓ Authorized as landlord");
         } else if (req.user.role === "tenant") {
             const tenantRecord = await Tenant.findById(invoice.tenantId);
+            console.log("Tenant record lookup:", {
+                found: !!tenantRecord,
+                tenantUserId: tenantRecord?.userId?.toString(),
+                requestUserId: req.user._id.toString(),
+            });
             if (tenantRecord && tenantRecord.userId.toString() === req.user._id.toString()) {
                 isAuthorized = true;
+                console.log("✓ Authorized as tenant");
             }
         }
 
         if (!isAuthorized) {
+            console.error("✗ Authorization failed");
             return res.status(401).json({ success: false, message: "Not authorized to view this invoice" });
         }
 
