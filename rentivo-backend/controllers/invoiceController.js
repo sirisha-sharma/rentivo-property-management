@@ -133,7 +133,7 @@ export const getInvoiceById = async (req, res) => {
             .populate("landlordId", "name email");
 
         if (!invoice) {
-            return res.status(404).json({ message: "Invoice not found" });
+            return res.status(404).json({ success: false, message: "Invoice not found" });
         }
 
         // Authorization check
@@ -151,12 +151,12 @@ export const getInvoiceById = async (req, res) => {
         }
 
         if (!isAuthorized) {
-            return res.status(401).json({ message: "Not authorized to view this invoice" });
+            return res.status(401).json({ success: false, message: "Not authorized to view this invoice" });
         }
 
-        res.json(invoice);
+        res.json({ success: true, invoice });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
