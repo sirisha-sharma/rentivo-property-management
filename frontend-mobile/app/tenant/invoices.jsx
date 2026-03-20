@@ -5,10 +5,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { TopBar } from "../../components/TopBar";
 import { StatusBadge } from "../../components/StatusBadge";
 import { COLORS } from "../../constants/theme";
+import { useRouter } from "expo-router";
 
 export default function TenantInvoices() {
     const { invoices, fetchInvoices, loading } = useContext(InvoiceContext);
     const [filter, setFilter] = useState("all");
+    const router = useRouter();
 
     useEffect(() => {
         fetchInvoices();
@@ -50,11 +52,22 @@ export default function TenantInvoices() {
             <View style={styles.divider} />
 
             <View style={styles.cardFooter}>
-                <Text style={styles.dateText}>Due: {formatDate(item.dueDate)}</Text>
-                {item.description && (
-                    <Text style={styles.descriptionText} numberOfLines={1}>
-                        {item.description}
-                    </Text>
+                <View style={{ flex: 1 }}>
+                    <Text style={styles.dateText}>Due: {formatDate(item.dueDate)}</Text>
+                    {item.description && (
+                        <Text style={styles.descriptionText} numberOfLines={1}>
+                            {item.description}
+                        </Text>
+                    )}
+                </View>
+                {(item.status?.toLowerCase() === "pending" || item.status?.toLowerCase() === "overdue") && (
+                    <TouchableOpacity
+                        style={styles.payButton}
+                        onPress={() => router.push(`/tenant/payment/${item._id}`)}
+                    >
+                        <Ionicons name="card-outline" size={16} color="#fff" />
+                        <Text style={styles.payButtonText}>Pay Now</Text>
+                    </TouchableOpacity>
                 )}
             </View>
         </View>
@@ -199,5 +212,19 @@ const styles = StyleSheet.create({
     },
     filterTextActive: {
         color: "#fff",
+    },
+    payButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: COLORS.primary,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 8,
+        gap: 6,
+    },
+    payButtonText: {
+        color: "#fff",
+        fontSize: 14,
+        fontWeight: "600",
     },
 });
