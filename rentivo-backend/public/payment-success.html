@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Successful</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+        }
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: #10B981;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+        .checkmark {
+            color: white;
+            font-size: 48px;
+            font-weight: bold;
+        }
+        h1 {
+            color: #0F172A;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        p {
+            color: #64748B;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        .details {
+            background: #F8FAFC;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #475569;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success-icon">
+            <div class="checkmark">✓</div>
+        </div>
+        <h1>Payment Successful!</h1>
+        <p>Your payment has been processed successfully. The invoice status has been updated.</p>
+        <div class="details">
+            <p><strong>Transaction:</strong> <span id="txn"></span></p>
+            <p><strong>Amount:</strong> NPR <span id="amount"></span></p>
+        </div>
+    </div>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        document.getElementById('txn').textContent = params.get('txn') || 'N/A';
+        document.getElementById('amount').textContent = params.get('amount') || 'N/A';
+    </script>
+</body>
+</html>

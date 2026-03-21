@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useContext } from "react";
 import {
     View,
     Text,
@@ -15,11 +15,13 @@ import { TopBar } from "../../../components/TopBar";
 import { COLORS } from "../../../constants/theme";
 import { initiatePayment } from "../../../api/payment";
 import { getInvoiceById } from "../../../api/invoice";
+import { InvoiceContext } from "../../../context/InvoiceContext";
 
 export default function PaymentScreen() {
     const { invoiceId } = useLocalSearchParams();
     const router = useRouter();
     const webViewRef = useRef(null);
+    const { fetchInvoices } = useContext(InvoiceContext);
 
     const [invoice, setInvoice] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -150,13 +152,19 @@ export default function PaymentScreen() {
             setPaymentInitiated(false);
 
             if (url.includes("/payment-success")) {
+                // Refresh invoices to show updated status
+                fetchInvoices();
+
                 Alert.alert(
                     "Payment Successful",
-                    "Your payment has been processed successfully!",
+                    "Your payment has been processed successfully! Invoice status will update shortly.",
                     [
                         {
                             text: "OK",
-                            onPress: () => router.replace("/tenant/invoices"),
+                            onPress: () => {
+                                // Navigate back to invoices
+                                router.replace("/tenant/invoices");
+                            },
                         },
                     ]
                 );

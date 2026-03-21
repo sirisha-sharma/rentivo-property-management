@@ -43,6 +43,9 @@ app.use("/api/payments", paymentRoutes);
 // Serve uploaded files
 app.use("/uploads", express.static("uploads"));
 
+// Serve public files (payment success/failure pages)
+app.use(express.static("public"));
+
 // Basic route
 app.get("/", (req, res) => {
   res.json({ message: "Rentivo API is running..." });
