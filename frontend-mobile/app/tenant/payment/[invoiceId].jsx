@@ -28,6 +28,7 @@ export default function PaymentScreen() {
     const [paymentInitiated, setPaymentInitiated] = useState(false);
     const [paymentData, setPaymentData] = useState(null);
     const [processing, setProcessing] = useState(false);
+    const [selectedGateway, setSelectedGateway] = useState(null);
 
     useEffect(() => {
         fetchInvoiceDetails();
@@ -53,6 +54,26 @@ export default function PaymentScreen() {
 
             if (response.success && response.gatewayData) {
                 setPaymentData(response.gatewayData);
+                setSelectedGateway("esewa");
+                setPaymentInitiated(true);
+            } else {
+                Alert.alert("Error", "Failed to initialize payment");
+            }
+        } catch (error) {
+            Alert.alert("Error", error.message || "Failed to initiate payment");
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    const handleKhaltiPayment = async () => {
+        try {
+            setProcessing(true);
+            const response = await initiatePayment(invoiceId, "khalti");
+
+            if (response.success && response.gatewayData) {
+                setPaymentData(response.gatewayData);
+                setSelectedGateway("khalti");
                 setPaymentInitiated(true);
             } else {
                 Alert.alert("Error", "Failed to initialize payment");
@@ -144,6 +165,80 @@ export default function PaymentScreen() {
         `;
     };
 
+    const generateKhaltiFormHTML = () => {
+        if (!paymentData) return "";
+
+        return `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <style>
+                    body {
+                        margin: 0;
+                        padding: 20px;
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                        background: #f5f5f5;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        min-height: 100vh;
+                    }
+                    .container {
+                        background: white;
+                        padding: 30px;
+                        border-radius: 12px;
+                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                        text-align: center;
+                    }
+                    .logo {
+                        font-size: 24px;
+                        font-weight: bold;
+                        color: #5C2D91;
+                        margin-bottom: 20px;
+                    }
+                    .message {
+                        color: #64748B;
+                        margin-bottom: 20px;
+                    }
+                    .loader {
+                        border: 3px solid #f3f3f3;
+                        border-top: 3px solid #5C2D91;
+                        border-radius: 50%;
+                        width: 40px;
+                        height: 40px;
+                        animation: spin 1s linear infinite;
+                        margin: 20px auto;
+                    }
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="logo">Khalti Payment</div>
+                    <div class="message">Redirecting to Khalti...</div>
+                    <div class="loader"></div>
+                </div>
+                <form id="khaltiForm" action="${paymentData.payment_url}" method="POST">
+                    <input type="hidden" name="return_url" value="${paymentData.return_url}" />
+                    <input type="hidden" name="website_url" value="${paymentData.website_url}" />
+                    <input type="hidden" name="amount" value="${paymentData.amount}" />
+                    <input type="hidden" name="purchase_order_id" value="${paymentData.purchase_order_id}" />
+                    <input type="hidden" name="purchase_order_name" value="${paymentData.purchase_order_name}" />
+                </form>
+                <script>
+                    setTimeout(function() {
+                        document.getElementById('khaltiForm').submit();
+                    }, 1000);
+                </script>
+            </body>
+            </html>
+        `;
+    };
+
     const handleWebViewNavigationStateChange = (navState) => {
         const { url } = navState;
 
@@ -196,10 +291,13 @@ export default function PaymentScreen() {
     }
 
     if (paymentInitiated && paymentData) {
+        const gatewayTitle = selectedGateway === "khalti" ? "Khalti Payment" : "eSewa Payment";
+        const formHTML = selectedGateway === "khalti" ? generateKhaltiFormHTML() : generateEsewaFormHTML();
+
         return (
             <View style={styles.container}>
                 <TopBar
-                    title="eSewa Payment"
+                    title={gatewayTitle}
                     showBack
                     onBackPress={() => {
                         Alert.alert(
@@ -217,7 +315,7 @@ export default function PaymentScreen() {
                 />
                 <WebView
                     ref={webViewRef}
-                    source={{ html: generateEsewaFormHTML() }}
+                    source={{ html: formHTML }}
                     style={{ flex: 1 }}
                     onNavigationStateChange={handleWebViewNavigationStateChange}
                     javaScriptEnabled={true}
@@ -284,11 +382,32 @@ export default function PaymentScreen() {
                         disabled={processing}
                     >
                         <View style={styles.paymentOptionContent}>
-                            <Ionicons name="wallet-outline" size={24} color={COLORS.primary} />
+                            <Ionicons name="wallet-outline" size={24} color="#2563EB" />
                             <View style={{ flex: 1, marginLeft: 12 }}>
                                 <Text style={styles.paymentOptionTitle}>eSewa</Text>
                                 <Text style={styles.paymentOptionSubtitle}>
                                     Pay securely using eSewa wallet
+                                </Text>
+                            </View>
+                            {processing ? (
+                                <ActivityIndicator size="small" color={COLORS.primary} />
+                            ) : (
+                                <Ionicons name="chevron-forward" size={20} color={COLORS.mutedForeground} />
+                            )}
+                        </View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.paymentOption, { marginTop: 12 }]}
+                        onPress={handleKhaltiPayment}
+                        disabled={processing}
+                    >
+                        <View style={styles.paymentOptionContent}>
+                            <Ionicons name="wallet-outline" size={24} color="#5C2D91" />
+                            <View style={{ flex: 1, marginLeft: 12 }}>
+                                <Text style={styles.paymentOptionTitle}>Khalti</Text>
+                                <Text style={styles.paymentOptionSubtitle}>
+                                    Pay securely using Khalti wallet
                                 </Text>
                             </View>
                             {processing ? (
@@ -304,7 +423,7 @@ export default function PaymentScreen() {
                 <View style={styles.infoCard}>
                     <Ionicons name="information-circle-outline" size={20} color={COLORS.primary} />
                     <Text style={styles.infoText}>
-                        You will be redirected to eSewa to complete your payment securely.
+                        You will be redirected to your selected payment gateway to complete the payment securely.
                     </Text>
                 </View>
             </ScrollView>
