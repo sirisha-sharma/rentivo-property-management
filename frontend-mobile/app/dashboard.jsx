@@ -313,6 +313,16 @@ export default function DashboardScreen() {
               </View>
               <Text className="text-sm font-semibold text-foreground">Documents</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              className="w-[47%] bg-card rounded-2xl border border-border p-4 items-center"
+              onPress={() => router.push("/tenant/payments")}
+            >
+              <View className="w-12 h-12 rounded-xl items-center justify-center mb-3 bg-purple-100">
+                <Ionicons name="receipt" size={24} color="#9333EA" />
+              </View>
+              <Text className="text-sm font-semibold text-foreground">Payments</Text>
+            </TouchableOpacity>
           </View>
         )}
 
