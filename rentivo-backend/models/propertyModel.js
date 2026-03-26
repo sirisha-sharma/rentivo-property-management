@@ -40,6 +40,22 @@ const propertySchema = mongoose.Schema(
             type: [String],
             default: [],
         },
+        rent: {
+            type: Number,
+            default: 0,
+        },
+        rentPerUnit: {
+            type: Boolean,
+            default: false,
+        },
+        description: {
+            type: String,
+            default: "",
+        },
+        availableFrom: {
+            type: Date,
+            default: Date.now,
+        },
         landlordId: {
             type: mongoose.Schema.Types.ObjectId,
             required: true,

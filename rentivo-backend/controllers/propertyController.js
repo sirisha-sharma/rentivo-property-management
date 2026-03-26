@@ -1,6 +1,25 @@
 import Property from "../models/propertyModel.js";
 import Tenant from "../models/tenantModel.js";
 
+// Get all vacant properties for marketplace (accessible to all authenticated users)
+export const getMarketplaceProperties = async (req, res) => {
+    try {
+        const properties = await Property.find({ status: "vacant" })
+            .populate("landlordId", "name email phone")
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            success: true,
+            properties
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+    }
+};
+
 // Get properties (landlord sees owned, tenant sees rented)
 export const getProperties = async (req, res) => {
     try {
