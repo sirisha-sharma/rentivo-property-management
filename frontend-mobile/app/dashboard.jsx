@@ -266,6 +266,16 @@ export default function DashboardScreen() {
           <View className="flex-row flex-wrap gap-4 mb-8">
             <TouchableOpacity
               className="w-[47%] bg-card rounded-2xl border border-border p-4 items-center"
+              onPress={() => router.push("/tenant/marketplace")}
+            >
+              <View className="w-12 h-12 rounded-xl items-center justify-center mb-3 bg-indigo-100">
+                <Ionicons name="search" size={24} color={COLORS.primary} />
+              </View>
+              <Text className="text-sm font-semibold text-foreground">Browse Properties</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              className="w-[47%] bg-card rounded-2xl border border-border p-4 items-center"
               onPress={() => router.push("/tenant/invitations")}
             >
               <View className="w-12 h-12 rounded-xl items-center justify-center mb-3 bg-blue-100">
