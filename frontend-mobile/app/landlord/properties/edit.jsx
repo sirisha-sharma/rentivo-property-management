@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { PropertyContext } from "../../../context/PropertyContext";
 import { TopBar } from "../../../components/TopBar";
 import { COLORS } from "../../../constants/theme";
@@ -28,6 +29,8 @@ export default function EditProperty() {
         units: "",
         splitMethod: "",
         status: "",
+        rent: "",
+        description: "",
     });
 
     const [roomSizes, setRoomSizes] = useState([]);
@@ -50,6 +53,8 @@ export default function EditProperty() {
                     units: property.units?.toString() || "",
                     splitMethod: property.splitMethod || "",
                     status: property.status || "vacant",
+                    rent: property.rent?.toString() || "",
+                    description: property.description || "",
                 });
                 setRoomSizes(property.roomSizes || []);
                 setImages(property.images || []);
@@ -83,6 +88,24 @@ export default function EditProperty() {
         setRoomSizes((prev) =>
             prev.map((room, i) => (i === index ? { ...room, [field]: value } : room))
         );
+    };
+
+    const pickImageFromGallery = async () => {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== "granted") {
+            Alert.alert("Permission Denied", "Camera roll permissions are required!");
+            return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsMultipleSelection: false,
+            quality: 0.8,
+        });
+
+        if (!result.canceled && result.assets[0]) {
+            setImages((prev) => [...prev, result.assets[0].uri]);
+        }
     };
 
     const addImage = () => {
@@ -127,6 +150,7 @@ export default function EditProperty() {
             await updateProperty(id, {
                 ...formData,
                 units: parseInt(formData.units),
+                rent: formData.rent ? parseFloat(formData.rent) : 0,
                 roomSizes: formData.splitMethod === "room-size" ? roomSizes : [],
                 images,
                 amenities,
@@ -242,6 +266,31 @@ export default function EditProperty() {
                     {errors.units && <Text style={styles.errorText}>{errors.units}</Text>}
                 </View>
 
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Monthly Rent (NPR)</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="e.g. 25000"
+                        value={formData.rent}
+                        onChangeText={(text) => updateField("rent", text)}
+                        keyboardType="number-pad"
+                        placeholderTextColor={COLORS.mutedForeground}
+                    />
+                </View>
+
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Description</Text>
+                    <TextInput
+                        style={[styles.input, { minHeight: 100, textAlignVertical: "top", paddingTop: 12 }]}
+                        placeholder="Describe your property (optional)"
+                        value={formData.description}
+                        onChangeText={(text) => updateField("description", text)}
+                        placeholderTextColor={COLORS.mutedForeground}
+                        multiline
+                        numberOfLines={4}
+                    />
+                </View>
+
                 <View style={styles.divider} />
 
                 <Text style={styles.sectionTitle}>Property Images</Text>
@@ -258,10 +307,17 @@ export default function EditProperty() {
                             ))}
                         </ScrollView>
                     )}
+                    <TouchableOpacity
+                        style={[styles.addImageRow, { backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, height: 48, marginBottom: 8 }]}
+                        onPress={pickImageFromGallery}
+                    >
+                        <Ionicons name="images-outline" size={20} color={COLORS.foreground} />
+                        <Text style={{ fontSize: 14, fontWeight: "500", color: COLORS.foreground }}>Pick from Gallery</Text>
+                    </TouchableOpacity>
                     <View style={styles.addImageRow}>
                         <TextInput
                             style={[styles.input, { flex: 1 }]}
-                            placeholder="Paste image URL"
+                            placeholder="Or paste image URL"
                             value={newImageUrl}
                             onChangeText={setNewImageUrl}
                             placeholderTextColor={COLORS.mutedForeground}

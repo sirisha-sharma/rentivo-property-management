@@ -7,12 +7,15 @@ import {
     ScrollView,
     ActivityIndicator,
     Alert,
+    Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { PropertyContext } from "../../../context/PropertyContext";
 import { TopBar } from "../../../components/TopBar";
 import { COLORS } from "../../../constants/theme";
+import { API_BASE_URL } from "../../../constants/config";
 
 export default function AddProperty() {
     const { addProperty } = useContext(PropertyContext);
@@ -24,9 +27,15 @@ export default function AddProperty() {
         type: "",
         units: "",
         splitMethod: "",
+        rent: "",
+        description: "",
     });
 
     const [roomSizes, setRoomSizes] = useState([{ name: "Room 1", size: "" }]);
+    const [images, setImages] = useState([]);
+    const [newImageUrl, setNewImageUrl] = useState("");
+    const [amenities, setAmenities] = useState([]);
+    const [newAmenity, setNewAmenity] = useState("");
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState({});
 
@@ -49,6 +58,46 @@ export default function AddProperty() {
         setRoomSizes((prev) =>
             prev.map((room, i) => (i === index ? { ...room, [field]: value } : room))
         );
+    };
+
+    const pickImageFromGallery = async () => {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== "granted") {
+            Alert.alert("Permission Denied", "Camera roll permissions are required!");
+            return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsMultipleSelection: false,
+            quality: 0.8,
+        });
+
+        if (!result.canceled && result.assets[0]) {
+            setImages((prev) => [...prev, result.assets[0].uri]);
+        }
+    };
+
+    const addImageFromUrl = () => {
+        if (newImageUrl.trim()) {
+            setImages((prev) => [...prev, newImageUrl.trim()]);
+            setNewImageUrl("");
+        }
+    };
+
+    const removeImage = (index) => {
+        setImages((prev) => prev.filter((_, i) => i !== index));
+    };
+
+    const addAmenityItem = () => {
+        if (newAmenity.trim()) {
+            setAmenities((prev) => [...prev, newAmenity.trim()]);
+            setNewAmenity("");
+        }
+    };
+
+    const removeAmenity = (index) => {
+        setAmenities((prev) => prev.filter((_, i) => i !== index));
     };
 
     const validateForm = () => {
@@ -77,9 +126,10 @@ export default function AddProperty() {
             await addProperty({
                 ...formData,
                 units: parseInt(formData.units),
+                rent: formData.rent ? parseFloat(formData.rent) : 0,
                 roomSizes: formData.splitMethod === "room-size" ? roomSizes : [],
-                images: [], // Placeholder
-                amenities: [] // Placeholder
+                images,
+                amenities,
             });
             Alert.alert("Success", "Property added successfully", [
                 { text: "OK", onPress: () => router.back() }
@@ -91,7 +141,6 @@ export default function AddProperty() {
         }
     };
 
-    // Simple selector component
     const Selector = ({ label, value, options, onSelect, error }) => (
         <View className="gap-2">
             <Text className="text-sm font-medium text-foreground">{label}</Text>
@@ -151,6 +200,20 @@ export default function AddProperty() {
                     {errors.address && <Text className="text-xs text-destructive">{errors.address}</Text>}
                 </View>
 
+                <View className="gap-2">
+                    <Text className="text-sm font-medium text-foreground">Description</Text>
+                    <TextInput
+                        className="min-h-24 border rounded-lg px-4 py-3 text-base bg-input text-foreground border-border"
+                        placeholder="Describe your property (optional)"
+                        value={formData.description}
+                        onChangeText={(text) => updateField("description", text)}
+                        placeholderTextColor={COLORS.mutedForeground}
+                        multiline
+                        numberOfLines={4}
+                        textAlignVertical="top"
+                    />
+                </View>
+
                 <Selector
                     label="Property Type"
                     value={formData.type}
@@ -175,6 +238,96 @@ export default function AddProperty() {
                         placeholderTextColor={COLORS.mutedForeground}
                     />
                     {errors.units && <Text className="text-xs text-destructive">{errors.units}</Text>}
+                </View>
+
+                <View className="gap-2">
+                    <Text className="text-sm font-medium text-foreground">Monthly Rent (NPR)</Text>
+                    <TextInput
+                        className="h-12 border rounded-lg px-4 text-base bg-input text-foreground border-border"
+                        placeholder="e.g. 25000"
+                        value={formData.rent}
+                        onChangeText={(text) => updateField("rent", text)}
+                        keyboardType="number-pad"
+                        placeholderTextColor={COLORS.mutedForeground}
+                    />
+                </View>
+
+                <View className="h-px bg-border my-2" />
+
+                <Text className="text-base font-semibold text-foreground">Property Images</Text>
+                <View className="gap-3">
+                    {images.length > 0 && (
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="gap-3">
+                            {images.map((img, index) => (
+                                <View key={index} className="relative mr-3">
+                                    <Image source={{ uri: img }} className="w-24 h-20 rounded-lg" />
+                                    <TouchableOpacity
+                                        className="absolute -top-2 -right-2 bg-white rounded-full"
+                                        onPress={() => removeImage(index)}
+                                    >
+                                        <Ionicons name="close-circle" size={24} color={COLORS.destructive} />
+                                    </TouchableOpacity>
+                                </View>
+                            ))}
+                        </ScrollView>
+                    )}
+                    <View className="flex-row gap-2">
+                        <TouchableOpacity
+                            className="flex-1 h-12 border border-border rounded-lg bg-card items-center justify-center flex-row gap-2"
+                            onPress={pickImageFromGallery}
+                        >
+                            <Ionicons name="images-outline" size={20} color={COLORS.foreground} />
+                            <Text className="text-sm font-medium text-foreground">Pick from Gallery</Text>
+                        </TouchableOpacity>
+                    </View>
+                    <View className="flex-row gap-2">
+                        <TextInput
+                            className="flex-1 h-12 border rounded-lg px-4 text-base bg-input text-foreground border-border"
+                            placeholder="Or paste image URL"
+                            value={newImageUrl}
+                            onChangeText={setNewImageUrl}
+                            placeholderTextColor={COLORS.mutedForeground}
+                        />
+                        <TouchableOpacity
+                            className="w-12 h-12 bg-primary rounded-lg items-center justify-center"
+                            onPress={addImageFromUrl}
+                        >
+                            <Ionicons name="add" size={20} color="white" />
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                <View className="h-px bg-border my-2" />
+
+                <Text className="text-base font-semibold text-foreground">Amenities</Text>
+                <View className="gap-3">
+                    {amenities.length > 0 && (
+                        <View className="flex-row flex-wrap gap-2">
+                            {amenities.map((amenity, index) => (
+                                <View key={index} className="flex-row items-center bg-muted px-3 py-2 rounded-lg gap-2">
+                                    <Text className="text-sm text-foreground">{amenity}</Text>
+                                    <TouchableOpacity onPress={() => removeAmenity(index)}>
+                                        <Ionicons name="close" size={16} color={COLORS.mutedForeground} />
+                                    </TouchableOpacity>
+                                </View>
+                            ))}
+                        </View>
+                    )}
+                    <View className="flex-row gap-2">
+                        <TextInput
+                            className="flex-1 h-12 border rounded-lg px-4 text-base bg-input text-foreground border-border"
+                            placeholder="e.g. WiFi, Pool, Gym"
+                            value={newAmenity}
+                            onChangeText={setNewAmenity}
+                            placeholderTextColor={COLORS.mutedForeground}
+                        />
+                        <TouchableOpacity
+                            className="w-12 h-12 bg-primary rounded-lg items-center justify-center"
+                            onPress={addAmenityItem}
+                        >
+                            <Ionicons name="add" size={20} color="white" />
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 <View className="h-px bg-border my-2" />
