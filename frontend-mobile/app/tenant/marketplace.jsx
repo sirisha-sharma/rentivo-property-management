@@ -8,7 +8,7 @@ import { useRouter } from "expo-router";
 import { TopBar } from "../../components/TopBar";
 import { COLORS } from "../../constants/theme";
 import { getMarketplaceProperties } from "../../api/marketplace";
-import { API_BASE_URL } from "../../constants/config";
+import { BASE_URL } from "../../constants/config";
 
 export default function MarketplaceBrowse() {
   const router = useRouter();
@@ -64,6 +64,17 @@ export default function MarketplaceBrowse() {
     setFilteredProperties(filtered);
   };
 
+  // Helper function to construct proper image URI
+  const getImageUri = (img) => {
+    if (!img) return "";
+    // If it's already a full URL, return as-is
+    if (img.startsWith('http://') || img.startsWith('https://')) {
+      return img;
+    }
+    // Otherwise, it's a server path - prepend BASE_URL (not API_BASE_URL)
+    return `${BASE_URL}${img}`;
+  };
+
   const renderPropertyCard = ({ item }) => (
     <TouchableOpacity
       style={styles.propertyCard}
@@ -71,7 +82,7 @@ export default function MarketplaceBrowse() {
     >
       {item.images && item.images.length > 0 ? (
         <Image
-          source={{ uri: `${API_BASE_URL}${item.images[0]}` }}
+          source={{ uri: getImageUri(item.images[0]) }}
           style={styles.propertyImage}
         />
       ) : (

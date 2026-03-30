@@ -15,7 +15,7 @@ import * as ImagePicker from "expo-image-picker";
 import { PropertyContext } from "../../../context/PropertyContext";
 import { TopBar } from "../../../components/TopBar";
 import { COLORS } from "../../../constants/theme";
-import { API_BASE_URL } from "../../../constants/config";
+import { BASE_URL } from "../../../constants/config";
 
 export default function AddProperty() {
     const { addProperty } = useContext(PropertyContext);
@@ -58,6 +58,17 @@ export default function AddProperty() {
         setRoomSizes((prev) =>
             prev.map((room, i) => (i === index ? { ...room, [field]: value } : room))
         );
+    };
+
+    // Helper function to construct proper image URI
+    const getImageUri = (img) => {
+        if (!img) return "";
+        // If it's already a full URL or local file URI, return as-is
+        if (img.startsWith('http://') || img.startsWith('https://') || img.startsWith('file://')) {
+            return img;
+        }
+        // Otherwise, it's a server path - prepend BASE_URL (not API_BASE_URL)
+        return `${BASE_URL}${img}`;
     };
 
     const pickImageFromGallery = async () => {
@@ -260,7 +271,7 @@ export default function AddProperty() {
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="gap-3">
                             {images.map((img, index) => (
                                 <View key={index} className="relative mr-3">
-                                    <Image source={{ uri: img }} className="w-24 h-20 rounded-lg" />
+                                    <Image source={{ uri: getImageUri(img) }} className="w-24 h-20 rounded-lg" />
                                     <TouchableOpacity
                                         className="absolute -top-2 -right-2 bg-white rounded-full"
                                         onPress={() => removeImage(index)}

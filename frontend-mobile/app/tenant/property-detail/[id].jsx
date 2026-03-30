@@ -8,7 +8,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { TopBar } from "../../../components/TopBar";
 import { COLORS } from "../../../constants/theme";
 import axios from "axios";
-import { API_BASE_URL } from "../../../constants/config";
+import { API_BASE_URL, BASE_URL } from "../../../constants/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function PropertyDetail() {
@@ -40,6 +40,17 @@ export default function PropertyDetail() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper function to construct proper image URI
+  const getImageUri = (img) => {
+    if (!img) return "";
+    // If it's already a full URL, return as-is
+    if (img.startsWith('http://') || img.startsWith('https://')) {
+      return img;
+    }
+    // Otherwise, it's a server path - prepend BASE_URL (not API_BASE_URL)
+    return `${BASE_URL}${img}`;
   };
 
   const handleCall = () => {
@@ -84,7 +95,7 @@ export default function PropertyDetail() {
         {property.images && property.images.length > 0 ? (
           <View style={styles.imageContainer}>
             <Image
-              source={{ uri: `${API_BASE_URL}${property.images[currentImageIndex]}` }}
+              source={{ uri: getImageUri(property.images[currentImageIndex]) }}
               style={styles.propertyImage}
             />
             <View style={styles.imageIndicator}>

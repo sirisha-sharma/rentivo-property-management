@@ -16,6 +16,7 @@ import * as ImagePicker from "expo-image-picker";
 import { PropertyContext } from "../../../context/PropertyContext";
 import { TopBar } from "../../../components/TopBar";
 import { COLORS } from "../../../constants/theme";
+import { BASE_URL } from "../../../constants/config";
 
 export default function EditProperty() {
     const { getPropertyById, updateProperty } = useContext(PropertyContext);
@@ -88,6 +89,17 @@ export default function EditProperty() {
         setRoomSizes((prev) =>
             prev.map((room, i) => (i === index ? { ...room, [field]: value } : room))
         );
+    };
+
+    // Helper function to construct proper image URI
+    const getImageUri = (img) => {
+        if (!img) return "";
+        // If it's already a full URL or local file URI, return as-is
+        if (img.startsWith('http://') || img.startsWith('https://') || img.startsWith('file://')) {
+            return img;
+        }
+        // Otherwise, it's a server path - prepend BASE_URL (not API_BASE_URL)
+        return `${BASE_URL}${img}`;
     };
 
     const pickImageFromGallery = async () => {
@@ -299,7 +311,7 @@ export default function EditProperty() {
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagePreviewRow}>
                             {images.map((img, index) => (
                                 <View key={index} style={styles.imagePreviewContainer}>
-                                    <Image source={{ uri: img }} style={styles.imagePreview} />
+                                    <Image source={{ uri: getImageUri(img) }} style={styles.imagePreview} />
                                     <TouchableOpacity style={styles.removeImageBtn} onPress={() => removeImage(index)}>
                                         <Ionicons name="close-circle" size={24} color="#EF4444" />
                                     </TouchableOpacity>

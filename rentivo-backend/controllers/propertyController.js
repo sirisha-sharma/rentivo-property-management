@@ -61,7 +61,7 @@ export const getPropertyById = async (req, res) => {
 
 // Create a new property
 export const createProperty = async (req, res) => {
-    const { title, address, type, units, splitMethod, roomSizes, amenities } = req.body;
+    const { title, address, type, units, splitMethod, roomSizes, amenities, rent, description } = req.body;
 
     if (!title || !address || !type || !units) {
         return res.status(400).json({ message: "Please fill in all required fields" });
@@ -72,6 +72,16 @@ export const createProperty = async (req, res) => {
         let imagePaths = [];
         if (req.files && req.files.length > 0) {
             imagePaths = req.files.map(file => `/uploads/properties/${file.filename}`);
+        }
+
+        // Parse and merge URL images
+        if (req.body.imageUrls) {
+            try {
+                const urlImages = JSON.parse(req.body.imageUrls);
+                imagePaths = [...imagePaths, ...urlImages];
+            } catch (e) {
+                // Invalid JSON, ignore
+            }
         }
 
         // Parse roomSizes if it comes as a JSON string
@@ -103,6 +113,8 @@ export const createProperty = async (req, res) => {
             roomSizes: parsedRoomSizes,
             amenities: parsedAmenities,
             images: imagePaths,
+            rent: rent ? parseFloat(rent) : 0,
+            description: description || "",
             landlordId: req.user._id,
         });
         res.status(201).json(property);
@@ -135,6 +147,16 @@ export const updateProperty = async (req, res) => {
         if (req.files && req.files.length > 0) {
             const newImagePaths = req.files.map(file => `/uploads/properties/${file.filename}`);
             updatedImages = [...updatedImages, ...newImagePaths]; // Add new images
+        }
+
+        // Parse and merge URL images
+        if (req.body.imageUrls) {
+            try {
+                const urlImages = JSON.parse(req.body.imageUrls);
+                updatedImages = [...updatedImages, ...urlImages];
+            } catch (e) {
+                // Invalid JSON, ignore
+            }
         }
 
         // Parse roomSizes if it comes as a JSON string
