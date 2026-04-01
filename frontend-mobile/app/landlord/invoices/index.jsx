@@ -90,6 +90,16 @@ export default function InvoiceList() {
                 <StatusBadge status={item.status || "Pending"} />
             </View>
 
+            {/* Breakdown Summary (if available) */}
+            {item.breakdown && (item.breakdown.baseRent > 0 || item.breakdown.totalUtilities > 0) && (
+                <View style={styles.breakdownSummary}>
+                    <Ionicons name="receipt-outline" size={12} color={COLORS.primary} />
+                    <Text style={styles.breakdownText}>
+                        Rent: NPR {item.breakdown.baseRent?.toLocaleString() || 0} + Utilities: NPR {item.breakdown.totalUtilities?.toLocaleString() || 0}
+                    </Text>
+                </View>
+            )}
+
             <View style={styles.divider} />
 
             <View style={styles.cardFooter}>
@@ -198,6 +208,21 @@ const styles = StyleSheet.create({
         height: 1,
         backgroundColor: COLORS.border,
         marginVertical: 12,
+    },
+    breakdownSummary: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        marginTop: 8,
+        paddingHorizontal: 8,
+        paddingVertical: 6,
+        backgroundColor: COLORS.muted,
+        borderRadius: 6,
+    },
+    breakdownText: {
+        fontSize: 12,
+        color: COLORS.primary,
+        fontWeight: "500",
     },
     cardFooter: {
         flexDirection: "row",

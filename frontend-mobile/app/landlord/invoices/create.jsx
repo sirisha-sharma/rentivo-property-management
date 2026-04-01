@@ -33,10 +33,51 @@ export default function CreateInvoice() {
     const [description, setDescription] = useState("");
     const [showDatePicker, setShowDatePicker] = useState(false);
 
+    // Breakdown state
+    const [showBreakdown, setShowBreakdown] = useState(false);
+    const [baseRent, setBaseRent] = useState("");
+    const [electricity, setElectricity] = useState("");
+    const [water, setWater] = useState("");
+    const [internet, setInternet] = useState("");
+    const [gas, setGas] = useState("");
+    const [waste, setWaste] = useState("");
+    const [otherUtility, setOtherUtility] = useState("");
+
     useEffect(() => {
         fetchProperties();
         fetchTenants();
     }, []);
+
+    // Auto-calculate total amount from breakdown fields
+    useEffect(() => {
+        if (showBreakdown) {
+            const base = parseFloat(baseRent) || 0;
+            const totalUtils =
+                (parseFloat(electricity) || 0) +
+                (parseFloat(water) || 0) +
+                (parseFloat(internet) || 0) +
+                (parseFloat(gas) || 0) +
+                (parseFloat(waste) || 0) +
+                (parseFloat(otherUtility) || 0);
+            const total = base + totalUtils;
+            setAmount(total > 0 ? String(total) : "");
+        }
+    }, [showBreakdown, baseRent, electricity, water, internet, gas, waste, otherUtility]);
+
+    // Reset breakdown fields when toggled off
+    const toggleBreakdown = () => {
+        if (showBreakdown) {
+            setBaseRent("");
+            setElectricity("");
+            setWater("");
+            setInternet("");
+            setGas("");
+            setWaste("");
+            setOtherUtility("");
+            setAmount("");
+        }
+        setShowBreakdown(!showBreakdown);
+    };
 
     // Filter tenants for selected property
     const filteredTenants = tenants.filter(
@@ -49,20 +90,52 @@ export default function CreateInvoice() {
             return;
         }
 
+        const parsedAmount = parseFloat(amount);
+        if (isNaN(parsedAmount) || parsedAmount <= 0) {
+            Alert.alert("Error", "Please enter a valid amount");
+            return;
+        }
+
+        const invoiceData = {
+            propertyId: selectedPropertyId,
+            tenantId: selectedTenantId,
+            amount: parsedAmount,
+            type,
+            dueDate: dueDate.toISOString(),
+            description,
+        };
+
+        if (showBreakdown) {
+            const totalUtilities =
+                (parseFloat(electricity) || 0) +
+                (parseFloat(water) || 0) +
+                (parseFloat(internet) || 0) +
+                (parseFloat(gas) || 0) +
+                (parseFloat(waste) || 0) +
+                (parseFloat(otherUtility) || 0);
+
+            invoiceData.breakdown = {
+                baseRent: parseFloat(baseRent) || 0,
+                utilities: {
+                    electricity: parseFloat(electricity) || 0,
+                    water: parseFloat(water) || 0,
+                    internet: parseFloat(internet) || 0,
+                    gas: parseFloat(gas) || 0,
+                    waste: parseFloat(waste) || 0,
+                    other: parseFloat(otherUtility) || 0,
+                },
+                totalUtilities,
+            };
+        }
+
         try {
-            await createInvoice({
-                propertyId: selectedPropertyId,
-                tenantId: selectedTenantId,
-                amount: parseFloat(amount),
-                type,
-                dueDate: dueDate.toISOString(),
-                description,
-            });
+            await createInvoice(invoiceData);
             Alert.alert("Success", "Invoice created successfully", [
                 { text: "OK", onPress: () => router.back() },
             ]);
         } catch (err) {
-            Alert.alert("Error", "Failed to create invoice");
+            const message = err?.response?.data?.message || "Failed to create invoice";
+            Alert.alert("Error", message);
         }
     };
 
@@ -153,16 +226,131 @@ export default function CreateInvoice() {
                     ))}
                 </View>
 
-                {/* Amount */}
-                <Text style={styles.label}>Amount (NPR) *</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="e.g. 15000"
-                    keyboardType="numeric"
-                    value={amount}
-                    onChangeText={setAmount}
-                    placeholderTextColor={COLORS.mutedForeground}
-                />
+                {/* Breakdown Toggle */}
+                <TouchableOpacity style={styles.breakdownToggle} onPress={toggleBreakdown}>
+                    <Ionicons
+                        name={showBreakdown ? "remove-circle-outline" : "add-circle-outline"}
+                        size={20}
+                        color={COLORS.primary}
+                    />
+                    <Text style={styles.breakdownToggleText}>
+                        {showBreakdown ? "Remove Breakdown" : "Add Cost Breakdown"}
+                    </Text>
+                </TouchableOpacity>
+
+                {/* Breakdown Fields */}
+                {showBreakdown && (
+                    <View style={styles.breakdownSection}>
+                        <Text style={styles.breakdownTitle}>Cost Breakdown</Text>
+
+                        <Text style={styles.label}>Base Rent (NPR)</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="0"
+                            keyboardType="numeric"
+                            value={baseRent}
+                            onChangeText={setBaseRent}
+                            placeholderTextColor={COLORS.mutedForeground}
+                        />
+
+                        <Text style={styles.breakdownSubtitle}>Utilities</Text>
+
+                        <View style={styles.utilityRow}>
+                            <View style={styles.utilityField}>
+                                <Text style={styles.utilityLabel}>Electricity</Text>
+                                <TextInput
+                                    style={styles.utilityInput}
+                                    placeholder="0"
+                                    keyboardType="numeric"
+                                    value={electricity}
+                                    onChangeText={setElectricity}
+                                    placeholderTextColor={COLORS.mutedForeground}
+                                />
+                            </View>
+                            <View style={styles.utilityField}>
+                                <Text style={styles.utilityLabel}>Water</Text>
+                                <TextInput
+                                    style={styles.utilityInput}
+                                    placeholder="0"
+                                    keyboardType="numeric"
+                                    value={water}
+                                    onChangeText={setWater}
+                                    placeholderTextColor={COLORS.mutedForeground}
+                                />
+                            </View>
+                        </View>
+
+                        <View style={styles.utilityRow}>
+                            <View style={styles.utilityField}>
+                                <Text style={styles.utilityLabel}>Internet</Text>
+                                <TextInput
+                                    style={styles.utilityInput}
+                                    placeholder="0"
+                                    keyboardType="numeric"
+                                    value={internet}
+                                    onChangeText={setInternet}
+                                    placeholderTextColor={COLORS.mutedForeground}
+                                />
+                            </View>
+                            <View style={styles.utilityField}>
+                                <Text style={styles.utilityLabel}>Gas</Text>
+                                <TextInput
+                                    style={styles.utilityInput}
+                                    placeholder="0"
+                                    keyboardType="numeric"
+                                    value={gas}
+                                    onChangeText={setGas}
+                                    placeholderTextColor={COLORS.mutedForeground}
+                                />
+                            </View>
+                        </View>
+
+                        <View style={styles.utilityRow}>
+                            <View style={styles.utilityField}>
+                                <Text style={styles.utilityLabel}>Waste</Text>
+                                <TextInput
+                                    style={styles.utilityInput}
+                                    placeholder="0"
+                                    keyboardType="numeric"
+                                    value={waste}
+                                    onChangeText={setWaste}
+                                    placeholderTextColor={COLORS.mutedForeground}
+                                />
+                            </View>
+                            <View style={styles.utilityField}>
+                                <Text style={styles.utilityLabel}>Other</Text>
+                                <TextInput
+                                    style={styles.utilityInput}
+                                    placeholder="0"
+                                    keyboardType="numeric"
+                                    value={otherUtility}
+                                    onChangeText={setOtherUtility}
+                                    placeholderTextColor={COLORS.mutedForeground}
+                                />
+                            </View>
+                        </View>
+
+                        <View style={styles.totalRow}>
+                            <Text style={styles.totalLabel}>Total Amount</Text>
+                            <Text style={styles.totalValue}>NPR {amount || "0"}</Text>
+                        </View>
+                    </View>
+                )}
+
+                {/* Amount (manual entry when no breakdown) */}
+                {!showBreakdown && (
+                    <>
+                        <Text style={styles.label}>Amount (NPR) *</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="e.g. 15000"
+                            keyboardType="numeric"
+                            value={amount}
+                            onChangeText={setAmount}
+                            placeholderTextColor={COLORS.mutedForeground}
+                        />
+                    </>
+                )}
 
                 {/* Due Date */}
                 <Text style={styles.label}>Due Date *</Text>
@@ -272,6 +460,7 @@ const styles = StyleSheet.create({
     },
     typeRow: {
         flexDirection: "row",
+        flexWrap: "wrap",
         gap: 8,
     },
     typeChip: {
@@ -290,6 +479,82 @@ const styles = StyleSheet.create({
     typeChipTextActive: {
         color: "#fff",
         fontWeight: "600",
+    },
+    breakdownToggle: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        marginTop: 20,
+        paddingVertical: 10,
+    },
+    breakdownToggleText: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.primary,
+    },
+    breakdownSection: {
+        backgroundColor: COLORS.muted,
+        borderRadius: 12,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+    },
+    breakdownTitle: {
+        fontSize: 15,
+        fontWeight: "700",
+        color: COLORS.foreground,
+        marginBottom: 4,
+    },
+    breakdownSubtitle: {
+        fontSize: 13,
+        fontWeight: "600",
+        color: COLORS.mutedForeground,
+        marginTop: 16,
+        marginBottom: 8,
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
+    },
+    utilityRow: {
+        flexDirection: "row",
+        gap: 12,
+        marginBottom: 12,
+    },
+    utilityField: {
+        flex: 1,
+    },
+    utilityLabel: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: COLORS.foreground,
+        marginBottom: 4,
+    },
+    utilityInput: {
+        backgroundColor: COLORS.input,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        borderRadius: 8,
+        padding: 10,
+        fontSize: 14,
+        color: COLORS.foreground,
+    },
+    totalRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginTop: 12,
+        paddingTop: 12,
+        borderTopWidth: 1,
+        borderTopColor: COLORS.border,
+    },
+    totalLabel: {
+        fontSize: 15,
+        fontWeight: "700",
+        color: COLORS.foreground,
+    },
+    totalValue: {
+        fontSize: 18,
+        fontWeight: "700",
+        color: COLORS.primary,
     },
     dateBtn: {
         flexDirection: "row",
@@ -314,6 +579,7 @@ const styles = StyleSheet.create({
         paddingVertical: 16,
         borderRadius: 12,
         marginTop: 30,
+        marginBottom: 20,
     },
     submitBtnDisabled: {
         opacity: 0.6,

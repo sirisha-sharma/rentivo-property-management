@@ -478,6 +478,66 @@ export default function PaymentScreen() {
                     )}
                 </View>
 
+                {/* Breakdown Details (if available) */}
+                {invoice?.breakdown && (invoice.breakdown.baseRent > 0 || invoice.breakdown.totalUtilities > 0) && (
+                    <View style={styles.card}>
+                        <Text style={styles.sectionTitle}>Cost Breakdown</Text>
+                        <View style={styles.divider} />
+
+                        <View style={styles.detailRow}>
+                            <Text style={styles.detailLabel}>Base Rent:</Text>
+                            <Text style={styles.detailValue}>NPR {invoice.breakdown.baseRent?.toLocaleString() || 0}</Text>
+                        </View>
+
+                        {invoice.breakdown.utilities?.electricity > 0 && (
+                            <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>  Electricity:</Text>
+                                <Text style={styles.detailValue}>NPR {invoice.breakdown.utilities.electricity.toLocaleString()}</Text>
+                            </View>
+                        )}
+                        {invoice.breakdown.utilities?.water > 0 && (
+                            <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>  Water:</Text>
+                                <Text style={styles.detailValue}>NPR {invoice.breakdown.utilities.water.toLocaleString()}</Text>
+                            </View>
+                        )}
+                        {invoice.breakdown.utilities?.internet > 0 && (
+                            <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>  Internet:</Text>
+                                <Text style={styles.detailValue}>NPR {invoice.breakdown.utilities.internet.toLocaleString()}</Text>
+                            </View>
+                        )}
+                        {invoice.breakdown.utilities?.gas > 0 && (
+                            <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>  Gas:</Text>
+                                <Text style={styles.detailValue}>NPR {invoice.breakdown.utilities.gas.toLocaleString()}</Text>
+                            </View>
+                        )}
+                        {invoice.breakdown.utilities?.waste > 0 && (
+                            <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>  Waste:</Text>
+                                <Text style={styles.detailValue}>NPR {invoice.breakdown.utilities.waste.toLocaleString()}</Text>
+                            </View>
+                        )}
+                        {invoice.breakdown.utilities?.other > 0 && (
+                            <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>  Other:</Text>
+                                <Text style={styles.detailValue}>NPR {invoice.breakdown.utilities.other.toLocaleString()}</Text>
+                            </View>
+                        )}
+
+                        <View style={[styles.divider, { marginVertical: 8 }]} />
+                        <View style={styles.detailRow}>
+                            <Text style={[styles.detailLabel, { fontWeight: "600", color: COLORS.foreground }]}>Total Utilities:</Text>
+                            <Text style={[styles.detailValue, { fontWeight: "600" }]}>NPR {invoice.breakdown.totalUtilities?.toLocaleString() || 0}</Text>
+                        </View>
+                        <View style={styles.detailRow}>
+                            <Text style={[styles.detailLabel, { fontWeight: "700", color: COLORS.primary }]}>Total Amount:</Text>
+                            <Text style={[styles.detailValue, { fontWeight: "700", color: COLORS.primary }]}>NPR {invoice.amount?.toLocaleString()}</Text>
+                        </View>
+                    </View>
+                )}
+
                 {/* Payment Method Selection */}
                 <View style={styles.card}>
                     <Text style={styles.sectionTitle}>Select Payment Method</Text>
