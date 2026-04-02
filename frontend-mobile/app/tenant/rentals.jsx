@@ -16,7 +16,7 @@ import { PropertyContext } from "../../context/PropertyContext";
 
 export default function MyRentals() {
     const router = useRouter();
-    const { tenants, fetchTenants } = useContext(TenantContext);
+    const { invitations, fetchMyInvitations } = useContext(TenantContext);
     const { getPropertyById } = useContext(PropertyContext);
 
     const [activeRentals, setActiveRentals] = useState([]);
@@ -26,8 +26,8 @@ export default function MyRentals() {
     const loadRentals = async () => {
         try {
             setLoading(true);
-            // Fetch tenants (user's tenant records)
-            await fetchTenants();
+            // Fetch tenant's own invitation/rental records
+            await fetchMyInvitations();
         } catch (error) {
             console.error("Failed to load rentals:", error);
         } finally {
@@ -47,11 +47,11 @@ export default function MyRentals() {
 
     // Filter for active rentals only
     useEffect(() => {
-        if (tenants) {
-            const active = tenants.filter(tenant => tenant.status === "Active");
+        if (invitations) {
+            const active = invitations.filter(tenant => tenant.status === "Active");
             setActiveRentals(active);
         }
-    }, [tenants]);
+    }, [invitations]);
 
     const getStatusColor = (status) => {
         switch (status) {

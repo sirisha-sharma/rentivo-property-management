@@ -38,7 +38,7 @@ export default function PropertyDetails() {
         fetchPropertyDetails();
     }, [id]);
 
-    const propertyTenants = tenants.filter(t => t.propertyId?._id === id || t.propertyId === id);
+    const propertyTenants = tenants.filter(t => String(t.propertyId?._id) === String(id) || String(t.propertyId) === String(id));
 
     const handleDelete = () => {
         Alert.alert(
