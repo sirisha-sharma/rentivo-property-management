@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import connectDatabase from "./config/database.js";
 import { startScheduler } from "./jobs/invoiceScheduler.js";
+import { verifyEmailConnection } from "./utils/emailService.js";
 import authRoutes from "./routes/authRoutes.js";
 import propertyRoutes from "./routes/propertyRoutes.js";
 import tenantRoutes from "./routes/tenantRoutes.js";
@@ -21,6 +22,9 @@ connectDatabase();
 
 // Start automated schedulers (invoice generation, overdue updates)
 startScheduler();
+
+// Verify SMTP connection for email notifications (non-blocking)
+verifyEmailConnection();
 
 const app = express();
 

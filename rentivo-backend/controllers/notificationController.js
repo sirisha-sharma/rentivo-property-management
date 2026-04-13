@@ -1,4 +1,6 @@
 import Notification from "../models/notificationModel.js";
+import User from "../models/userModel.js";
+import { sendNotificationEmail } from "../utils/emailService.js";
 
 // Get all notifications for the logged-in user
 export const getNotifications = async (req, res) => {
@@ -60,9 +62,22 @@ export const deleteNotification = async (req, res) => {
 };
 
 // Helper to create a notification (used by other controllers)
+// Also sends an email to the user so they get notified outside the app.
 export const createNotification = async (userId, type, message) => {
     try {
         await Notification.create({ userId, type, message });
+
+        // Fire-and-forget email. We don't await this against the request
+        // lifecycle — but we do await here so errors are caught and logged.
+        const user = await User.findById(userId).select("name email");
+        if (user?.email) {
+            await sendNotificationEmail({
+                to: user.email,
+                name: user.name,
+                type,
+                message,
+            });
+        }
     } catch (error) {
         console.log("Failed to create notification:", error.message);
     }
