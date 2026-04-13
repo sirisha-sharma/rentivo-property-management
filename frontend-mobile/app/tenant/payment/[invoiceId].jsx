@@ -184,80 +184,6 @@ export default function PaymentScreen() {
         `;
     };
 
-    const generateKhaltiFormHTML = () => {
-        if (!paymentData) return "";
-
-        return `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <style>
-                    body {
-                        margin: 0;
-                        padding: 20px;
-                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                        background: #f5f5f5;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        min-height: 100vh;
-                    }
-                    .container {
-                        background: white;
-                        padding: 30px;
-                        border-radius: 12px;
-                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                        text-align: center;
-                    }
-                    .logo {
-                        font-size: 24px;
-                        font-weight: bold;
-                        color: #5C2D91;
-                        margin-bottom: 20px;
-                    }
-                    .message {
-                        color: #64748B;
-                        margin-bottom: 20px;
-                    }
-                    .loader {
-                        border: 3px solid #f3f3f3;
-                        border-top: 3px solid #5C2D91;
-                        border-radius: 50%;
-                        width: 40px;
-                        height: 40px;
-                        animation: spin 1s linear infinite;
-                        margin: 20px auto;
-                    }
-                    @keyframes spin {
-                        0% { transform: rotate(0deg); }
-                        100% { transform: rotate(360deg); }
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="logo">Khalti Payment</div>
-                    <div class="message">Redirecting to Khalti...</div>
-                    <div class="loader"></div>
-                </div>
-                <form id="khaltiForm" action="${paymentData.payment_url}" method="POST">
-                    <input type="hidden" name="return_url" value="${paymentData.return_url}" />
-                    <input type="hidden" name="website_url" value="${paymentData.website_url}" />
-                    <input type="hidden" name="amount" value="${paymentData.amount}" />
-                    <input type="hidden" name="purchase_order_id" value="${paymentData.purchase_order_id}" />
-                    <input type="hidden" name="purchase_order_name" value="${paymentData.purchase_order_name}" />
-                </form>
-                <script>
-                    setTimeout(function() {
-                        document.getElementById('khaltiForm').submit();
-                    }, 1000);
-                </script>
-            </body>
-            </html>
-        `;
-    };
-
     const generateFonepayFormHTML = () => {
         if (!paymentData) return "";
 
@@ -389,16 +315,20 @@ export default function PaymentScreen() {
     if (paymentInitiated && paymentData) {
         let gatewayTitle = "Payment";
         let formHTML = "";
+        let webViewSource = null;
 
         if (selectedGateway === "esewa") {
             gatewayTitle = "eSewa Payment";
             formHTML = generateEsewaFormHTML();
+            webViewSource = { html: formHTML };
         } else if (selectedGateway === "khalti") {
             gatewayTitle = "Khalti Payment";
-            formHTML = generateKhaltiFormHTML();
+            // Khalti e-Payment v2: directly load the payment_url returned by the API
+            webViewSource = { uri: paymentData.payment_url };
         } else if (selectedGateway === "fonepay") {
             gatewayTitle = "Fonepay Payment";
             formHTML = generateFonepayFormHTML();
+            webViewSource = { html: formHTML };
         }
 
         return (
@@ -422,7 +352,7 @@ export default function PaymentScreen() {
                 />
                 <WebView
                     ref={webViewRef}
-                    source={{ html: formHTML }}
+                    source={webViewSource}
                     style={{ flex: 1 }}
                     onNavigationStateChange={handleWebViewNavigationStateChange}
                     javaScriptEnabled={true}

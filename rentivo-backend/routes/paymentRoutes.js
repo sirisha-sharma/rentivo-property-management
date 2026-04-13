@@ -23,6 +23,7 @@ router.get("/:id", protect, getPaymentById);
 
 // Payment gateway verification endpoints (callbacks)
 router.get("/esewa/verify", verifyEsewaPayment);
+router.get("/khalti/verify", verifyKhaltiPayment);
 router.post("/khalti/verify", verifyKhaltiPayment);
 router.get("/fonepay/verify", verifyFonepayPayment);
 

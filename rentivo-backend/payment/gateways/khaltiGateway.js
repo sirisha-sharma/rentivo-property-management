@@ -54,13 +54,14 @@ export const initializeKhaltiPayment = async (amount, transactionId, invoiceId, 
 
         console.log("Khalti API Request:", {
             url: config.paymentUrl,
+            secretKeyPrefix: config.secretKey?.substring(0, 8) + "...",
             amount: amountInPaisa,
             transactionId,
         });
 
         const response = await axios.post(config.paymentUrl, payload, {
             headers: {
-                Authorization: `Key ${config.secretKey}`,
+                Authorization: `key ${config.secretKey}`,
                 "Content-Type": "application/json",
             },
         });
@@ -113,7 +114,7 @@ export const verifyKhaltiPayment = async (pidx) => {
             { pidx },
             {
                 headers: {
-                    Authorization: `Key ${config.secretKey}`,
+                    Authorization: `key ${config.secretKey}`,
                     "Content-Type": "application/json",
                 },
             }
