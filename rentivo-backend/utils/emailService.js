@@ -77,6 +77,86 @@ export const sendNotificationEmail = async ({ to, name, type, message }) => {
 };
 
 /**
+ * Send an email verification link to a newly registered user.
+ *
+ * @param {Object} params
+ * @param {string} params.to               - recipient email address
+ * @param {string} params.name             - recipient name
+ * @param {string} params.verificationUrl  - full URL the user must click
+ */
+export const sendVerificationEmail = async ({ to, name, verificationUrl }) => {
+    try {
+        if (!to) return;
+        const tx = getTransporter();
+        if (!tx) return;
+
+        const greeting = name ? `Hi ${name},` : "Hello,";
+        const fromName = process.env.SMTP_FROM_NAME || "Rentivo";
+        const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER;
+
+        const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify your email - Rentivo</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f6f8;font-family:Arial,Helvetica,sans-serif;color:#111827;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f8;padding:24px 0;">
+    <tr><td align="center">
+      <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+        <tr>
+          <td style="background-color:#2563eb;padding:20px 24px;color:#ffffff;">
+            <h1 style="margin:0;font-size:20px;font-weight:600;">Rentivo</h1>
+            <p style="margin:4px 0 0 0;font-size:13px;opacity:0.9;">Email Verification</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:24px;">
+            <p style="margin:0 0 12px 0;font-size:15px;">${greeting}</p>
+            <p style="margin:0 0 20px 0;font-size:15px;line-height:1.5;color:#374151;">
+              Thank you for registering with Rentivo. Please verify your email address by clicking the button below.
+            </p>
+            <a href="${verificationUrl}" style="display:inline-block;background-color:#2563eb;color:#ffffff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
+              Verify Email Address
+            </a>
+            <p style="margin:20px 0 0 0;font-size:13px;color:#6b7280;">
+              Or copy this link into your browser:<br>
+              <a href="${verificationUrl}" style="color:#2563eb;word-break:break-all;">${verificationUrl}</a>
+            </p>
+            <p style="margin:16px 0 0 0;font-size:13px;color:#6b7280;">This link expires in 24 hours.</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:16px 24px;border-top:1px solid #e5e7eb;background-color:#f9fafb;">
+            <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;">
+              If you did not create a Rentivo account, you can safely ignore this email.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+        const text = `${greeting}\n\nPlease verify your email address by visiting:\n${verificationUrl}\n\nThis link expires in 24 hours.\n\n— Rentivo`;
+
+        await tx.sendMail({
+            from: `"${fromName}" <${fromEmail}>`,
+            to,
+            subject: "Verify your email - Rentivo",
+            text,
+            html,
+        });
+
+        console.log(`[emailService] Verification email sent to ${to}`);
+    } catch (error) {
+        console.error("[emailService] Failed to send verification email:", error.message);
+    }
+};
+
+/**
  * Verify SMTP connection (useful at startup for debugging).
  */
 export const verifyEmailConnection = async () => {

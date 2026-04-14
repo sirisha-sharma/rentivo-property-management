@@ -24,6 +24,12 @@ const userSchema = mongoose.Schema(
       enum: ["landlord", "tenant"],
       default: "tenant",
     },
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    emailVerificationToken: String,
+    emailVerificationExpires: Date,
   },
   {
     timestamps: true,

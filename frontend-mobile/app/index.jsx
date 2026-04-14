@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -24,6 +25,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [role, setRole] = useState("landlord");
   const [error, setError] = useState("");
+  const [unverifiedEmail, setUnverifiedEmail] = useState("");
 
   const { login } = useContext(AuthContext);
   const router = useRouter();
@@ -55,7 +57,13 @@ export default function LoginScreen() {
       await login(response.data);
       router.replace("/dashboard");
     } catch (err) {
-      setError(err.response?.data?.message || "Invalid email or password");
+      if (err.response?.status === 403 && err.response?.data?.needsVerification) {
+        setUnverifiedEmail(err.response.data.email || email);
+        setError("Please verify your email before logging in.");
+      } else {
+        setUnverifiedEmail("");
+        setError(err.response?.data?.message || "Invalid email or password");
+      }
     } finally {
       setLoading(false);
     }
@@ -79,9 +87,23 @@ export default function LoginScreen() {
 
           {/* Error Banner */}
           {error ? (
-            <View className="flex-row items-center bg-red-50 border border-red-200 rounded-lg p-3 mb-4 gap-2">
-              <Ionicons name="alert-circle" size={16} color={COLORS.destructive} />
-              <Text className="text-destructive text-sm">{error}</Text>
+            <View className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+              <View className="flex-row items-center gap-2">
+                <Ionicons name="alert-circle" size={16} color={COLORS.destructive} />
+                <Text className="text-destructive text-sm flex-1">{error}</Text>
+              </View>
+              {unverifiedEmail ? (
+                <TouchableOpacity
+                  className="mt-2"
+                  onPress={() =>
+                    router.push(`/verify-email?email=${encodeURIComponent(unverifiedEmail)}`)
+                  }
+                >
+                  <Text className="text-primary text-sm font-medium">
+                    Resend verification email →
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
           ) : null}
 
@@ -159,7 +181,7 @@ export default function LoginScreen() {
               </View>
             </View>
 
-            <TouchableOpacity className="self-end">
+            <TouchableOpacity className="self-end" onPress={() => router.push("/forgot-password")}>
               <Text className="text-primary font-semibold text-sm">Forgot password?</Text>
             </TouchableOpacity>
 

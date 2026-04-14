@@ -32,7 +32,6 @@ export default function RegisterScreen() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
 
   const router = useRouter();
 
@@ -83,30 +82,13 @@ export default function RegisterScreen() {
         role: role,
       });
 
-      setShowSuccess(true);
-      setTimeout(() => {
-        router.replace("/");
-      }, 1500);
+      router.replace(`/verify-email?email=${encodeURIComponent(formData.email)}`);
     } catch (error) {
       Alert.alert("Error", error.response?.data?.message || "Registration failed");
     } finally {
       setLoading(false);
     }
   };
-
-  if (showSuccess) {
-    return (
-      <View className="flex-1 items-center justify-center p-6 bg-background">
-        <View className="w-20 h-20 rounded-full bg-green-100 items-center justify-center mb-4">
-          <Ionicons name="checkmark-circle" size={40} color={COLORS.success} />
-        </View>
-        <Text className="text-xl font-bold text-foreground mb-2">Account created!</Text>
-        <Text className="text-mutedForeground text-center">
-          Welcome to Rentivo. Redirecting you to login...
-        </Text>
-      </View>
-    );
-  }
 
   return (
     <SafeAreaView className="flex-1 bg-background">
