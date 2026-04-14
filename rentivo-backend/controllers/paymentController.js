@@ -4,6 +4,7 @@ import Tenant from "../models/tenantModel.js";
 import { initializeEsewaPayment, verifyEsewaSignature } from "../payment/gateways/esewaGateway.js";
 import { initializeKhaltiPayment, verifyKhaltiPayment as khaltiLookup } from "../payment/gateways/khaltiGateway.js";
 import { initializeFonepayPayment, verifyFonepayPayment as fonepayVerify } from "../payment/gateways/fonepayGateway.js";
+import { createNotification } from "./notificationController.js";
 import axios from "axios";
 
 /**
@@ -373,7 +374,21 @@ export const verifyEsewaPayment = async (req, res) => {
 
         console.log(`✓ eSewa payment verified successfully: ${transaction_uuid}`);
 
-        // Redirect to success page (will be implemented in frontend)
+        // Notify tenant and landlord
+        await createNotification(
+            payment.userId,
+            "payment",
+            `Your eSewa payment of NPR ${total_amount} has been confirmed. Your invoice has been marked as Paid.`
+        );
+        if (invoice?.landlordId) {
+            await createNotification(
+                invoice.landlordId,
+                "payment",
+                `Rent payment of NPR ${total_amount} received via eSewa from your tenant.`
+            );
+        }
+
+        // Redirect to success page
         return res.redirect(`/payment-success?txn=${transaction_uuid}&amount=${total_amount}`);
 
     } catch (error) {
@@ -499,6 +514,20 @@ export const verifyKhaltiPayment = async (req, res) => {
         }
 
         console.log(`✓ Khalti payment verified successfully: ${transactionId}`);
+
+        // Notify tenant and landlord
+        await createNotification(
+            payment.userId,
+            "payment",
+            `Your Khalti payment of NPR ${paidAmount} has been confirmed. Your invoice has been marked as Paid.`
+        );
+        if (invoice?.landlordId) {
+            await createNotification(
+                invoice.landlordId,
+                "payment",
+                `Rent payment of NPR ${paidAmount} received via Khalti from your tenant.`
+            );
+        }
 
         // Redirect to success page
         return res.redirect(`/payment-success?txn=${transactionId}&amount=${paidAmount}`);

@@ -48,7 +48,7 @@ app.use("/api/payments", paymentRoutes);
 app.use("/uploads", express.static("uploads"));
 
 // Serve public files (payment success/failure pages)
-app.use(express.static("public"));
+app.use(express.static("public", { extensions: ["html"] }));
 
 // Basic route
 app.get("/", (req, res) => {
