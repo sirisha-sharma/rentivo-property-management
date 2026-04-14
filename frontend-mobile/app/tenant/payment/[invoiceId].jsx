@@ -85,25 +85,6 @@ export default function PaymentScreen() {
         }
     };
 
-    const handleFonepayPayment = async () => {
-        try {
-            setProcessing(true);
-            const response = await initiatePayment(invoiceId, "fonepay");
-
-            if (response.success && response.gatewayData) {
-                setPaymentData(response.gatewayData);
-                setSelectedGateway("fonepay");
-                setPaymentInitiated(true);
-            } else {
-                Alert.alert("Error", "Failed to initialize payment");
-            }
-        } catch (error) {
-            Alert.alert("Error", error.message || "Failed to initiate payment");
-        } finally {
-            setProcessing(false);
-        }
-    };
-
     const generateEsewaFormHTML = () => {
         if (!paymentData) return "";
 
@@ -184,83 +165,6 @@ export default function PaymentScreen() {
         `;
     };
 
-    const generateFonepayFormHTML = () => {
-        if (!paymentData) return "";
-
-        return `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <style>
-                    body {
-                        margin: 0;
-                        padding: 20px;
-                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                        background: #f5f5f5;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        min-height: 100vh;
-                    }
-                    .container {
-                        background: white;
-                        padding: 30px;
-                        border-radius: 12px;
-                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                        text-align: center;
-                    }
-                    .logo {
-                        font-size: 24px;
-                        font-weight: bold;
-                        color: #DC2626;
-                        margin-bottom: 20px;
-                    }
-                    .message {
-                        color: #64748B;
-                        margin-bottom: 20px;
-                    }
-                    .loader {
-                        border: 3px solid #f3f3f3;
-                        border-top: 3px solid #DC2626;
-                        border-radius: 50%;
-                        width: 40px;
-                        height: 40px;
-                        animation: spin 1s linear infinite;
-                        margin: 20px auto;
-                    }
-                    @keyframes spin {
-                        0% { transform: rotate(0deg); }
-                        100% { transform: rotate(360deg); }
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="logo">Fonepay Payment</div>
-                    <div class="message">Redirecting to Fonepay...</div>
-                    <div class="loader"></div>
-                </div>
-                <form id="fonepayForm" action="${paymentData.PID}" method="POST">
-                    <input type="hidden" name="AMT" value="${paymentData.AMT}" />
-                    <input type="hidden" name="CRN" value="${paymentData.CRN}" />
-                    <input type="hidden" name="DV" value="${paymentData.DV}" />
-                    <input type="hidden" name="MD" value="${paymentData.MD}" />
-                    <input type="hidden" name="PRN" value="${paymentData.PRN}" />
-                    <input type="hidden" name="R1" value="${paymentData.R1}" />
-                    <input type="hidden" name="R2" value="${paymentData.R2}" />
-                    <input type="hidden" name="RU" value="${paymentData.RU}" />
-                </form>
-                <script>
-                    setTimeout(function() {
-                        document.getElementById('fonepayForm').submit();
-                    }, 1000);
-                </script>
-            </body>
-            </html>
-        `;
-    };
-
     const handleWebViewNavigationStateChange = (navState) => {
         const { url } = navState;
 
@@ -325,10 +229,6 @@ export default function PaymentScreen() {
             gatewayTitle = "Khalti Payment";
             // Khalti e-Payment v2: directly load the payment_url returned by the API
             webViewSource = { uri: paymentData.payment_url };
-        } else if (selectedGateway === "fonepay") {
-            gatewayTitle = "Fonepay Payment";
-            formHTML = generateFonepayFormHTML();
-            webViewSource = { html: formHTML };
         }
 
         return (
@@ -515,26 +415,6 @@ export default function PaymentScreen() {
                         </View>
                     </TouchableOpacity>
 
-                    <TouchableOpacity
-                        style={[styles.paymentOption, { marginTop: 12 }]}
-                        onPress={handleFonepayPayment}
-                        disabled={processing}
-                    >
-                        <View style={styles.paymentOptionContent}>
-                            <Ionicons name="wallet-outline" size={24} color="#DC2626" />
-                            <View style={{ flex: 1, marginLeft: 12 }}>
-                                <Text style={styles.paymentOptionTitle}>Fonepay</Text>
-                                <Text style={styles.paymentOptionSubtitle}>
-                                    Pay securely using Fonepay
-                                </Text>
-                            </View>
-                            {processing ? (
-                                <ActivityIndicator size="small" color={COLORS.primary} />
-                            ) : (
-                                <Ionicons name="chevron-forward" size={20} color={COLORS.mutedForeground} />
-                            )}
-                        </View>
-                    </TouchableOpacity>
                 </View>
 
                 {/* Payment Info */}

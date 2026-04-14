@@ -7,7 +7,6 @@ import {
     handlePaymentFailure,
     verifyEsewaPayment,
     verifyKhaltiPayment,
-    verifyFonepayPayment,
 } from "../controllers/paymentController.js";
 import { protect } from "../middleware/authMiddleware.js";
 
@@ -25,7 +24,6 @@ router.get("/:id", protect, getPaymentById);
 router.get("/esewa/verify", verifyEsewaPayment);
 router.get("/khalti/verify", verifyKhaltiPayment);
 router.post("/khalti/verify", verifyKhaltiPayment);
-router.get("/fonepay/verify", verifyFonepayPayment);
 
 // Payment failure handler
 router.get("/failure", handlePaymentFailure);

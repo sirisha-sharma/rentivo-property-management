@@ -3,9 +3,7 @@ import Invoice from "../models/invoiceModel.js";
 import Tenant from "../models/tenantModel.js";
 import { initializeEsewaPayment, verifyEsewaSignature } from "../payment/gateways/esewaGateway.js";
 import { initializeKhaltiPayment, verifyKhaltiPayment as khaltiLookup } from "../payment/gateways/khaltiGateway.js";
-import { initializeFonepayPayment, verifyFonepayPayment as fonepayVerify } from "../payment/gateways/fonepayGateway.js";
 import { createNotification } from "./notificationController.js";
-import axios from "axios";
 
 /**
  * @desc    Initiate payment for an invoice
@@ -17,10 +15,10 @@ export const initiatePayment = async (req, res) => {
         const { invoiceId, gateway } = req.body;
 
         // Validate gateway
-        if (!["esewa", "khalti", "fonepay"].includes(gateway)) {
+        if (!["esewa", "khalti"].includes(gateway)) {
             return res.status(400).json({
                 success: false,
-                message: "Invalid payment gateway. Choose: esewa, khalti, or fonepay"
+                message: "Invalid payment gateway. Choose: esewa or khalti"
             });
         }
 
@@ -77,13 +75,6 @@ export const initiatePayment = async (req, res) => {
                 invoiceId,
                 customerInfo
             );
-        } else if (gateway === "fonepay") {
-            gatewayResponse = initializeFonepayPayment(
-                invoice.amount,
-                transactionId,
-                invoiceId,
-                customerInfo
-            );
         }
 
         // Create payment record in database
@@ -127,7 +118,7 @@ export const getPaymentConfig = async (req, res) => {
     try {
         res.status(200).json({
             success: true,
-            availableGateways: ["esewa", "khalti", "fonepay"],
+            availableGateways: ["esewa", "khalti"],
             defaultGateway: "esewa",
         });
     } catch (error) {
@@ -541,158 +532,3 @@ export const verifyKhaltiPayment = async (req, res) => {
     }
 };
 
-/**
- * @desc    Verify Fonepay payment
- * @route   GET /api/payments/fonepay/verify
- * @access  Public (Payment gateway callback)
- */
-export const verifyFonepayPayment = async (req, res) => {
-    try {
-        // Fonepay sends these parameters as query params
-        const { PRN, UID, BC, DV, R1, R2 } = req.query;
-
-        if (!PRN || !UID) {
-            console.error("Fonepay verification failed: Missing PRN or UID");
-            return res.status(400).json({
-                success: false,
-                message: "Invalid verification data - missing PRN or UID"
-            });
-        }
-
-        console.log("Fonepay callback received:", {
-            PRN,
-            UID,
-            BC,
-            R1,
-            R2,
-        });
-
-        // Find the payment record using PRN (which is our transactionId)
-        const payment = await Payment.findOne({ transactionId: PRN })
-            .populate("invoiceId")
-            .populate("userId");
-
-        if (!payment) {
-            console.error(`Payment record not found for transaction: ${PRN}`);
-            return res.status(404).json({
-                success: false,
-                message: "Payment record not found"
-            });
-        }
-
-        // Check if payment is already processed
-        if (payment.status === "completed") {
-            console.log(`Payment already processed: ${PRN}`);
-            return res.redirect(`/payment-success?txn=${PRN}&amount=${payment.amount}`);
-        }
-
-        // Call Fonepay verification API
-        let verificationResult;
-        try {
-            const verificationData = fonepayVerify(PRN, UID, payment.amount);
-
-            console.log("Calling Fonepay verification API:", {
-                url: verificationData.verifyUrl,
-                payload: verificationData.payload,
-            });
-
-            const response = await axios.post(
-                verificationData.verifyUrl,
-                verificationData.payload,
-                {
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                }
-            );
-
-            verificationResult = response.data;
-            console.log("Fonepay verification API response:", verificationResult);
-        } catch (error) {
-            console.error("Fonepay verification API failed:", error.response?.data || error.message);
-
-            payment.status = "failed";
-            payment.gatewayResponse = {
-                error: error.response?.data || error.message,
-                callback_data: { PRN, UID, BC, R1, R2 },
-            };
-            await payment.save();
-
-            return res.status(500).json({
-                success: false,
-                message: "Failed to verify payment with Fonepay"
-            });
-        }
-
-        // Check Fonepay verification response
-        // Fonepay typically returns: success: true/false, message, etc.
-        const isSuccess = verificationResult.success === true ||
-                         verificationResult.status === "success" ||
-                         verificationResult.responseCode === "00";
-
-        if (!isSuccess) {
-            console.log(`Fonepay payment verification failed. Response:`, verificationResult);
-
-            payment.status = "failed";
-            payment.gatewayResponse = {
-                verification: verificationResult,
-                callback_data: { PRN, UID, BC, R1, R2 },
-            };
-            await payment.save();
-
-            return res.redirect(`/payment-failed?status=failed&txn=${PRN}`);
-        }
-
-        // Verify amount if provided in response
-        if (verificationResult.amount) {
-            const verifiedAmount = parseFloat(verificationResult.amount);
-            if (verifiedAmount !== payment.amount) {
-                console.error("Amount mismatch", {
-                    expected: payment.amount,
-                    received: verifiedAmount,
-                });
-
-                payment.status = "failed";
-                payment.gatewayResponse = {
-                    verification: verificationResult,
-                    callback_data: { PRN, UID, BC, R1, R2 },
-                };
-                await payment.save();
-
-                return res.status(400).json({
-                    success: false,
-                    message: "Payment amount mismatch"
-                });
-            }
-        }
-
-        // All verifications passed - update payment status
-        payment.status = "completed";
-        payment.gatewayResponse = {
-            verification: verificationResult,
-            callback_data: { PRN, UID, BC, R1, R2 },
-        };
-        await payment.save();
-
-        // Update invoice status to Paid
-        const invoice = await Invoice.findById(payment.invoiceId);
-        if (invoice) {
-            invoice.status = "Paid";
-            invoice.paidDate = new Date();
-            await invoice.save();
-            console.log(`Invoice ${invoice.invoiceNumber} marked as Paid`);
-        }
-
-        console.log(`✓ Fonepay payment verified successfully: ${PRN}`);
-
-        // Redirect to success page
-        return res.redirect(`/payment-success?txn=${PRN}&amount=${payment.amount}`);
-
-    } catch (error) {
-        console.error("Fonepay verification error:", error);
-        res.status(500).json({
-            success: false,
-            message: error.message || "Payment verification failed"
-        });
-    }
-};
