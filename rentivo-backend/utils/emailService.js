@@ -157,6 +157,84 @@ export const sendVerificationEmail = async ({ to, name, verificationUrl }) => {
 };
 
 /**
+ * Send a password reset code to the user.
+ * The raw token is displayed prominently so the user can copy it into the app.
+ *
+ * @param {Object} params
+ * @param {string} params.to        - recipient email address
+ * @param {string} params.name      - recipient name
+ * @param {string} params.resetToken - raw reset token to display in the email
+ */
+export const sendPasswordResetEmail = async ({ to, name, resetToken }) => {
+    try {
+        if (!to) return;
+        const tx = getTransporter();
+        if (!tx) return;
+
+        const greeting = name ? `Hi ${name},` : "Hello,";
+        const fromName = process.env.SMTP_FROM_NAME || "Rentivo";
+        const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER;
+
+        const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reset your password - Rentivo</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f6f8;font-family:Arial,Helvetica,sans-serif;color:#111827;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f8;padding:24px 0;">
+    <tr><td align="center">
+      <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+        <tr>
+          <td style="background-color:#2563eb;padding:20px 24px;color:#ffffff;">
+            <h1 style="margin:0;font-size:20px;font-weight:600;">Rentivo</h1>
+            <p style="margin:4px 0 0 0;font-size:13px;opacity:0.9;">Password Reset</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:24px;">
+            <p style="margin:0 0 12px 0;font-size:15px;">${greeting}</p>
+            <p style="margin:0 0 16px 0;font-size:15px;line-height:1.5;color:#374151;">
+              We received a request to reset your Rentivo password. Copy the reset code below and paste it into the app.
+            </p>
+            <div style="background-color:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:16px;text-align:center;margin-bottom:16px;">
+              <p style="margin:0 0 6px 0;font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;">Your reset code</p>
+              <p style="margin:0;font-size:13px;font-family:monospace;color:#0f172a;word-break:break-all;">${resetToken}</p>
+            </div>
+            <p style="margin:0;font-size:13px;color:#6b7280;">This code expires in <strong>1 hour</strong>. If you did not request a password reset, please ignore this email — your password will not change.</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:16px 24px;border-top:1px solid #e5e7eb;background-color:#f9fafb;">
+            <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;">
+              This is an automated message from Rentivo Property Management. Do not reply.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+        const text = `${greeting}\n\nYour Rentivo password reset code is:\n\n${resetToken}\n\nThis code expires in 1 hour.\n\nIf you did not request a password reset, please ignore this email.\n\n— Rentivo`;
+
+        await tx.sendMail({
+            from: `"${fromName}" <${fromEmail}>`,
+            to,
+            subject: "Reset your password - Rentivo",
+            text,
+            html,
+        });
+
+        console.log(`[emailService] Password reset email sent to ${to}`);
+    } catch (error) {
+        console.error("[emailService] Failed to send password reset email:", error.message);
+    }
+};
+
+/**
  * Verify SMTP connection (useful at startup for debugging).
  */
 export const verifyEmailConnection = async () => {

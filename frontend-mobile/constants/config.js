@@ -1,7 +1,7 @@
 import { Platform } from "react-native";
 
 // Update this if your local IP changes (for physical device testing)
-const LAN_IP = "192.168.0.10";
+const LAN_IP = "192.168.1.69";
 
 // Base URL for the server (without /api)
 export const BASE_URL =
