@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from "react-native";
 import { InvoiceContext } from "../../../context/InvoiceContext";
 import { useRouter } from "expo-router";
@@ -6,15 +6,24 @@ import { Ionicons } from "@expo/vector-icons";
 import { TopBar } from "../../../components/TopBar";
 import { StatusBadge } from "../../../components/StatusBadge";
 import { COLORS } from "../../../constants/theme";
+import { useFocusEffect } from "@react-navigation/native";
 
 export default function InvoiceList() {
     const { invoices, fetchInvoices, updateInvoiceStatus, deleteInvoice, loading } = useContext(InvoiceContext);
     const router = useRouter();
     const [filter, setFilter] = useState("all");
 
-    useEffect(() => {
-        fetchInvoices();
-    }, []);
+    useFocusEffect(
+        React.useCallback(() => {
+            void fetchInvoices();
+
+            const intervalId = setInterval(() => {
+                void fetchInvoices();
+            }, 5000);
+
+            return () => clearInterval(intervalId);
+        }, [fetchInvoices])
+    );
 
     const filteredInvoices = invoices.filter((inv) => {
         if (filter === "all") return true;
@@ -32,7 +41,7 @@ export default function InvoiceList() {
                     onPress: async () => {
                         try {
                             await updateInvoiceStatus(invoice._id, "Paid");
-                        } catch (e) {
+                        } catch (_error) {
                             Alert.alert("Error", "Failed to update status");
                         }
                     },
@@ -53,7 +62,7 @@ export default function InvoiceList() {
                     onPress: async () => {
                         try {
                             await deleteInvoice(invoice._id);
-                        } catch (e) {
+                        } catch (_error) {
                             Alert.alert("Error", "Failed to delete invoice");
                         }
                     },

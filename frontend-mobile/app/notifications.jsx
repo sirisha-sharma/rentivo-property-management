@@ -1,17 +1,26 @@
-import React, { useContext, useEffect } from "react";
+import React, { useContext } from "react";
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert } from "react-native";
 import { NotificationContext } from "../context/NotificationContext";
 import { Ionicons } from "@expo/vector-icons";
 import { TopBar } from "../components/TopBar";
 import { COLORS } from "../constants/theme";
+import { useFocusEffect } from "@react-navigation/native";
 
 export default function NotificationsScreen() {
     const { notifications, loading, fetchNotifications, markAsRead, markAllAsRead, deleteNotification } =
         useContext(NotificationContext);
 
-    useEffect(() => {
-        fetchNotifications();
-    }, []);
+    useFocusEffect(
+        React.useCallback(() => {
+            void fetchNotifications();
+
+            const intervalId = setInterval(() => {
+                void fetchNotifications();
+            }, 5000);
+
+            return () => clearInterval(intervalId);
+        }, [fetchNotifications])
+    );
 
     const getIcon = (type) => {
         switch (type) {
@@ -23,6 +32,8 @@ export default function NotificationsScreen() {
                 return { name: "person-add-outline", color: COLORS.success };
             case "document":
                 return { name: "folder-open-outline", color: "#0D9488" };
+            case "payment":
+                return { name: "card-outline", color: COLORS.primary };
             default:
                 return { name: "notifications-outline", color: COLORS.primary };
         }
@@ -87,7 +98,7 @@ export default function NotificationsScreen() {
                     <View style={styles.emptyContainer}>
                         <Ionicons name="notifications-off-outline" size={48} color={COLORS.border} />
                         <Text style={styles.emptyTitle}>No notifications</Text>
-                        <Text style={styles.emptyText}>You're all caught up!</Text>
+                        <Text style={styles.emptyText}>You&apos;re all caught up!</Text>
                     </View>
                 }
                 refreshing={loading}

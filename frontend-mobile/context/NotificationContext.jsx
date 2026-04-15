@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext } from "react";
+import React, { createContext, useCallback, useState, useContext } from "react";
 import axios from "axios";
 import { AuthContext } from "./AuthContext";
 import { API_BASE_URL } from "../constants/config";
@@ -13,25 +13,26 @@ export const NotificationProvider = ({ children }) => {
 
     const API_URL = `${API_BASE_URL}/notifications`;
 
-    const getAuthHeader = () => ({
+    const getAuthHeader = useCallback(() => ({
         headers: { Authorization: `Bearer ${user?.token}` },
-    });
+    }), [user?.token]);
 
     // Fetch all notifications
-    const fetchNotifications = async () => {
+    const fetchNotifications = useCallback(async () => {
         setLoading(true);
         try {
             const response = await axios.get(API_URL, getAuthHeader());
             setNotifications(response.data);
+            return response.data;
         } catch (err) {
             console.log("Failed to fetch notifications:", err);
         } finally {
             setLoading(false);
         }
-    };
+    }, [API_URL, getAuthHeader]);
 
     // Mark one as read
-    const markAsRead = async (id) => {
+    const markAsRead = useCallback(async (id) => {
         try {
             await axios.put(`${API_URL}/${id}/read`, {}, getAuthHeader());
             setNotifications((prev) =>
@@ -40,27 +41,27 @@ export const NotificationProvider = ({ children }) => {
         } catch (err) {
             console.log("Failed to mark as read:", err);
         }
-    };
+    }, [API_URL, getAuthHeader]);
 
     // Mark all as read
-    const markAllAsRead = async () => {
+    const markAllAsRead = useCallback(async () => {
         try {
             await axios.put(`${API_URL}/read-all`, {}, getAuthHeader());
             setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
         } catch (err) {
             console.log("Failed to mark all as read:", err);
         }
-    };
+    }, [API_URL, getAuthHeader]);
 
     // Delete a notification
-    const deleteNotification = async (id) => {
+    const deleteNotification = useCallback(async (id) => {
         try {
             await axios.delete(`${API_URL}/${id}`, getAuthHeader());
             setNotifications((prev) => prev.filter((n) => n._id !== id));
         } catch (err) {
             console.log("Failed to delete notification:", err);
         }
-    };
+    }, [API_URL, getAuthHeader]);
 
     // Unread count
     const unreadCount = notifications.filter((n) => !n.read).length;

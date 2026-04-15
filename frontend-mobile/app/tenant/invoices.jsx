@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
 import { InvoiceContext } from "../../context/InvoiceContext";
 import { Ionicons } from "@expo/vector-icons";
@@ -6,15 +6,24 @@ import { TopBar } from "../../components/TopBar";
 import { StatusBadge } from "../../components/StatusBadge";
 import { COLORS } from "../../constants/theme";
 import { useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 
 export default function TenantInvoices() {
     const { invoices, fetchInvoices, loading } = useContext(InvoiceContext);
     const [filter, setFilter] = useState("all");
     const router = useRouter();
 
-    useEffect(() => {
-        fetchInvoices();
-    }, []);
+    useFocusEffect(
+        React.useCallback(() => {
+            void fetchInvoices();
+
+            const intervalId = setInterval(() => {
+                void fetchInvoices();
+            }, 5000);
+
+            return () => clearInterval(intervalId);
+        }, [fetchInvoices])
+    );
 
     const filteredInvoices = invoices.filter((inv) => {
         if (filter === "all") return true;
@@ -104,7 +113,7 @@ export default function TenantInvoices() {
                         <View style={styles.emptyContainer}>
                             <Ionicons name="document-text" size={48} color={COLORS.border} />
                             <Text style={styles.emptyTitle}>No invoices</Text>
-                            <Text style={styles.emptyText}>You don't have any invoices yet.</Text>
+                            <Text style={styles.emptyText}>You don&apos;t have any invoices yet.</Text>
                         </View>
                     }
                     refreshing={loading}

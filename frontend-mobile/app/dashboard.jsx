@@ -1,7 +1,8 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useCallback, useContext, useState } from "react";
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import { AuthContext } from "../context/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../constants/theme";
@@ -42,34 +43,46 @@ export default function DashboardScreen() {
   // Loading state for API calls
   const [loading, setLoading] = useState(true);
 
-  // Fetch dashboard statistics based on user role
-  useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        if (user?.role === "landlord") {
-          // Fetch landlord stats from API
-          const response = await axios.get(`${API_BASE_URL}/dashboard/stats`, {
-            headers: { Authorization: `Bearer ${user.token}` },
-          });
-          setStats(response.data);
-        } else {
-          // Fetch tenant stats from API
-          const response = await axios.get(`${API_BASE_URL}/dashboard/tenant-stats`, {
-            headers: { Authorization: `Bearer ${user.token}` },
-          });
-          setTenantStats(response.data);
-        }
-      } catch (error) {
-        console.log("Failed to fetch stats:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (user?.token) {
-      fetchStats();
-      fetchNotifications();
+  const fetchStats = useCallback(async () => {
+    if (!user?.token) {
+      return;
     }
-  }, [user]);
+
+    try {
+      setLoading(true);
+      if (user.role === "landlord") {
+        // Fetch landlord stats from API
+        const response = await axios.get(`${API_BASE_URL}/dashboard/stats`, {
+          headers: { Authorization: `Bearer ${user.token}` },
+        });
+        setStats(response.data);
+      } else {
+        // Fetch tenant stats from API
+        const response = await axios.get(`${API_BASE_URL}/dashboard/tenant-stats`, {
+          headers: { Authorization: `Bearer ${user.token}` },
+        });
+        setTenantStats(response.data);
+      }
+    } catch (error) {
+      console.log("Failed to fetch stats:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.role, user?.token]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void fetchStats();
+      void fetchNotifications();
+
+      const intervalId = setInterval(() => {
+        void fetchStats();
+        void fetchNotifications();
+      }, 5000);
+
+      return () => clearInterval(intervalId);
+    }, [fetchNotifications, fetchStats])
+  );
 
   // Handle user logout
   const handleLogout = async () => {

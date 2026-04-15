@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext } from "react";
+import React, { createContext, useCallback, useState, useContext } from "react";
 import axios from "axios";
 import { AuthContext } from "./AuthContext";
 import { API_BASE_URL } from "../constants/config";
@@ -23,38 +23,39 @@ export const InvoiceProvider = ({ children }) => {
     const API_URL = `${API_BASE_URL}/invoices`;
 
     // Helper function to get authorization header with JWT token
-    const getAuthHeader = () => {
+    const getAuthHeader = useCallback(() => {
         return {
             headers: {
                 Authorization: `Bearer ${user?.token}`,
             },
         };
-    };
+    }, [user?.token]);
 
     // Fetch all invoices from API
     // For landlords: returns invoices they created
     // For tenants: returns invoices issued to them
-    const fetchInvoices = async () => {
+    const fetchInvoices = useCallback(async () => {
         setLoading(true);
         try {
             const response = await axios.get(API_URL, getAuthHeader());
             setInvoices(response.data);
             setError(null);
+            return response.data;
         } catch (err) {
             console.log(err);
             setError(err.response?.data?.message || "Failed to fetch invoices");
         } finally {
             setLoading(false);
         }
-    };
+    }, [API_URL, getAuthHeader]);
 
     // Create a new invoice (landlord only)
     // Adds the new invoice to the local state after creation
-    const createInvoice = async (invoiceData) => {
+    const createInvoice = useCallback(async (invoiceData) => {
         setLoading(true);
         try {
             const response = await axios.post(API_URL, invoiceData, getAuthHeader());
-            setInvoices([...invoices, response.data]);
+            setInvoices((prev) => [...prev, response.data]);
             setError(null);
             return response.data;
         } catch (err) {
@@ -64,14 +65,14 @@ export const InvoiceProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [API_URL, getAuthHeader]);
 
     // Update invoice status (landlord only)
     // Allowed statuses: Pending, Paid, Overdue
-    const updateInvoiceStatus = async (id, status) => {
+    const updateInvoiceStatus = useCallback(async (id, status) => {
         try {
             const response = await axios.put(`${API_URL}/${id}/status`, { status }, getAuthHeader());
-            setInvoices(invoices.map((inv) => (inv._id === id ? response.data : inv)));
+            setInvoices((prev) => prev.map((inv) => (inv._id === id ? response.data : inv)));
             setError(null);
             return response.data;
         } catch (err) {
@@ -79,21 +80,21 @@ export const InvoiceProvider = ({ children }) => {
             setError(err.response?.data?.message || "Failed to update invoice status");
             throw err;
         }
-    };
+    }, [API_URL, getAuthHeader]);
 
     // Delete an invoice (landlord only)
     // Removes the invoice from local state after deletion
-    const deleteInvoice = async (id) => {
+    const deleteInvoice = useCallback(async (id) => {
         try {
             await axios.delete(`${API_URL}/${id}`, getAuthHeader());
-            setInvoices(invoices.filter((inv) => inv._id !== id));
+            setInvoices((prev) => prev.filter((inv) => inv._id !== id));
             setError(null);
         } catch (err) {
             console.log(err);
             setError(err.response?.data?.message || "Failed to delete invoice");
             throw err;
         }
-    };
+    }, [API_URL, getAuthHeader]);
 
     // Provide invoice state and methods to child components
     return (

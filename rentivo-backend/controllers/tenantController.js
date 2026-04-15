@@ -1,6 +1,7 @@
 import Tenant from "../models/tenantModel.js";
 import User from "../models/userModel.js";
 import Property from "../models/propertyModel.js";
+import { createNotification } from "./notificationController.js";
 
 // Invite or add a tenant to a property
 export const inviteTenant = async (req, res) => {
@@ -41,6 +42,12 @@ export const inviteTenant = async (req, res) => {
             leaseEnd,
             status: "Pending",
         });
+
+        await createNotification(
+            user._id,
+            "tenant",
+            `You have a new rental invitation for ${property.title}. Review it in Rentivo to accept or reject.`
+        );
 
         res.status(201).json(tenant);
     } catch (error) {
@@ -98,6 +105,15 @@ export const acceptInvitation = async (req, res) => {
         tenant.status = "Active";
         await tenant.save();
 
+        const property = await Property.findById(tenant.propertyId).select("title landlordId");
+        if (property?.landlordId) {
+            await createNotification(
+                property.landlordId,
+                "tenant",
+                `${req.user.name} accepted the rental invitation for ${property.title}.`
+            );
+        }
+
         res.status(200).json(tenant);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -118,7 +134,17 @@ export const rejectInvitation = async (req, res) => {
             return res.status(401).json({ message: "Not authorized to reject this invitation" });
         }
 
+        const property = await Property.findById(tenant.propertyId).select("title landlordId");
+
         await tenant.deleteOne();
+
+        if (property?.landlordId) {
+            await createNotification(
+                property.landlordId,
+                "tenant",
+                `${req.user.name} rejected the rental invitation for ${property.title}.`
+            );
+        }
 
         res.status(200).json({ message: "Invitation rejected" });
     } catch (error) {
@@ -139,6 +165,12 @@ export const deleteTenant = async (req, res) => {
         if (tenant.propertyId.landlordId.toString() !== req.user._id.toString()) {
             return res.status(401).json({ message: "Not authorized to remove this tenant" });
         }
+
+        await createNotification(
+            tenant.userId,
+            "tenant",
+            `Your tenancy for ${tenant.propertyId.title} has been removed by the landlord.`
+        );
 
         await tenant.deleteOne();
 

@@ -16,12 +16,15 @@ import { COLORS } from "../../../constants/theme";
 import { initiatePayment } from "../../../api/payment";
 import { getInvoiceById } from "../../../api/invoice";
 import { InvoiceContext } from "../../../context/InvoiceContext";
+import { NotificationContext } from "../../../context/NotificationContext";
 
 export default function PaymentScreen() {
     const { invoiceId } = useLocalSearchParams();
     const router = useRouter();
     const webViewRef = useRef(null);
+    const handledGatewayResultRef = useRef(false);
     const { fetchInvoices } = useContext(InvoiceContext);
+    const { fetchNotifications } = useContext(NotificationContext);
 
     const [invoice, setInvoice] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -30,11 +33,33 @@ export default function PaymentScreen() {
     const [processing, setProcessing] = useState(false);
     const [selectedGateway, setSelectedGateway] = useState(null);
 
-    useEffect(() => {
-        fetchInvoiceDetails();
-    }, [invoiceId]);
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-    const fetchInvoiceDetails = async () => {
+    const getInvoiceIdFromUrl = (url) => {
+        try {
+            return new URL(url).searchParams.get("invoice");
+        } catch (_error) {
+            return null;
+        }
+    };
+
+    const getFailureReasonFromUrl = (url) => {
+        try {
+            const params = new URL(url).searchParams;
+            const reason = params.get("reason");
+            const status = params.get("status");
+            if (reason === "signature_mismatch") return "Payment verification failed. Please try again.";
+            if (reason === "amount_mismatch") return "Payment amount mismatch. Please try again.";
+            if (reason === "cancelled") return "Payment was cancelled.";
+            if (reason === "lookup_failed") return "Could not verify payment with the provider. Please try again.";
+            if (status) return `Payment status: ${status}. Please try again.`;
+            return "Your payment could not be processed. Please try again.";
+        } catch (_error) {
+            return "Your payment could not be processed. Please try again.";
+        }
+    };
+
+    const fetchInvoiceDetails = React.useCallback(async () => {
         try {
             setLoading(true);
             const data = await getInvoiceById(invoiceId);
@@ -45,11 +70,16 @@ export default function PaymentScreen() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [invoiceId, router]);
+
+    useEffect(() => {
+        void fetchInvoiceDetails();
+    }, [fetchInvoiceDetails]);
 
     const handleEsewaPayment = async () => {
         try {
             setProcessing(true);
+            handledGatewayResultRef.current = false;
             const response = await initiatePayment(invoiceId, "esewa");
 
             if (response.success && response.gatewayData) {
@@ -69,6 +99,7 @@ export default function PaymentScreen() {
     const handleKhaltiPayment = async () => {
         try {
             setProcessing(true);
+            handledGatewayResultRef.current = false;
             const response = await initiatePayment(invoiceId, "khalti");
 
             if (response.success && response.gatewayData) {
@@ -165,43 +196,179 @@ export default function PaymentScreen() {
         `;
     };
 
-    const handleWebViewNavigationStateChange = (navState) => {
-        const { url } = navState;
+    const syncSuccessfulPaymentState = async (targetInvoiceId) => {
+        const invoiceToRefresh = targetInvoiceId || invoiceId;
+        let latestInvoice = null;
 
-        // Check if returned from payment gateway
-        if (url.includes("/payment-success") || url.includes("/payment-failed")) {
+        for (let attempt = 0; attempt < 5; attempt++) {
+            const data = await getInvoiceById(invoiceToRefresh);
+            latestInvoice = data.invoice;
+            setInvoice(data.invoice);
+
+            if (data.invoice?.status === "Paid") {
+                break;
+            }
+
+            await sleep(1000);
+        }
+
+        if (latestInvoice?.status !== "Paid") {
+            throw new Error("Invoice status is still pending after payment verification");
+        }
+
+        await Promise.allSettled([fetchInvoices(), fetchNotifications()]);
+    };
+
+    const handleSuccessfulGatewayReturn = async (url) => {
+        setPaymentInitiated(false);
+        setProcessing(true);
+
+        try {
+            await syncSuccessfulPaymentState(getInvoiceIdFromUrl(url));
+
+            Alert.alert(
+                "Payment Successful",
+                "Your payment has been processed successfully and the invoice is now marked as Paid.",
+                [
+                    {
+                        text: "OK",
+                        onPress: () => {
+                            router.replace("/tenant/invoices");
+                        },
+                    },
+                ]
+            );
+        } catch (_error) {
+            Alert.alert(
+                "Payment Successful",
+                "Your payment was confirmed, but the latest status is still syncing. Please reopen your invoices in a moment.",
+                [
+                    {
+                        text: "OK",
+                        onPress: () => {
+                            router.replace("/tenant/invoices");
+                        },
+                    },
+                ]
+            );
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    const handleGatewayResult = (url) => {
+        if (handledGatewayResultRef.current) return;
+        handledGatewayResultRef.current = true;
+
+        if (url.includes("/payment-success")) {
+            void handleSuccessfulGatewayReturn(url);
+        } else {
+            const reason = getFailureReasonFromUrl(url);
             setPaymentInitiated(false);
+            Alert.alert("Payment Failed", reason, [
+                {
+                    text: "OK",
+                    onPress: () => {
+                        handledGatewayResultRef.current = false;
+                        setPaymentInitiated(false);
+                    },
+                },
+            ]);
+        }
+    };
 
-            if (url.includes("/payment-success")) {
-                // Refresh invoices to show updated status
-                fetchInvoices();
+    /**
+     * Intercept the gateway callback URL and hit it from React Native
+     * directly. This bypasses ngrok's free-tier interstitial page which
+     * blocks browser-initiated requests and prevents the backend from
+     * ever receiving the payment verification callback.
+     */
+    const verifyPaymentDirectly = async (verifyUrl) => {
+        if (handledGatewayResultRef.current) return;
+        handledGatewayResultRef.current = true;
 
+        setPaymentInitiated(false);
+        setProcessing(true);
+
+        try {
+            // fetch from RN native networking (not WebView) — CORS and
+            // ngrok interstitial do not apply.
+            const response = await fetch(verifyUrl, {
+                headers: { "ngrok-skip-browser-warning": "true" },
+                redirect: "follow",
+            });
+
+            // After redirects, response.url is the final destination
+            // e.g. https://host/payment-success?txn=...&invoice=...
+            const finalUrl = response.url || "";
+
+            if (finalUrl.includes("/payment-success")) {
+                await syncSuccessfulPaymentState(getInvoiceIdFromUrl(finalUrl));
                 Alert.alert(
                     "Payment Successful",
-                    "Your payment has been processed successfully! Invoice status will update shortly.",
-                    [
-                        {
-                            text: "OK",
-                            onPress: () => {
-                                // Navigate back to invoices
-                                router.replace("/tenant/invoices");
-                            },
-                        },
-                    ]
+                    "Your payment has been processed successfully and the invoice is now marked as Paid.",
+                    [{ text: "OK", onPress: () => router.replace("/tenant/invoices") }]
                 );
-            } else {
-                Alert.alert(
-                    "Payment Failed",
-                    "Your payment could not be processed. Please try again.",
-                    [
-                        {
-                            text: "OK",
-                            onPress: () => setPaymentInitiated(false),
+            } else if (finalUrl.includes("/payment-failed")) {
+                const reason = getFailureReasonFromUrl(finalUrl);
+                setProcessing(false);
+                Alert.alert("Payment Failed", reason, [
+                    {
+                        text: "OK",
+                        onPress: () => {
+                            handledGatewayResultRef.current = false;
                         },
-                    ]
+                    },
+                ]);
+                return;
+            } else {
+                // Redirect URL not recognised — fall back to polling
+                await syncSuccessfulPaymentState();
+                Alert.alert(
+                    "Payment Successful",
+                    "Your payment has been processed successfully.",
+                    [{ text: "OK", onPress: () => router.replace("/tenant/invoices") }]
                 );
             }
+        } catch (_error) {
+            Alert.alert(
+                "Payment Processing",
+                "Your payment is being processed. Please check your invoices in a moment.",
+                [{ text: "OK", onPress: () => router.replace("/tenant/invoices") }]
+            );
+        } finally {
+            setProcessing(false);
         }
+    };
+
+    const handleWebViewNavigationStateChange = (navState) => {
+        const { url } = navState;
+        if (url.includes("/payment-success") || url.includes("/payment-failed")) {
+            handleGatewayResult(url);
+        }
+    };
+
+    const handleShouldStartLoadWithRequest = (request) => {
+        const { url } = request;
+
+        // Final result pages — handle directly
+        if (url.includes("/payment-success") || url.includes("/payment-failed")) {
+            handleGatewayResult(url);
+            return false;
+        }
+
+        // Intercept verify / failure callbacks heading to our backend.
+        // Make the request from RN so ngrok interstitial cannot block it.
+        if (
+            url.includes("/api/payments/esewa/verify") ||
+            url.includes("/api/payments/khalti/verify") ||
+            url.includes("/api/payments/failure")
+        ) {
+            void verifyPaymentDirectly(url);
+            return false;
+        }
+
+        return true;
     };
 
     if (loading) {
@@ -244,7 +411,10 @@ export default function PaymentScreen() {
                                 { text: "No", style: "cancel" },
                                 {
                                     text: "Yes",
-                                    onPress: () => setPaymentInitiated(false),
+                                    onPress: () => {
+                                        handledGatewayResultRef.current = false;
+                                        setPaymentInitiated(false);
+                                    },
                                 },
                             ]
                         );
@@ -255,6 +425,7 @@ export default function PaymentScreen() {
                     source={webViewSource}
                     style={{ flex: 1 }}
                     onNavigationStateChange={handleWebViewNavigationStateChange}
+                    onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
                     javaScriptEnabled={true}
                     domStorageEnabled={true}
                     startInLoadingState={true}

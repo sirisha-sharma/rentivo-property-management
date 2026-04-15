@@ -18,7 +18,6 @@ router.get("/config", protect, getPaymentConfig);
 
 // Payment history
 router.get("/history", protect, getPaymentHistory);
-router.get("/:id", protect, getPaymentById);
 
 // Payment gateway verification endpoints (callbacks)
 router.get("/esewa/verify", verifyEsewaPayment);
@@ -27,5 +26,8 @@ router.post("/khalti/verify", verifyKhaltiPayment);
 
 // Payment failure handler
 router.get("/failure", handlePaymentFailure);
+
+// Payment detail
+router.get("/:id", protect, getPaymentById);
 
 export default router;

@@ -17,11 +17,15 @@ const getTransporter = () => {
     const host = process.env.SMTP_HOST;
     const port = parseInt(process.env.SMTP_PORT || "587", 10);
     const user = process.env.SMTP_USER;
-    const pass = process.env.SMTP_PASS;
+    // Gmail App Passwords are displayed with spaces (e.g. "mhnw aais gpct viyj")
+    // but the spaces are purely cosmetic — the actual password has no spaces.
+    // Strip any whitespace so users can paste the password verbatim from Gmail.
+    const pass = (process.env.SMTP_PASS || "").replace(/\s+/g, "");
 
     if (!host || !user || !pass) {
         console.warn(
-            "[emailService] SMTP credentials not fully configured. Emails will be skipped."
+            "[emailService] SMTP credentials not fully configured. Emails will be skipped.",
+            { hasHost: !!host, hasUser: !!user, hasPass: !!pass }
         );
         return null;
     }
@@ -32,6 +36,10 @@ const getTransporter = () => {
         secure: port === 465, // true for 465, false for other ports
         auth: { user, pass },
     });
+
+    console.log(
+        `[emailService] Transporter initialized: ${user} via ${host}:${port}`
+    );
 
     return transporter;
 };

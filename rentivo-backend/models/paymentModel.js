@@ -23,7 +23,7 @@ const paymentSchema = mongoose.Schema(
         },
         gateway: {
             type: String,
-            enum: ["esewa", "khalti", "fonepay"],
+            enum: ["esewa", "khalti"],
             required: true,
         },
         transactionId: {
@@ -38,6 +38,9 @@ const paymentSchema = mongoose.Schema(
         },
         gatewayResponse: {
             type: mongoose.Schema.Types.Mixed,
+        },
+        failureReason: {
+            type: String,
         },
     },
     {

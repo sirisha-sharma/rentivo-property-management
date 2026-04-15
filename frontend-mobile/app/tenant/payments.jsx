@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
     View,
     Text,
@@ -12,6 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { TopBar } from "../../components/TopBar";
 import { COLORS } from "../../constants/theme";
 import { getPaymentHistory } from "../../api/payment";
+import { useFocusEffect } from "@react-navigation/native";
 
 export default function PaymentHistory() {
     const [payments, setPayments] = useState([]);
@@ -19,11 +20,7 @@ export default function PaymentHistory() {
     const [refreshing, setRefreshing] = useState(false);
     const [filter, setFilter] = useState("all");
 
-    useEffect(() => {
-        fetchPayments();
-    }, []);
-
-    const fetchPayments = async () => {
+    const fetchPayments = React.useCallback(async () => {
         try {
             setLoading(true);
             const data = await getPaymentHistory();
@@ -33,7 +30,19 @@ export default function PaymentHistory() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    useFocusEffect(
+        React.useCallback(() => {
+            void fetchPayments();
+
+            const intervalId = setInterval(() => {
+                void fetchPayments();
+            }, 5000);
+
+            return () => clearInterval(intervalId);
+        }, [fetchPayments])
+    );
 
     const onRefresh = async () => {
         setRefreshing(true);

@@ -5,6 +5,70 @@ import { initializeEsewaPayment, verifyEsewaSignature } from "../payment/gateway
 import { initializeKhaltiPayment, verifyKhaltiPayment as khaltiLookup } from "../payment/gateways/khaltiGateway.js";
 import { createNotification } from "./notificationController.js";
 
+const buildRedirectUrl = (path, params = {}) => {
+    const searchParams = new URLSearchParams();
+
+    Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== "") {
+            searchParams.set(key, value.toString());
+        }
+    });
+
+    const query = searchParams.toString();
+    return query ? `/${path}?${query}` : `/${path}`;
+};
+
+const finalizeOnlinePayment = async ({
+    payment,
+    gatewayResponse,
+    paidAmount,
+    gatewayLabel,
+}) => {
+    const wasCompleted = payment.status === "completed";
+
+    payment.status = "completed";
+    payment.gatewayResponse = gatewayResponse;
+    await payment.save();
+
+    const invoice = await Invoice.findById(payment.invoiceId);
+
+    let invoiceUpdated = false;
+    if (invoice) {
+        if (invoice.status !== "Paid") {
+            invoice.status = "Paid";
+            invoiceUpdated = true;
+        }
+
+        if (!invoice.paidDate) {
+            invoice.paidDate = new Date();
+            invoiceUpdated = true;
+        }
+
+        if (invoiceUpdated) {
+            await invoice.save();
+            console.log(`Invoice ${invoice.invoiceNumber || invoice._id} marked as Paid`);
+        }
+    }
+
+    if (!wasCompleted || invoiceUpdated) {
+        await createNotification(
+            payment.userId,
+            "payment",
+            `Your ${gatewayLabel} payment of NPR ${paidAmount} has been confirmed. Your invoice has been marked as Paid.`
+        );
+
+        if (invoice?.landlordId) {
+            await createNotification(
+                invoice.landlordId,
+                "payment",
+                `Rent payment of NPR ${paidAmount} received via ${gatewayLabel} from your tenant.`
+            );
+        }
+    }
+
+    return invoice;
+};
+
 /**
  * @desc    Initiate payment for an invoice
  * @route   POST /api/payments/initiate
@@ -88,6 +152,22 @@ export const initiatePayment = async (req, res) => {
             status: "initiated",
         });
 
+        // Notify the tenant that a payment session has started.
+        // Silent-fail: email failures must never break payment initiation.
+        try {
+            const gatewayLabel = gateway === "esewa" ? "eSewa" : "Khalti";
+            await createNotification(
+                req.user._id,
+                "payment",
+                `Payment of NPR ${invoice.amount} via ${gatewayLabel} has been initiated for invoice ${invoice.invoiceNumber || invoice._id}. Complete the payment in the opened page.`
+            );
+        } catch (notifyError) {
+            console.error(
+                "Failed to send payment initiation notification:",
+                notifyError.message
+            );
+        }
+
         res.status(200).json({
             success: true,
             message: "Payment initiated successfully",
@@ -137,7 +217,13 @@ export const getPaymentConfig = async (req, res) => {
 export const getPaymentHistory = async (req, res) => {
     try {
         const payments = await Payment.find({ userId: req.user._id })
-            .populate("invoiceId")
+            .populate({
+                path: "invoiceId",
+                populate: {
+                    path: "propertyId",
+                    select: "title",
+                },
+            })
             .sort({ createdAt: -1 })
             .limit(50);
 
@@ -203,24 +289,35 @@ export const handlePaymentFailure = async (req, res) => {
         const txnId = transaction_uuid || transactionId || PRN;
 
         if (txnId) {
-            // Update payment status to failed
-            await Payment.findOneAndUpdate(
+            const payment = await Payment.findOneAndUpdate(
                 { transactionId: txnId },
                 {
                     status: "failed",
                     failureReason: "Payment cancelled or failed by user",
-                }
+                },
+                { new: true }
             );
+
+            if (payment) {
+                await createNotification(
+                    payment.userId,
+                    "payment",
+                    "Your payment was cancelled or could not be processed. Please try again."
+                );
+            }
         }
 
-        // Redirect to frontend failure page (will be implemented later)
-        res.redirect(`/payment-failed?txn=${txnId}`);
+        return res.redirect(
+            buildRedirectUrl("payment-failed", {
+                txn: txnId,
+                reason: "cancelled",
+            })
+        );
     } catch (error) {
         console.error("Payment failure handler error:", error);
-        res.status(500).json({
-            success: false,
-            message: "Failed to process payment failure"
-        });
+        return res.redirect(
+            buildRedirectUrl("payment-failed", { reason: "server_error" })
+        );
     }
 };
 
@@ -228,30 +325,35 @@ export const handlePaymentFailure = async (req, res) => {
  * @desc    Verify eSewa payment
  * @route   GET /api/payments/esewa/verify
  * @access  Public (Payment gateway callback)
+ *
+ * IMPORTANT: Every code path MUST redirect (not return JSON) so the
+ * mobile WebView can detect the result via URL inspection.
  */
 export const verifyEsewaPayment = async (req, res) => {
     try {
-        // eSewa sends these parameters as query params
         const { data } = req.query;
 
         if (!data) {
             console.error("eSewa verification failed: No data parameter");
-            return res.status(400).json({
-                success: false,
-                message: "Invalid verification data"
-            });
+            return res.redirect(
+                buildRedirectUrl("payment-failed", {
+                    reason: "no_data",
+                    gateway: "esewa",
+                })
+            );
         }
 
-        // Decode base64 data from eSewa
         let decodedData;
         try {
             decodedData = JSON.parse(Buffer.from(data, "base64").toString("utf-8"));
         } catch (error) {
             console.error("eSewa verification failed: Invalid base64 data", error);
-            return res.status(400).json({
-                success: false,
-                message: "Invalid payment data format"
-            });
+            return res.redirect(
+                buildRedirectUrl("payment-failed", {
+                    reason: "invalid_data",
+                    gateway: "esewa",
+                })
+            );
         }
 
         const {
@@ -271,123 +373,123 @@ export const verifyEsewaPayment = async (req, res) => {
             transaction_uuid,
         });
 
-        // Check if payment was successful on eSewa side
         if (status !== "COMPLETE") {
             console.log(`eSewa payment not complete. Status: ${status}`);
-            return res.redirect(`/payment-failed?status=${status}&txn=${transaction_uuid}`);
+            return res.redirect(
+                buildRedirectUrl("payment-failed", {
+                    status,
+                    txn: transaction_uuid,
+                    gateway: "esewa",
+                })
+            );
         }
 
-        // Find the payment record
-        const payment = await Payment.findOne({ transactionId: transaction_uuid })
-            .populate("invoiceId")
-            .populate("userId");
+        const payment = await Payment.findOne({ transactionId: transaction_uuid });
 
         if (!payment) {
             console.error(`Payment record not found for transaction: ${transaction_uuid}`);
-            return res.status(404).json({
-                success: false,
-                message: "Payment record not found"
-            });
-        }
-
-        // Check if payment is already processed
-        if (payment.status === "completed") {
-            console.log(`Payment already processed: ${transaction_uuid}`);
-            return res.redirect(`/payment-success?txn=${transaction_uuid}&amount=${total_amount}`);
-        }
-
-        // Verify signature to ensure authenticity
-        try {
-            const expectedSignature = verifyEsewaSignature(
-                transaction_code,
-                total_amount,
-                transaction_uuid
+            return res.redirect(
+                buildRedirectUrl("payment-failed", {
+                    reason: "not_found",
+                    txn: transaction_uuid,
+                    gateway: "esewa",
+                })
             );
+        }
+
+        // Verify signature (uses actual signed_field_names from response)
+        try {
+            const expectedSignature = verifyEsewaSignature(decodedData);
 
             if (signature !== expectedSignature) {
                 console.error("eSewa signature verification failed", {
                     received: signature,
                     expected: expectedSignature,
+                    signed_field_names,
+                    decodedData,
                 });
 
-                // Update payment status to failed
                 payment.status = "failed";
+                payment.failureReason = "Signature verification failed";
                 payment.gatewayResponse = decodedData;
                 await payment.save();
 
-                return res.status(400).json({
-                    success: false,
-                    message: "Payment verification failed. Signature mismatch."
-                });
+                await createNotification(
+                    payment.userId,
+                    "payment",
+                    "Your eSewa payment could not be verified. Please try again or contact support."
+                );
+
+                return res.redirect(
+                    buildRedirectUrl("payment-failed", {
+                        reason: "signature_mismatch",
+                        txn: transaction_uuid,
+                        gateway: "esewa",
+                    })
+                );
             }
         } catch (error) {
             console.error("Error verifying eSewa signature:", error);
             payment.status = "failed";
+            payment.failureReason = "Signature verification error";
             payment.gatewayResponse = decodedData;
             await payment.save();
 
-            return res.status(500).json({
-                success: false,
-                message: "Payment verification error"
-            });
+            return res.redirect(
+                buildRedirectUrl("payment-failed", {
+                    reason: "verification_error",
+                    txn: transaction_uuid,
+                    gateway: "esewa",
+                })
+            );
         }
 
-        // Verify amount matches
-        if (parseFloat(total_amount) !== payment.amount) {
+        // Verify amount
+        if (Math.abs(parseFloat(total_amount) - payment.amount) > 0.01) {
             console.error("Amount mismatch", {
                 expected: payment.amount,
                 received: total_amount,
             });
 
             payment.status = "failed";
+            payment.failureReason = "Amount mismatch";
             payment.gatewayResponse = decodedData;
             await payment.save();
 
-            return res.status(400).json({
-                success: false,
-                message: "Payment amount mismatch"
-            });
-        }
-
-        // All verifications passed - update payment status
-        payment.status = "completed";
-        payment.gatewayResponse = decodedData;
-        await payment.save();
-
-        // Update invoice status to Paid
-        const invoice = await Invoice.findById(payment.invoiceId);
-        if (invoice) {
-            invoice.status = "Paid";
-            invoice.paidDate = new Date();
-            await invoice.save();
-            console.log(`Invoice ${invoice.invoiceNumber} marked as Paid`);
-        }
-
-        console.log(`✓ eSewa payment verified successfully: ${transaction_uuid}`);
-
-        // Notify tenant and landlord
-        await createNotification(
-            payment.userId,
-            "payment",
-            `Your eSewa payment of NPR ${total_amount} has been confirmed. Your invoice has been marked as Paid.`
-        );
-        if (invoice?.landlordId) {
-            await createNotification(
-                invoice.landlordId,
-                "payment",
-                `Rent payment of NPR ${total_amount} received via eSewa from your tenant.`
+            return res.redirect(
+                buildRedirectUrl("payment-failed", {
+                    reason: "amount_mismatch",
+                    txn: transaction_uuid,
+                    gateway: "esewa",
+                })
             );
         }
 
-        // Redirect to success page
-        return res.redirect(`/payment-success?txn=${transaction_uuid}&amount=${total_amount}`);
+        await finalizeOnlinePayment({
+            payment,
+            gatewayResponse: decodedData,
+            paidAmount: total_amount,
+            gatewayLabel: "eSewa",
+        });
 
+        console.log(`✓ eSewa payment verified successfully: ${transaction_uuid}`);
+
+        return res.redirect(
+            buildRedirectUrl("payment-success", {
+                txn: transaction_uuid,
+                amount: total_amount,
+                invoice: payment.invoiceId,
+                gateway: "esewa",
+            })
+        );
     } catch (error) {
         console.error("eSewa verification error:", error);
-        res.status(500).json({
-            success: false,
-            message: error.message || "Payment verification failed"
-        });
+        return res.redirect(
+            buildRedirectUrl("payment-failed", {
+                reason: "server_error",
+                gateway: "esewa",
+            })
+        );
     }
 };
 
@@ -395,19 +497,23 @@ export const verifyEsewaPayment = async (req, res) => {
  * @desc    Verify Khalti payment
  * @route   POST /api/payments/khalti/verify (or GET with query params)
  * @access  Public (Payment gateway callback)
+ *
+ * IMPORTANT: Every code path MUST redirect (not return JSON) so the
+ * mobile WebView can detect the result via URL inspection.
  */
 export const verifyKhaltiPayment = async (req, res) => {
     try {
-        // Khalti can send data via query params (GET) or body (POST)
         const { pidx, txnId, amount, mobile, purchase_order_id, purchase_order_name, transaction_id } =
             req.method === 'GET' ? req.query : req.body;
 
         if (!pidx) {
             console.error("Khalti verification failed: No pidx parameter");
-            return res.status(400).json({
-                success: false,
-                message: "Invalid verification data - missing pidx"
-            });
+            return res.redirect(
+                buildRedirectUrl("payment-failed", {
+                    reason: "no_pidx",
+                    gateway: "khalti",
+                })
+            );
         }
 
         console.log("Khalti callback received:", {
@@ -417,48 +523,64 @@ export const verifyKhaltiPayment = async (req, res) => {
             purchase_order_id,
         });
 
-        // Use Khalti lookup API to verify payment
         let lookupResult;
         try {
             lookupResult = await khaltiLookup(pidx);
         } catch (error) {
             console.error("Khalti lookup API failed:", error.message);
-            return res.status(500).json({
-                success: false,
-                message: "Failed to verify payment with Khalti"
-            });
+            return res.redirect(
+                buildRedirectUrl("payment-failed", {
+                    reason: "lookup_failed",
+                    gateway: "khalti",
+                })
+            );
         }
 
         console.log("Khalti lookup result:", lookupResult);
 
-        // Extract transaction ID from purchase_order_id or lookup result
         const transactionId = purchase_order_id || lookupResult.purchase_order_id;
 
         if (!transactionId) {
             console.error("Transaction ID not found in Khalti response");
-            return res.status(400).json({
-                success: false,
-                message: "Transaction ID not found"
-            });
+            return res.redirect(
+                buildRedirectUrl("payment-failed", {
+                    reason: "no_txn_id",
+                    gateway: "khalti",
+                })
+            );
         }
 
-        // Find the payment record
-        const payment = await Payment.findOne({ transactionId })
-            .populate("invoiceId")
-            .populate("userId");
+        const payment = await Payment.findOne({ transactionId });
 
         if (!payment) {
             console.error(`Payment record not found for transaction: ${transactionId}`);
-            return res.status(404).json({
-                success: false,
-                message: "Payment record not found"
-            });
+            return res.redirect(
+                buildRedirectUrl("payment-failed", {
+                    reason: "not_found",
+                    txn: transactionId,
+                    gateway: "khalti",
+                })
+            );
         }
 
-        // Check if payment is already processed
+        // Already processed — ensure invoice is marked Paid and redirect
         if (payment.status === "completed") {
             console.log(`Payment already processed: ${transactionId}`);
-            return res.redirect(`/payment-success?txn=${transactionId}&amount=${lookupResult.total_amount / 100}`);
+            await finalizeOnlinePayment({
+                payment,
+                gatewayResponse: lookupResult,
+                paidAmount: lookupResult.total_amount / 100,
+                gatewayLabel: "Khalti",
+            });
+
+            return res.redirect(
+                buildRedirectUrl("payment-success", {
+                    txn: transactionId,
+                    amount: lookupResult.total_amount / 100,
+                    invoice: payment.invoiceId,
+                    gateway: "khalti",
+                })
+            );
         }
 
         // Check Khalti payment status
@@ -466,69 +588,73 @@ export const verifyKhaltiPayment = async (req, res) => {
             console.log(`Khalti payment not completed. Status: ${lookupResult.status}`);
 
             payment.status = lookupResult.status === "Pending" ? "pending" : "failed";
+            payment.failureReason = `Khalti status: ${lookupResult.status}`;
             payment.gatewayResponse = lookupResult;
             await payment.save();
 
-            return res.redirect(`/payment-failed?status=${lookupResult.status}&txn=${transactionId}`);
+            if (payment.status === "failed") {
+                await createNotification(
+                    payment.userId,
+                    "payment",
+                    "Your Khalti payment could not be completed. Please try again."
+                );
+            }
+
+            return res.redirect(
+                buildRedirectUrl("payment-failed", {
+                    status: lookupResult.status,
+                    txn: transactionId,
+                    gateway: "khalti",
+                })
+            );
         }
 
-        // Verify amount matches (Khalti returns amount in paisa, convert to NPR)
+        // Verify amount (Khalti returns amount in paisa)
         const paidAmount = lookupResult.total_amount / 100;
-        if (paidAmount !== payment.amount) {
+        if (Math.abs(paidAmount - payment.amount) > 0.01) {
             console.error("Amount mismatch", {
                 expected: payment.amount,
                 received: paidAmount,
             });
 
             payment.status = "failed";
+            payment.failureReason = "Amount mismatch";
             payment.gatewayResponse = lookupResult;
             await payment.save();
 
-            return res.status(400).json({
-                success: false,
-                message: "Payment amount mismatch"
-            });
-        }
-
-        // All verifications passed - update payment status
-        payment.status = "completed";
-        payment.gatewayResponse = lookupResult;
-        await payment.save();
-
-        // Update invoice status to Paid
-        const invoice = await Invoice.findById(payment.invoiceId);
-        if (invoice) {
-            invoice.status = "Paid";
-            invoice.paidDate = new Date();
-            await invoice.save();
-            console.log(`Invoice ${invoice.invoiceNumber} marked as Paid`);
-        }
-
-        console.log(`✓ Khalti payment verified successfully: ${transactionId}`);
-
-        // Notify tenant and landlord
-        await createNotification(
-            payment.userId,
-            "payment",
-            `Your Khalti payment of NPR ${paidAmount} has been confirmed. Your invoice has been marked as Paid.`
-        );
-        if (invoice?.landlordId) {
-            await createNotification(
-                invoice.landlordId,
-                "payment",
-                `Rent payment of NPR ${paidAmount} received via Khalti from your tenant.`
+            return res.redirect(
+                buildRedirectUrl("payment-failed", {
+                    reason: "amount_mismatch",
+                    txn: transactionId,
+                    gateway: "khalti",
+                })
             );
         }
 
-        // Redirect to success page
-        return res.redirect(`/payment-success?txn=${transactionId}&amount=${paidAmount}`);
+        await finalizeOnlinePayment({
+            payment,
+            gatewayResponse: lookupResult,
+            paidAmount,
+            gatewayLabel: "Khalti",
+        });
 
+        console.log(`✓ Khalti payment verified successfully: ${transactionId}`);
+
+        return res.redirect(
+            buildRedirectUrl("payment-success", {
+                txn: transactionId,
+                amount: paidAmount,
+                invoice: payment.invoiceId,
+                gateway: "khalti",
+            })
+        );
     } catch (error) {
         console.error("Khalti verification error:", error);
-        res.status(500).json({
-            success: false,
-            message: error.message || "Payment verification failed"
-        });
+        return res.redirect(
+            buildRedirectUrl("payment-failed", {
+                reason: "server_error",
+                gateway: "khalti",
+            })
+        );
     }
 };
-

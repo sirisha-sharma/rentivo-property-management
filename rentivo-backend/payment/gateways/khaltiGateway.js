@@ -4,13 +4,14 @@ import axios from "axios";
  * Get Khalti configuration (lazy-loaded to ensure env vars are available)
  */
 const getKhaltiConfig = () => {
+    const baseUrl = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3000}`;
     const config = {
         publicKey: process.env.KHALTI_PUBLIC_KEY,
         secretKey: process.env.KHALTI_SECRET_KEY,
         paymentUrl: process.env.KHALTI_PAYMENT_URL,
         lookupUrl: process.env.KHALTI_LOOKUP_URL,
-        returnUrl: process.env.KHALTI_RETURN_URL,
-        websiteUrl: process.env.KHALTI_WEBSITE_URL,
+        returnUrl: `${baseUrl}/api/payments/khalti/verify`,
+        websiteUrl: baseUrl,
     };
 
     if (!config.secretKey) {
@@ -127,6 +128,8 @@ export const verifyKhaltiPayment = async (pidx) => {
             transaction_id: response.data.transaction_id,
             fee: response.data.fee,
             refunded: response.data.refunded,
+            purchase_order_id: response.data.purchase_order_id,
+            purchase_order_name: response.data.purchase_order_name,
         };
     } catch (error) {
         console.error("Khalti payment verification error:", error.response?.data || error.message);

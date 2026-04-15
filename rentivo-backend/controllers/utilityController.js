@@ -1,5 +1,6 @@
 import Property from "../models/propertyModel.js";
 import Tenant from "../models/tenantModel.js";
+import { createNotification } from "./notificationController.js";
 
 /**
  * Utility Bill Splitting Algorithm
@@ -79,6 +80,27 @@ export const calculateUtilitySplit = async (req, res) => {
                     success: false,
                     message: "Invalid split method"
                 });
+        }
+
+        // Notify each tenant of their utility split (fire and forget)
+        try {
+            const propertyLabel = property.title || property.address || "your property";
+            await Promise.all(
+                splitResult.map(async (split) => {
+                    if (!split.userId) return;
+                    const amount = Number(split.totalAmount || 0).toFixed(2);
+                    await createNotification(
+                        split.userId,
+                        "invoice",
+                        `Your utility share for ${propertyLabel} has been calculated: NPR ${amount} (method: ${property.splitMethod}).`
+                    );
+                })
+            );
+        } catch (notifyError) {
+            console.error(
+                "Failed to send utility split notifications:",
+                notifyError.message
+            );
         }
 
         res.status(200).json({

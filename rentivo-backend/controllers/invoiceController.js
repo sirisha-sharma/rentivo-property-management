@@ -204,6 +204,18 @@ export const updateInvoiceStatus = async (req, res) => {
 
         const updatedInvoice = await invoice.save();
 
+        // Notify tenant when landlord manually marks invoice as Paid (cash payment)
+        if (status === "Paid") {
+            const tenant = await Tenant.findById(invoice.tenantId);
+            if (tenant?.userId) {
+                await createNotification(
+                    tenant.userId,
+                    "invoice",
+                    `Your invoice of NPR ${invoice.amount} has been marked as Paid by your landlord.`
+                );
+            }
+        }
+
         res.json(updatedInvoice);
     } catch (error) {
         res.status(500).json({ message: error.message });
