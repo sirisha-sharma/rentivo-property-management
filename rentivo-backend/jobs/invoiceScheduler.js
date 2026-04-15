@@ -1,169 +1,344 @@
 import cron from "node-cron";
 import Invoice from "../models/invoiceModel.js";
 import Tenant from "../models/tenantModel.js";
-import Property from "../models/propertyModel.js";
+import "../models/propertyModel.js";
 import { createNotification } from "../controllers/notificationController.js";
+
+const RENT_INVOICE_TYPE = "Rent";
+
+const buildBillingLabel = (referenceDate) =>
+    referenceDate.toLocaleString("default", { month: "long", year: "numeric" });
+
+const getStartOfDay = (referenceDate) => {
+    const normalizedDate = new Date(referenceDate);
+    normalizedDate.setHours(0, 0, 0, 0);
+    return normalizedDate;
+};
+
+const getNextMonthStart = (referenceDate) =>
+    new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 1);
+
+const buildBaseRentBreakdown = (amount) => ({
+    baseRent: amount,
+    utilities: {
+        electricity: 0,
+        water: 0,
+        internet: 0,
+        gas: 0,
+        waste: 0,
+        other: 0,
+    },
+    totalUtilities: 0,
+});
+
+const getInvoiceDescription = (referenceDate) =>
+    `Monthly rent for ${buildBillingLabel(referenceDate)}`;
+
+const createDueDate = (referenceDate) => {
+    const dueDate = new Date(referenceDate);
+    dueDate.setDate(dueDate.getDate() + 15);
+    return dueDate;
+};
+
+const logSummary = (label, summary) => {
+    console.log(
+        `${label} Created: ${summary.createdCount}, Would Create: ${summary.wouldCreateCount}, Duplicates: ${summary.duplicateCount}, Missing Rent: ${summary.missingRentCount}, Invalid Links: ${summary.invalidLinkCount}, Failures: ${summary.failedCount}`
+    );
+};
+
+/**
+ * Generate monthly rent invoices for tenants whose leases are active on the run date.
+ * Uses property.rent as the invoice amount and prevents duplicate rent invoices
+ * for the same billing month.
+ */
+export const generateMonthlyInvoices = async ({
+    referenceDate = new Date(),
+    dryRun = false,
+} = {}) => {
+    const runDate = new Date(referenceDate);
+    if (Number.isNaN(runDate.getTime())) {
+        throw new Error("Invalid referenceDate provided for invoice generation");
+    }
+
+    const billingDate = getStartOfDay(runDate);
+    const monthStart = new Date(runDate.getFullYear(), runDate.getMonth(), 1);
+    const nextMonthStart = getNextMonthStart(runDate);
+    const invoiceDescription = getInvoiceDescription(runDate);
+    const dueDate = createDueDate(runDate);
+    const billingYear = runDate.getFullYear();
+    const billingMonth = runDate.getMonth() + 1;
+
+    console.log(
+        `[${new Date().toISOString()}] Starting monthly invoice generation${dryRun ? " (dry run)" : ""}...`
+    );
+
+    const summary = {
+        dryRun,
+        runDate: runDate.toISOString(),
+        billingYear,
+        billingMonth,
+        createdCount: 0,
+        wouldCreateCount: 0,
+        duplicateCount: 0,
+        missingRentCount: 0,
+        invalidLinkCount: 0,
+        failedCount: 0,
+        createdInvoices: [],
+        skippedInvoices: [],
+        failedInvoices: [],
+    };
+
+    const activeTenants = await Tenant.find({
+        status: "Active",
+        leaseStart: { $lte: billingDate },
+        leaseEnd: { $gte: billingDate },
+    })
+        .populate("userId", "name email")
+        .populate("propertyId", "title rent landlordId");
+
+    if (activeTenants.length === 0) {
+        console.log("No active tenants found for the selected run date.");
+        return summary;
+    }
+
+    for (const tenant of activeTenants) {
+        try {
+            const property = tenant.propertyId;
+            const tenantUser = tenant.userId;
+
+            if (!property?._id || !property?.landlordId || !tenantUser?._id) {
+                summary.invalidLinkCount++;
+                summary.skippedInvoices.push({
+                    tenantId: tenant._id.toString(),
+                    propertyId: property?._id?.toString() || null,
+                    reason: "Missing tenant user, property, or landlord link",
+                });
+                continue;
+            }
+
+            const rentAmount = Number(property.rent || 0);
+            if (!Number.isFinite(rentAmount) || rentAmount <= 0) {
+                summary.missingRentCount++;
+                summary.skippedInvoices.push({
+                    tenantId: tenant._id.toString(),
+                    propertyId: property._id.toString(),
+                    propertyTitle: property.title,
+                    reason: "Property rent is missing or zero",
+                });
+                continue;
+            }
+
+            const existingInvoice = await Invoice.findOne({
+                tenantId: tenant._id,
+                propertyId: property._id,
+                type: RENT_INVOICE_TYPE,
+                $or: [
+                    { billingYear, billingMonth },
+                    { description: invoiceDescription },
+                    {
+                        dueDate: {
+                            $gte: monthStart,
+                            $lt: nextMonthStart,
+                        },
+                    },
+                ],
+            }).select("_id");
+
+            if (existingInvoice) {
+                summary.duplicateCount++;
+                summary.skippedInvoices.push({
+                    tenantId: tenant._id.toString(),
+                    propertyId: property._id.toString(),
+                    propertyTitle: property.title,
+                    reason: "Rent invoice already exists for this billing month",
+                    existingInvoiceId: existingInvoice._id.toString(),
+                });
+                continue;
+            }
+
+            const invoicePayload = {
+                tenantId: tenant._id,
+                propertyId: property._id,
+                landlordId: property.landlordId,
+                amount: rentAmount,
+                type: RENT_INVOICE_TYPE,
+                dueDate,
+                description: invoiceDescription,
+                status: "Pending",
+                billingYear,
+                billingMonth,
+                autoGenerated: true,
+                breakdown: buildBaseRentBreakdown(rentAmount),
+            };
+
+            const invoicePreview = {
+                tenantId: tenant._id.toString(),
+                tenantName: tenantUser.name || "Tenant",
+                propertyId: property._id.toString(),
+                propertyTitle: property.title,
+                landlordId: property.landlordId.toString(),
+                amount: rentAmount,
+                dueDate: dueDate.toISOString(),
+                description: invoiceDescription,
+            };
+
+            if (dryRun) {
+                summary.wouldCreateCount++;
+                summary.createdInvoices.push(invoicePreview);
+                continue;
+            }
+
+            const invoice = await Invoice.create(invoicePayload);
+
+            await createNotification(
+                tenantUser._id,
+                "invoice",
+                `Monthly rent invoice of NPR ${rentAmount} generated for ${property.title}. Due on ${dueDate.toLocaleDateString()}.`
+            );
+
+            await createNotification(
+                property.landlordId,
+                "invoice",
+                `Monthly rent invoice of NPR ${rentAmount} created for ${tenantUser.name} at ${property.title}.`
+            );
+
+            summary.createdCount++;
+            summary.createdInvoices.push({
+                ...invoicePreview,
+                invoiceId: invoice._id.toString(),
+            });
+            console.log(
+                `✓ Invoice created for tenant: ${tenantUser.name} - Property: ${property.title} - Amount: NPR ${rentAmount}`
+            );
+        } catch (error) {
+            summary.failedCount++;
+            summary.failedInvoices.push({
+                tenantId: tenant._id.toString(),
+                error: error.message,
+            });
+            console.error(
+                `✗ Failed to create invoice for tenant ${tenant.userId?.name || tenant._id}:`,
+                error.message
+            );
+        }
+    }
+
+    console.log(`[${new Date().toISOString()}] Monthly invoice generation completed.`);
+    logSummary("Invoice generation summary.", summary);
+    return summary;
+};
+
+/**
+ * Mark pending invoices as overdue once their due date is in the past.
+ */
+export const updateOverdueInvoices = async ({
+    referenceDate = new Date(),
+    dryRun = false,
+} = {}) => {
+    const runDate = getStartOfDay(referenceDate);
+
+    console.log(
+        `[${new Date().toISOString()}] Checking for overdue invoices${dryRun ? " (dry run)" : ""}...`
+    );
+
+    const overdueInvoices = await Invoice.find({
+        status: "Pending",
+        dueDate: { $lt: runDate },
+    })
+        .populate("tenantId")
+        .populate("propertyId", "title");
+
+    const summary = {
+        dryRun,
+        runDate: runDate.toISOString(),
+        updatedCount: 0,
+        wouldUpdateCount: 0,
+        failedCount: 0,
+        invoices: [],
+    };
+
+    if (overdueInvoices.length === 0) {
+        console.log("No overdue invoices found.");
+        return summary;
+    }
+
+    for (const invoice of overdueInvoices) {
+        try {
+            const tenantRecord = await Tenant.findById(invoice.tenantId);
+            const invoiceSummary = {
+                invoiceId: invoice._id.toString(),
+                tenantId: tenantRecord?._id?.toString() || null,
+                propertyTitle: invoice.propertyId?.title || "Property",
+                amount: invoice.amount,
+            };
+
+            if (dryRun) {
+                summary.wouldUpdateCount++;
+                summary.invoices.push(invoiceSummary);
+                continue;
+            }
+
+            invoice.status = "Overdue";
+            await invoice.save();
+
+            if (tenantRecord?.userId) {
+                await createNotification(
+                    tenantRecord.userId,
+                    "invoice",
+                    `Invoice for ${invoice.propertyId?.title || "your property"} is now overdue. Amount: NPR ${invoice.amount}.`
+                );
+            }
+
+            summary.updatedCount++;
+            summary.invoices.push(invoiceSummary);
+            console.log(`✓ Invoice ${invoice._id} marked as Overdue`);
+        } catch (error) {
+            summary.failedCount++;
+            console.error(`✗ Failed to update invoice ${invoice._id}:`, error.message);
+        }
+    }
+
+    console.log(`[${new Date().toISOString()}] Overdue invoice update completed.`);
+    console.log(
+        `Overdue summary. Updated: ${summary.updatedCount}, Would Update: ${summary.wouldUpdateCount}, Failures: ${summary.failedCount}`
+    );
+    return summary;
+};
 
 /**
  * Automated Monthly Invoice Generation
  * Runs on the 1st of every month at 00:00 (midnight)
- * Cron expression: '0 0 1 * *'
- * - 0: minute (0)
- * - 0: hour (00:00 / midnight)
- * - 1: day of month (1st)
- * - *: every month
- * - *: every day of week
  */
 const scheduleMonthlyInvoiceGeneration = () => {
-    // For testing: runs every minute - '* * * * *'
-    // For production: runs 1st of every month - '0 0 1 * *'
-    const cronExpression = '0 0 1 * *';
+    const cronExpression = "0 0 1 * *";
 
     cron.schedule(cronExpression, async () => {
         try {
-            console.log(`[${new Date().toISOString()}] Starting monthly invoice generation...`);
-
-            // Find all active tenants
-            const activeTenants = await Tenant.find({ status: "Active" })
-                .populate('userId', 'name email')
-                .populate('propertyId');
-
-            if (activeTenants.length === 0) {
-                console.log("No active tenants found. Skipping invoice generation.");
-                return;
-            }
-
-            let successCount = 0;
-            let failureCount = 0;
-
-            // Generate invoice for each active tenant
-            for (const tenant of activeTenants) {
-                try {
-                    const property = tenant.propertyId;
-
-                    // Calculate due date (15 days from now)
-                    const dueDate = new Date();
-                    dueDate.setDate(dueDate.getDate() + 15);
-
-                    // Create monthly rent invoice
-                    // Note: This creates base rent invoice without utility breakdown
-                    // Landlord can manually add utilities or use utility calculator
-                    const invoice = await Invoice.create({
-                        tenantId: tenant._id,
-                        propertyId: property._id,
-                        landlordId: property.landlordId,
-                        amount: 0, // Landlord will need to set the amount
-                        type: "Rent",
-                        dueDate: dueDate,
-                        description: `Monthly rent for ${new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}`,
-                        status: "Pending"
-                    });
-
-                    // Notify tenant about new invoice
-                    await createNotification(
-                        tenant.userId._id,
-                        "invoice",
-                        `Monthly rent invoice generated for ${property.title}. Due on ${dueDate.toLocaleDateString()}`
-                    );
-
-                    // Notify landlord about generated invoice
-                    await createNotification(
-                        property.landlordId,
-                        "invoice",
-                        `Monthly rent invoice created for ${tenant.userId.name} at ${property.title}`
-                    );
-
-                    successCount++;
-                    console.log(`✓ Invoice created for tenant: ${tenant.userId.name} - Property: ${property.title}`);
-
-                } catch (error) {
-                    failureCount++;
-                    console.error(`✗ Failed to create invoice for tenant ${tenant.userId?.name}:`, error.message);
-                }
-            }
-
-            console.log(`[${new Date().toISOString()}] Monthly invoice generation completed.`);
-            console.log(`Success: ${successCount}, Failures: ${failureCount}`);
-
+            await generateMonthlyInvoices();
         } catch (error) {
             console.error("Error in monthly invoice generation job:", error);
         }
     });
 
-    console.log(`✓ Monthly invoice generation scheduled (runs on 1st of every month at 00:00)`);
+    console.log("✓ Monthly invoice generation scheduled (runs on 1st of every month at 00:00)");
 };
 
 /**
  * Automated Overdue Invoice Status Update
  * Runs daily at 00:00 (midnight)
- * Cron expression: '0 0 * * *'
- * - 0: minute (0)
- * - 0: hour (00:00 / midnight)
- * - *: every day of month
- * - *: every month
- * - *: every day of week
  */
 const scheduleOverdueInvoiceUpdate = () => {
-    // For testing: runs every minute - '* * * * *'
-    // For production: runs daily at midnight - '0 0 * * *'
-    const cronExpression = '0 0 * * *';
+    const cronExpression = "0 0 * * *";
 
     cron.schedule(cronExpression, async () => {
         try {
-            console.log(`[${new Date().toISOString()}] Checking for overdue invoices...`);
-
-            const today = new Date();
-            today.setHours(0, 0, 0, 0); // Set to start of day
-
-            // Find all pending invoices with due date before today
-            const overdueInvoices = await Invoice.find({
-                status: "Pending",
-                dueDate: { $lt: today }
-            }).populate('tenantId')
-              .populate('propertyId');
-
-            if (overdueInvoices.length === 0) {
-                console.log("No overdue invoices found.");
-                return;
-            }
-
-            let updatedCount = 0;
-
-            // Update status to Overdue and notify tenants
-            for (const invoice of overdueInvoices) {
-                try {
-                    invoice.status = "Overdue";
-                    await invoice.save();
-
-                    // Get tenant user ID
-                    const tenant = await Tenant.findById(invoice.tenantId);
-
-                    if (tenant) {
-                        // Notify tenant about overdue invoice
-                        await createNotification(
-                            tenant.userId,
-                            "invoice",
-                            `Invoice for ${invoice.propertyId.title} is now overdue. Amount: NPR ${invoice.amount}`
-                        );
-                    }
-
-                    updatedCount++;
-                    console.log(`✓ Invoice ${invoice._id} marked as Overdue`);
-
-                } catch (error) {
-                    console.error(`✗ Failed to update invoice ${invoice._id}:`, error.message);
-                }
-            }
-
-            console.log(`[${new Date().toISOString()}] Overdue invoice update completed.`);
-            console.log(`Updated ${updatedCount} invoices to Overdue status.`);
-
+            await updateOverdueInvoices();
         } catch (error) {
             console.error("Error in overdue invoice update job:", error);
         }
     });
 
-    console.log(`✓ Overdue invoice checker scheduled (runs daily at 00:00)`);
+    console.log("✓ Overdue invoice checker scheduled (runs daily at 00:00)");
 };
 
 /**
@@ -177,10 +352,9 @@ export const startScheduler = () => {
 };
 
 /**
- * For testing purposes - manually trigger monthly invoice generation
+ * Manual trigger helper retained for compatibility with older local scripts.
  */
-export const testMonthlyInvoiceGeneration = async () => {
+export const testMonthlyInvoiceGeneration = async (options = {}) => {
     console.log("Testing monthly invoice generation...");
-    // Execute the same logic as the scheduled job
-    // Implementation goes here if needed for testing
+    return generateMonthlyInvoices(options);
 };

@@ -61,6 +61,12 @@ export const createInvoice = async (req, res) => {
             description,
         };
 
+        if (type === "Rent" && dueDate) {
+            const billingDate = new Date(dueDate);
+            invoiceData.billingYear = billingDate.getFullYear();
+            invoiceData.billingMonth = billingDate.getMonth() + 1;
+        }
+
         // Add breakdown if provided
         if (breakdown) {
             invoiceData.breakdown = breakdown;

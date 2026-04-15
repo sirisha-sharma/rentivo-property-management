@@ -2,6 +2,7 @@ import Property from "../models/propertyModel.js";
 import Tenant from "../models/tenantModel.js";
 import Invoice from "../models/invoiceModel.js";
 import Maintenance from "../models/maintenanceModel.js";
+import { generateMonthlyInvoices } from "../jobs/invoiceScheduler.js";
 
 // This function gets the dashboard statistics for the landlord
 // Returns counts for properties, tenants, pending tenants, and invoices
@@ -310,6 +311,36 @@ export const getTenantChartData = async (req, res) => {
             monthlyRentPaid,
             paymentStatusBreakdown: paymentStatusMap,
             maintenanceStats,
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Dev-only endpoint to manually trigger automatic rent generation.
+export const triggerInvoiceGeneration = async (req, res) => {
+    try {
+        if (process.env.NODE_ENV === "production") {
+            return res.status(403).json({ message: "Manual invoice generation is disabled in production" });
+        }
+
+        const { dryRun = false, referenceDate } = req.body || {};
+        const parsedReferenceDate = referenceDate ? new Date(referenceDate) : new Date();
+
+        if (Number.isNaN(parsedReferenceDate.getTime())) {
+            return res.status(400).json({ message: "Invalid referenceDate" });
+        }
+
+        const result = await generateMonthlyInvoices({
+            referenceDate: parsedReferenceDate,
+            dryRun: Boolean(dryRun),
+        });
+
+        res.status(200).json({
+            message: dryRun
+                ? "Invoice generation dry run completed"
+                : "Invoice generation completed",
+            result,
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
