@@ -68,13 +68,15 @@ export const getTenantStats = async (req, res) => {
         const totalInvoices = await Invoice.countDocuments({ tenantId: { $in: tenantIds } });
         const pendingInvoices = await Invoice.countDocuments({ tenantId: { $in: tenantIds }, status: "Pending" });
         const paidInvoices = await Invoice.countDocuments({ tenantId: { $in: tenantIds }, status: "Paid" });
+        const overdueInvoices = await Invoice.countDocuments({ tenantId: { $in: tenantIds }, status: "Overdue" });
 
         res.status(200).json({
             activeProperties,
             pendingInvitations,
             totalInvoices,
             pendingInvoices,
-            paidInvoices
+            paidInvoices,
+            overdueInvoices
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -197,6 +199,116 @@ export const getLandlordChartData = async (req, res) => {
                 totalProperties,
                 occupancyRate,
             },
+            maintenanceStats,
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// This function returns chart-friendly dashboard data for tenants.
+// It includes monthly rent paid, payment breakdown, and maintenance stats.
+export const getTenantChartData = async (req, res) => {
+    try {
+        if (req.user.role !== "tenant") {
+            return res.status(403).json({ message: "Only tenants can access chart data" });
+        }
+
+        const tenantRecords = await Tenant.find({ userId: req.user._id }).select("_id");
+        const tenantIds = tenantRecords.map((tenant) => tenant._id);
+
+        const now = new Date();
+        const chartMonths = Array.from({ length: 6 }, (_, index) => {
+            const date = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
+            return {
+                label: date.toLocaleDateString("en-US", { month: "short" }),
+                month: date.getMonth() + 1,
+                year: date.getFullYear(),
+            };
+        });
+
+        const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+
+        const monthlyPaidInvoices = await Invoice.aggregate([
+            {
+                $match: {
+                    tenantId: { $in: tenantIds },
+                    status: "Paid",
+                    paidDate: { $gte: sixMonthsAgo },
+                },
+            },
+            {
+                $group: {
+                    _id: {
+                        year: { $year: "$paidDate" },
+                        month: { $month: "$paidDate" },
+                    },
+                    totalAmount: { $sum: "$amount" },
+                },
+            },
+        ]);
+
+        const monthlyRentPaid = chartMonths.map(({ label, month, year }) => {
+            const matchedMonth = monthlyPaidInvoices.find(
+                (item) => item._id.month === month && item._id.year === year
+            );
+
+            return {
+                label,
+                value: matchedMonth?.totalAmount || 0,
+            };
+        });
+
+        const paymentStatusBreakdown = await Invoice.aggregate([
+            { $match: { tenantId: { $in: tenantIds } } },
+            {
+                $group: {
+                    _id: "$status",
+                    count: { $sum: 1 },
+                },
+            },
+        ]);
+
+        const paymentStatusMap = paymentStatusBreakdown.reduce(
+            (accumulator, item) => ({
+                ...accumulator,
+                [item._id]: item.count,
+            }),
+            { Paid: 0, Pending: 0, Overdue: 0 }
+        );
+
+        const maintenanceBreakdown = await Maintenance.aggregate([
+            {
+                $match: {
+                    tenantId: { $in: tenantIds },
+                },
+            },
+            {
+                $group: {
+                    _id: "$status",
+                    count: { $sum: 1 },
+                },
+            },
+        ]);
+
+        const maintenanceStats = maintenanceBreakdown.reduce(
+            (accumulator, item) => {
+                if (item._id === "Resolved") {
+                    accumulator.resolved = item.count;
+                } else if (item._id === "In Progress") {
+                    accumulator.inProgress = item.count;
+                } else {
+                    accumulator.pending = item.count;
+                }
+
+                return accumulator;
+            },
+            { pending: 0, inProgress: 0, resolved: 0 }
+        );
+
+        res.status(200).json({
+            monthlyRentPaid,
+            paymentStatusBreakdown: paymentStatusMap,
             maintenanceStats,
         });
     } catch (error) {

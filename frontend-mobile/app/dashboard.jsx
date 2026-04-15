@@ -41,7 +41,8 @@ export default function DashboardScreen() {
     pendingInvitations: 0,
     totalInvoices: 0,
     pendingInvoices: 0,
-    paidInvoices: 0
+    paidInvoices: 0,
+    overdueInvoices: 0,
   });
 
   const [landlordCharts, setLandlordCharts] = useState({
@@ -58,6 +59,20 @@ export default function DashboardScreen() {
     },
     maintenanceStats: {
       pending: 0,
+      resolved: 0,
+    },
+  });
+
+  const [tenantCharts, setTenantCharts] = useState({
+    monthlyRentPaid: [],
+    paymentStatusBreakdown: {
+      Paid: 0,
+      Pending: 0,
+      Overdue: 0,
+    },
+    maintenanceStats: {
+      pending: 0,
+      inProgress: 0,
       resolved: 0,
     },
   });
@@ -81,11 +96,13 @@ export default function DashboardScreen() {
         setStats(statsResponse.data);
         setLandlordCharts(chartResponse.data);
       } else {
-        // Fetch tenant stats from API
-        const response = await axios.get(`${API_BASE_URL}/dashboard/tenant-stats`, {
-          headers: { Authorization: `Bearer ${user.token}` },
-        });
-        setTenantStats(response.data);
+        const headers = { Authorization: `Bearer ${user.token}` };
+        const [statsResponse, chartResponse] = await Promise.all([
+          axios.get(`${API_BASE_URL}/dashboard/tenant-stats`, { headers }),
+          axios.get(`${API_BASE_URL}/dashboard/tenant-charts`, { headers }),
+        ]);
+        setTenantStats(statsResponse.data);
+        setTenantCharts(chartResponse.data);
       }
     } catch (error) {
       console.log("Failed to fetch stats:", error);
@@ -133,8 +150,49 @@ export default function DashboardScreen() {
     [landlordCharts.paymentStatusBreakdown]
   );
 
+  const tenantMonthlyPaidData = useMemo(
+    () =>
+      tenantCharts.monthlyRentPaid.map((item) => ({
+        value: item.value,
+        label: item.label,
+        frontColor: COLORS.success,
+        topLabelComponent: () => (
+          <Text style={{ fontSize: 10, color: COLORS.mutedForeground }}>
+            {item.value > 0 ? `${Math.round(item.value)}` : ""}
+          </Text>
+        ),
+      })),
+    [tenantCharts.monthlyRentPaid]
+  );
+
+  const tenantPaymentPieData = useMemo(
+    () => [
+      {
+        value: tenantCharts.paymentStatusBreakdown.Paid,
+        color: COLORS.success,
+        text: `${tenantCharts.paymentStatusBreakdown.Paid}`,
+        label: "Paid",
+      },
+      {
+        value: tenantCharts.paymentStatusBreakdown.Pending,
+        color: COLORS.warning,
+        text: `${tenantCharts.paymentStatusBreakdown.Pending}`,
+        label: "Pending",
+      },
+      {
+        value: tenantCharts.paymentStatusBreakdown.Overdue,
+        color: COLORS.destructive,
+        text: `${tenantCharts.paymentStatusBreakdown.Overdue}`,
+        label: "Overdue",
+      },
+    ],
+    [tenantCharts.paymentStatusBreakdown]
+  );
+
   const hasCollectionData = monthlyCollectionData.some((item) => item.value > 0);
   const hasPaymentBreakdownData = paymentPieData.some((item) => item.value > 0);
+  const hasTenantCollectionData = tenantMonthlyPaidData.some((item) => item.value > 0);
+  const hasTenantPaymentBreakdownData = tenantPaymentPieData.some((item) => item.value > 0);
 
   useFocusEffect(
     useCallback(() => {
@@ -280,6 +338,11 @@ export default function DashboardScreen() {
                     <Text className="text-xl font-bold text-success">{tenantStats.paidInvoices}</Text>
                     <Text className="text-xs text-mutedForeground">Paid</Text>
                   </View>
+                  <View className="w-px bg-border h-full" />
+                  <View className="items-center flex-1">
+                    <Text className="text-xl font-bold text-destructive">{tenantStats.overdueInvoices}</Text>
+                    <Text className="text-xs text-mutedForeground">Overdue</Text>
+                  </View>
                 </>
               )}
             </View>
@@ -413,6 +476,141 @@ export default function DashboardScreen() {
                     </Text>
                     <Text className="text-xs text-mutedForeground mt-1">
                       Total paid invoices so far
+                    </Text>
+                  </View>
+                </View>
+              )}
+            </View>
+          </>
+        )}
+
+        {user?.role === "tenant" && (
+          <>
+            <View className="bg-card rounded-2xl border border-border p-5 mb-4 shadow-sm">
+              <View className="flex-row justify-between items-center mb-4">
+                <Text className="text-base font-semibold text-foreground">Rent Paid</Text>
+                <Text className="text-xs text-mutedForeground">Last 6 months</Text>
+              </View>
+              {loading ? (
+                <ActivityIndicator size="small" color={COLORS.primary} />
+              ) : !hasTenantCollectionData ? (
+                <Text className="text-sm text-mutedForeground">
+                  No paid invoice data yet for the last 6 months.
+                </Text>
+              ) : (
+                <BarChart
+                  data={tenantMonthlyPaidData}
+                  width={screenWidth - 120}
+                  barWidth={24}
+                  spacing={18}
+                  roundedTop
+                  roundedBottom
+                  hideRules
+                  xAxisThickness={1}
+                  yAxisThickness={0}
+                  xAxisColor={COLORS.border}
+                  yAxisTextStyle={{ color: COLORS.mutedForeground, fontSize: 10 }}
+                  xAxisLabelTextStyle={{ color: COLORS.mutedForeground, fontSize: 11 }}
+                  noOfSections={4}
+                  maxValue={Math.max(...tenantMonthlyPaidData.map((item) => item.value), 0) || 100}
+                />
+              )}
+            </View>
+
+            <View className="bg-card rounded-2xl border border-border p-5 mb-4 shadow-sm">
+              <Text className="text-base font-semibold text-foreground mb-4">Payment Status</Text>
+              {loading ? (
+                <ActivityIndicator size="small" color={COLORS.primary} />
+              ) : !hasTenantPaymentBreakdownData ? (
+                <Text className="text-sm text-mutedForeground">
+                  No invoice payment status data available yet.
+                </Text>
+              ) : (
+                <>
+                  <View style={{ alignItems: "center" }}>
+                    <PieChart
+                      data={tenantPaymentPieData}
+                      donut
+                      radius={90}
+                      innerRadius={55}
+                      textColor="#fff"
+                      textSize={12}
+                      centerLabelComponent={() => (
+                        <View style={{ alignItems: "center" }}>
+                          <Text style={{ fontSize: 12, color: COLORS.mutedForeground }}>Invoices</Text>
+                          <Text style={{ fontSize: 20, fontWeight: "700", color: COLORS.foreground }}>
+                            {tenantStats.totalInvoices}
+                          </Text>
+                        </View>
+                      )}
+                    />
+                  </View>
+
+                  <View className="mt-5 gap-3">
+                    {tenantPaymentPieData.map((item) => (
+                      <View
+                        key={item.label}
+                        className="flex-row items-center justify-between"
+                      >
+                        <View className="flex-row items-center gap-2">
+                          <View
+                            style={{
+                              width: 12,
+                              height: 12,
+                              borderRadius: 6,
+                              backgroundColor: item.color,
+                            }}
+                          />
+                          <Text className="text-sm text-foreground">{item.label}</Text>
+                        </View>
+                        <Text className="text-sm font-semibold text-foreground">{item.value}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </>
+              )}
+            </View>
+
+            <View className="bg-card rounded-2xl border border-border p-5 mb-8 shadow-sm">
+              <Text className="text-base font-semibold text-foreground mb-4">Tenant Snapshot</Text>
+              {loading ? (
+                <ActivityIndicator size="small" color={COLORS.primary} />
+              ) : (
+                <View className="flex-row flex-wrap justify-between gap-y-4">
+                  <View className="w-[48%] bg-muted rounded-xl p-4">
+                    <Text className="text-xs text-mutedForeground mb-1">Active Rentals</Text>
+                    <Text className="text-2xl font-bold text-foreground">
+                      {tenantStats.activeProperties}
+                    </Text>
+                    <Text className="text-xs text-mutedForeground mt-1">
+                      Current active properties
+                    </Text>
+                  </View>
+                  <View className="w-[48%] bg-muted rounded-xl p-4">
+                    <Text className="text-xs text-mutedForeground mb-1">Pending Invites</Text>
+                    <Text className="text-2xl font-bold text-foreground">
+                      {tenantStats.pendingInvitations}
+                    </Text>
+                    <Text className="text-xs text-mutedForeground mt-1">
+                      Invitations waiting for action
+                    </Text>
+                  </View>
+                  <View className="w-[48%] bg-muted rounded-xl p-4">
+                    <Text className="text-xs text-mutedForeground mb-1">Open Requests</Text>
+                    <Text className="text-2xl font-bold text-foreground">
+                      {tenantCharts.maintenanceStats.pending + tenantCharts.maintenanceStats.inProgress}
+                    </Text>
+                    <Text className="text-xs text-mutedForeground mt-1">
+                      Pending or in-progress maintenance
+                    </Text>
+                  </View>
+                  <View className="w-[48%] bg-muted rounded-xl p-4">
+                    <Text className="text-xs text-mutedForeground mb-1">Resolved Requests</Text>
+                    <Text className="text-2xl font-bold text-foreground">
+                      {tenantCharts.maintenanceStats.resolved}
+                    </Text>
+                    <Text className="text-xs text-mutedForeground mt-1">
+                      Maintenance issues completed
                     </Text>
                   </View>
                 </View>
