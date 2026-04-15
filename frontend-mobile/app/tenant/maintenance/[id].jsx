@@ -149,16 +149,16 @@ export default function TenantMaintenanceDetail() {
                     <View style={[styles.infoBox, { backgroundColor: "#DBEAFE" }]}>
                         <Ionicons name="construct-outline" size={20} color="#1E40AF" />
                         <Text style={[styles.infoText, { color: "#1E40AF" }]}>
-                            Your request is being worked on. You will be notified when it's completed.
+                            Your request is being worked on. You will be notified when it's resolved.
                         </Text>
                     </View>
                 )}
 
-                {request.status === "Completed" && (
+                {request.status === "Resolved" && (
                     <View style={[styles.infoBox, { backgroundColor: "#DCFCE7" }]}>
                         <Ionicons name="checkmark-circle-outline" size={20} color="#166534" />
                         <Text style={[styles.infoText, { color: "#166534" }]}>
-                            This maintenance request has been completed.
+                            This maintenance request has been resolved.
                         </Text>
                     </View>
                 )}

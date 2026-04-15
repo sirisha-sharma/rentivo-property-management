@@ -7,7 +7,7 @@ export const StatusBadge = ({ status }) => {
         switch (status) {
             case "occupied":
             case "Active":
-            case "Completed":
+            case "Resolved":
             case "Paid":
                 return { bg: "#DCFCE7", text: "#166534" }; // green-100, green-800
             case "vacant":

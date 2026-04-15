@@ -197,10 +197,10 @@ export default function MaintenanceDetail() {
                     {request.status === "In Progress" && (
                         <TouchableOpacity
                             style={styles.completedBtn}
-                            onPress={() => handleStatusUpdate("Completed")}
+                            onPress={() => handleStatusUpdate("Resolved")}
                         >
                             <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
-                            <Text style={styles.actionBtnText}>Mark as Completed</Text>
+                            <Text style={styles.actionBtnText}>Mark as Resolved</Text>
                         </TouchableOpacity>
                     )}
 

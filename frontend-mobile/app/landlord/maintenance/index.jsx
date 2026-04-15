@@ -46,18 +46,18 @@ export default function MaintenanceList() {
         );
     };
 
-    // Handle marking a request as "Completed"
-    const handleMarkCompleted = (request) => {
+    // Handle marking a request as "Resolved"
+    const handleMarkResolved = (request) => {
         Alert.alert(
-            "Complete Request",
-            `Mark this maintenance request as Completed?`,
+            "Resolve Request",
+            `Mark this maintenance request as Resolved?`,
             [
                 { text: "Cancel", style: "cancel" },
                 {
-                    text: "Complete",
+                    text: "Resolve",
                     onPress: async () => {
                         try {
-                            await updateRequestStatus(request._id, "Completed");
+                            await updateRequestStatus(request._id, "Resolved");
                         } catch (e) {
                             Alert.alert("Error", "Failed to update status");
                         }
@@ -151,7 +151,7 @@ export default function MaintenanceList() {
                             </TouchableOpacity>
                         )}
                         {item.status === "In Progress" && (
-                            <TouchableOpacity style={styles.completeBtn} onPress={() => handleMarkCompleted(item)}>
+                            <TouchableOpacity style={styles.completeBtn} onPress={() => handleMarkResolved(item)}>
                                 <Ionicons name="checkmark-circle-outline" size={16} color={COLORS.success} />
                                 <Text style={styles.completeBtnText}>Done</Text>
                             </TouchableOpacity>
@@ -171,7 +171,7 @@ export default function MaintenanceList() {
 
             {/* Filter Tabs */}
             <View style={styles.filterRow}>
-                {["all", "pending", "in progress", "completed"].map((f) => (
+                {["all", "pending", "in progress", "resolved"].map((f) => (
                     <TouchableOpacity
                         key={f}
                         style={[styles.filterChip, filter === f && styles.filterChipActive]}
