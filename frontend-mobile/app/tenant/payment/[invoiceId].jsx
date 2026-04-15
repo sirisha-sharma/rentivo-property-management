@@ -9,11 +9,12 @@ import {
     ScrollView,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import { WebView } from "react-native-webview";
 import { Ionicons } from "@expo/vector-icons";
 import { TopBar } from "../../../components/TopBar";
 import { COLORS } from "../../../constants/theme";
-import { initiatePayment } from "../../../api/payment";
+import { getPaymentById, initiatePayment } from "../../../api/payment";
 import { getInvoiceById } from "../../../api/invoice";
 import { InvoiceContext } from "../../../context/InvoiceContext";
 import { NotificationContext } from "../../../context/NotificationContext";
@@ -43,19 +44,73 @@ export default function PaymentScreen() {
         }
     };
 
-    const getFailureReasonFromUrl = (url) => {
+    const getFailureMeta = ({ reason, status }) => {
+        const normalized = (reason || status || "").toLowerCase();
+
+        if (["pending", "ambiguous", "not_found"].includes(normalized)) {
+            return {
+                title: "Payment Processing",
+                message: "Your payment is still being verified with eSewa. Please check your invoices again in a few moments.",
+            };
+        }
+
+        if (reason === "signature_mismatch") {
+            return {
+                title: "Payment Failed",
+                message: "Payment verification failed. Please try again.",
+            };
+        }
+
+        if (reason === "amount_mismatch") {
+            return {
+                title: "Payment Failed",
+                message: "Payment amount mismatch. Please try again.",
+            };
+        }
+
+        if (reason === "cancelled") {
+            return {
+                title: "Payment Failed",
+                message: "Payment was cancelled.",
+            };
+        }
+
+        if (reason === "lookup_failed") {
+            return {
+                title: "Payment Failed",
+                message: "Could not verify payment with the provider. Please try again.",
+            };
+        }
+
+        if (reason === "failed") {
+            return {
+                title: "Payment Failed",
+                message: "eSewa reported this payment as failed.",
+            };
+        }
+
+        if (status) {
+            return {
+                title: "Payment Failed",
+                message: `Payment status: ${status}. Please try again.`,
+            };
+        }
+
+        return {
+            title: "Payment Failed",
+            message: "Your payment could not be processed. Please try again.",
+        };
+    };
+
+    const getFailureMetaFromUrl = (url) => {
         try {
             const params = new URL(url).searchParams;
-            const reason = params.get("reason");
-            const status = params.get("status");
-            if (reason === "signature_mismatch") return "Payment verification failed. Please try again.";
-            if (reason === "amount_mismatch") return "Payment amount mismatch. Please try again.";
-            if (reason === "cancelled") return "Payment was cancelled.";
-            if (reason === "lookup_failed") return "Could not verify payment with the provider. Please try again.";
-            if (status) return `Payment status: ${status}. Please try again.`;
-            return "Your payment could not be processed. Please try again.";
+            return getFailureMeta({
+                reason: params.get("reason"),
+                status: params.get("status"),
+            });
         } catch (_error) {
-            return "Your payment could not be processed. Please try again.";
+            return getFailureMeta({});
         }
     };
 
@@ -82,10 +137,26 @@ export default function PaymentScreen() {
             handledGatewayResultRef.current = false;
             const response = await initiatePayment(invoiceId, "esewa");
 
-            if (response.success && response.gatewayData) {
-                setPaymentData(response.gatewayData);
-                setSelectedGateway("esewa");
-                setPaymentInitiated(true);
+            if (response.success && response.launchUrl && response.payment?.paymentId) {
+                Alert.alert(
+                    "Continue in Browser",
+                    "eSewa will open in your browser or eSewa app. After completing the payment, return to Rentivo.",
+                    [
+                        {
+                            text: "Continue",
+                            onPress: async () => {
+                                try {
+                                    await WebBrowser.openBrowserAsync(response.launchUrl, {
+                                        showTitle: true,
+                                        enableDefaultShareMenuItem: false,
+                                    });
+                                } finally {
+                                    await checkEsewaBrowserPaymentResult(response.payment.paymentId);
+                                }
+                            },
+                        },
+                    ]
+                );
             } else {
                 Alert.alert("Error", "Failed to initialize payment");
             }
@@ -116,86 +187,6 @@ export default function PaymentScreen() {
         }
     };
 
-    const generateEsewaFormHTML = () => {
-        if (!paymentData) return "";
-
-        return `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <style>
-                    body {
-                        margin: 0;
-                        padding: 20px;
-                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                        background: #f5f5f5;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        min-height: 100vh;
-                    }
-                    .container {
-                        background: white;
-                        padding: 30px;
-                        border-radius: 12px;
-                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                        text-align: center;
-                    }
-                    .logo {
-                        font-size: 24px;
-                        font-weight: bold;
-                        color: #2563EB;
-                        margin-bottom: 20px;
-                    }
-                    .message {
-                        color: #64748B;
-                        margin-bottom: 20px;
-                    }
-                    .loader {
-                        border: 3px solid #f3f3f3;
-                        border-top: 3px solid #2563EB;
-                        border-radius: 50%;
-                        width: 40px;
-                        height: 40px;
-                        animation: spin 1s linear infinite;
-                        margin: 20px auto;
-                    }
-                    @keyframes spin {
-                        0% { transform: rotate(0deg); }
-                        100% { transform: rotate(360deg); }
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="logo">eSewa Payment</div>
-                    <div class="message">Redirecting to eSewa...</div>
-                    <div class="loader"></div>
-                </div>
-                <form id="esewaForm" action="${paymentData.payment_url}" method="POST">
-                    <input type="hidden" name="amount" value="${paymentData.amount}" />
-                    <input type="hidden" name="tax_amount" value="${paymentData.tax_amount || 0}" />
-                    <input type="hidden" name="total_amount" value="${paymentData.total_amount}" />
-                    <input type="hidden" name="transaction_uuid" value="${paymentData.transaction_uuid}" />
-                    <input type="hidden" name="product_code" value="${paymentData.product_code}" />
-                    <input type="hidden" name="product_service_charge" value="${paymentData.product_service_charge || 0}" />
-                    <input type="hidden" name="product_delivery_charge" value="${paymentData.product_delivery_charge || 0}" />
-                    <input type="hidden" name="success_url" value="${paymentData.success_url}" />
-                    <input type="hidden" name="failure_url" value="${paymentData.failure_url}" />
-                    <input type="hidden" name="signed_field_names" value="${paymentData.signed_field_names}" />
-                    <input type="hidden" name="signature" value="${paymentData.signature}" />
-                </form>
-                <script>
-                    setTimeout(function() {
-                        document.getElementById('esewaForm').submit();
-                    }, 1000);
-                </script>
-            </body>
-            </html>
-        `;
-    };
-
     const syncSuccessfulPaymentState = async (targetInvoiceId) => {
         const invoiceToRefresh = targetInvoiceId || invoiceId;
         let latestInvoice = null;
@@ -217,6 +208,67 @@ export default function PaymentScreen() {
         }
 
         await Promise.allSettled([fetchInvoices(), fetchNotifications()]);
+    };
+
+    const checkEsewaBrowserPaymentResult = async (paymentId) => {
+        setProcessing(true);
+
+        try {
+            for (let attempt = 0; attempt < 12; attempt++) {
+                const [{ payment }, invoiceResponse] = await Promise.all([
+                    getPaymentById(paymentId),
+                    getInvoiceById(invoiceId),
+                ]);
+
+                setInvoice(invoiceResponse.invoice);
+
+                if (invoiceResponse.invoice?.status === "Paid" || payment?.status === "completed") {
+                    await Promise.allSettled([fetchInvoices(), fetchNotifications()]);
+                    Alert.alert(
+                        "Payment Successful",
+                        "Your payment has been processed successfully and the invoice is now marked as Paid.",
+                        [{ text: "OK", onPress: () => router.replace("/tenant/invoices") }]
+                    );
+                    return;
+                }
+
+                if (payment?.status === "failed") {
+                    const failureMeta = getFailureMeta({
+                        reason:
+                            payment.gatewayResponse?.status?.toLowerCase() === "failed"
+                                ? "failed"
+                                : payment.failureReason?.toLowerCase?.(),
+                        status: payment.gatewayResponse?.status,
+                    });
+
+                    Alert.alert(failureMeta.title, failureMeta.message, [
+                        {
+                            text: "OK",
+                            onPress: () => {
+                                handledGatewayResultRef.current = false;
+                            },
+                        },
+                    ]);
+                    return;
+                }
+
+                await sleep(2000);
+            }
+
+            Alert.alert(
+                "Payment Processing",
+                "Your payment is still being verified. Please check your invoices again in a moment.",
+                [{ text: "OK", onPress: () => router.replace("/tenant/invoices") }]
+            );
+        } catch (_error) {
+            Alert.alert(
+                "Payment Processing",
+                "Your payment is being processed. Please check your invoices again in a moment.",
+                [{ text: "OK", onPress: () => router.replace("/tenant/invoices") }]
+            );
+        } finally {
+            setProcessing(false);
+        }
     };
 
     const handleSuccessfulGatewayReturn = async (url) => {
@@ -263,13 +315,20 @@ export default function PaymentScreen() {
         if (url.includes("/payment-success")) {
             void handleSuccessfulGatewayReturn(url);
         } else {
-            const reason = getFailureReasonFromUrl(url);
+            const failureMeta = getFailureMetaFromUrl(url);
             setPaymentInitiated(false);
-            Alert.alert("Payment Failed", reason, [
+            if (failureMeta.title === "Payment Processing") {
+                void Promise.allSettled([fetchInvoices(), fetchNotifications()]);
+            }
+            Alert.alert(failureMeta.title, failureMeta.message, [
                 {
                     text: "OK",
                     onPress: () => {
                         handledGatewayResultRef.current = false;
+                        if (failureMeta.title === "Payment Processing") {
+                            router.replace("/tenant/invoices");
+                            return;
+                        }
                         setPaymentInitiated(false);
                     },
                 },
@@ -310,13 +369,19 @@ export default function PaymentScreen() {
                     [{ text: "OK", onPress: () => router.replace("/tenant/invoices") }]
                 );
             } else if (finalUrl.includes("/payment-failed")) {
-                const reason = getFailureReasonFromUrl(finalUrl);
+                const failureMeta = getFailureMetaFromUrl(finalUrl);
+                if (failureMeta.title === "Payment Processing") {
+                    await Promise.allSettled([fetchInvoices(), fetchNotifications()]);
+                }
                 setProcessing(false);
-                Alert.alert("Payment Failed", reason, [
+                Alert.alert(failureMeta.title, failureMeta.message, [
                     {
                         text: "OK",
                         onPress: () => {
                             handledGatewayResultRef.current = false;
+                            if (failureMeta.title === "Payment Processing") {
+                                router.replace("/tenant/invoices");
+                            }
                         },
                     },
                 ]);
@@ -385,17 +450,18 @@ export default function PaymentScreen() {
 
     if (paymentInitiated && paymentData) {
         let gatewayTitle = "Payment";
-        let formHTML = "";
         let webViewSource = null;
 
         if (selectedGateway === "esewa") {
             gatewayTitle = "eSewa Payment";
-            formHTML = generateEsewaFormHTML();
-            webViewSource = { html: formHTML };
         } else if (selectedGateway === "khalti") {
             gatewayTitle = "Khalti Payment";
             // Khalti e-Payment v2: directly load the payment_url returned by the API
             webViewSource = { uri: paymentData.payment_url };
+        }
+
+        if (selectedGateway === "esewa") {
+            return null;
         }
 
         return (

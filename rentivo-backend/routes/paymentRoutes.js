@@ -4,7 +4,9 @@ import {
     getPaymentConfig,
     getPaymentHistory,
     getPaymentById,
+    handleEsewaIntentCallback,
     handlePaymentFailure,
+    serveEsewaPaymentLaunchPage,
     verifyEsewaPayment,
     verifyKhaltiPayment,
 } from "../controllers/paymentController.js";
@@ -20,7 +22,11 @@ router.get("/config", protect, getPaymentConfig);
 router.get("/history", protect, getPaymentHistory);
 
 // Payment gateway verification endpoints (callbacks)
+router.get("/esewa/launch/:token", serveEsewaPaymentLaunchPage);
+router.get("/esewa/intent/callback", handleEsewaIntentCallback);
+router.post("/esewa/intent/callback", handleEsewaIntentCallback);
 router.get("/esewa/verify", verifyEsewaPayment);
+router.get("/esewa/failure/:transactionId", handlePaymentFailure);
 router.get("/khalti/verify", verifyKhaltiPayment);
 router.post("/khalti/verify", verifyKhaltiPayment);
 
