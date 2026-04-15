@@ -77,7 +77,11 @@ export const getTenants = async (req, res) => {
 export const getMyInvitations = async (req, res) => {
     try {
         const invitations = await Tenant.find({ userId: req.user._id })
-            .populate("propertyId", "title address type images");
+            .populate({
+                path: "propertyId",
+                select: "title address type images splitMethod landlordId",
+                populate: { path: "landlordId", select: "name _id" },
+            });
         res.status(200).json(invitations);
     } catch (error) {
         res.status(500).json({ message: error.message });

@@ -63,10 +63,24 @@ export default function TenantList() {
 
             <View style={styles.cardFooter}>
                 <Text style={styles.dateText}>Lease ends: {item.leaseEnd ? new Date(item.leaseEnd).toLocaleDateString() : "N/A"}</Text>
-                <TouchableOpacity style={styles.removeBtn} onPress={() => handleRemove(item)}>
-                    <Ionicons name="trash-outline" size={16} color="#EF4444" />
-                    <Text style={styles.removeBtnText}>Remove</Text>
-                </TouchableOpacity>
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                    {item.status === "Active" && item.userId?._id && item.propertyId?._id && (
+                        <TouchableOpacity
+                            style={styles.messageBtn}
+                            onPress={() => {
+                                const threadId = `${item.userId._id}_${item.propertyId._id}`;
+                                router.push(`/messages/${threadId}?name=${encodeURIComponent(item.userId?.name || "Tenant")}&property=${encodeURIComponent(item.propertyId?.title || "")}`);
+                            }}
+                        >
+                            <Ionicons name="chatbubble-outline" size={16} color={COLORS.primary} />
+                            <Text style={styles.messageBtnText}>Message</Text>
+                        </TouchableOpacity>
+                    )}
+                    <TouchableOpacity style={styles.removeBtn} onPress={() => handleRemove(item)}>
+                        <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                        <Text style={styles.removeBtnText}>Remove</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
         </View>
     );
@@ -225,6 +239,20 @@ const styles = StyleSheet.create({
     },
     filterTextActive: {
         color: "#fff",
+    },
+    messageBtn: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        backgroundColor: "#DBEAFE",
+        borderRadius: 6,
+    },
+    messageBtnText: {
+        fontSize: 12,
+        color: COLORS.primary,
+        fontWeight: "500",
     },
     removeBtn: {
         flexDirection: "row",

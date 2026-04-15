@@ -9,6 +9,7 @@ import { COLORS } from "../constants/theme";
 import axios from "axios";
 import { API_BASE_URL } from "../constants/config";
 import { NotificationContext } from "../context/NotificationContext";
+import { MessageContext } from "../context/MessageContext";
 
 // Dashboard Screen Component
 // This is the main dashboard screen that displays different content based on user role
@@ -19,6 +20,7 @@ export default function DashboardScreen() {
   const router = useRouter();
 
   const { unreadCount, fetchNotifications } = useContext(NotificationContext);
+  const { unreadMessageCount, fetchUnreadCount } = useContext(MessageContext);
 
   // State for landlord statistics
   const [stats, setStats] = useState({
@@ -74,14 +76,16 @@ export default function DashboardScreen() {
     useCallback(() => {
       void fetchStats();
       void fetchNotifications();
+      void fetchUnreadCount();
 
       const intervalId = setInterval(() => {
         void fetchStats();
         void fetchNotifications();
+        void fetchUnreadCount();
       }, 5000);
 
       return () => clearInterval(intervalId);
-    }, [fetchNotifications, fetchStats])
+    }, [fetchNotifications, fetchStats, fetchUnreadCount])
   );
 
   // Handle user logout
@@ -272,6 +276,28 @@ export default function DashboardScreen() {
               </View>
               <Text className="text-sm font-semibold text-foreground">Documents</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              className="w-[47%] bg-card rounded-2xl border border-border p-4 items-center"
+              onPress={() => router.push("/messages")}
+            >
+              <View className="w-12 h-12 rounded-xl items-center justify-center mb-3 bg-pink-100" style={{ position: "relative" }}>
+                <Ionicons name="chatbubbles" size={24} color="#DB2777" />
+                {unreadMessageCount > 0 && (
+                  <View style={{
+                    position: "absolute", top: -2, right: -2,
+                    backgroundColor: COLORS.destructive, borderRadius: 10,
+                    minWidth: 18, height: 18, alignItems: "center", justifyContent: "center",
+                    paddingHorizontal: 4,
+                  }}>
+                    <Text style={{ color: "#fff", fontSize: 10, fontWeight: "700" }}>
+                      {unreadMessageCount > 9 ? "9+" : unreadMessageCount}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <Text className="text-sm font-semibold text-foreground">Messages</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -345,6 +371,28 @@ export default function DashboardScreen() {
                 <Ionicons name="receipt" size={24} color="#9333EA" />
               </View>
               <Text className="text-sm font-semibold text-foreground">Payments</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              className="w-[47%] bg-card rounded-2xl border border-border p-4 items-center"
+              onPress={() => router.push("/messages")}
+            >
+              <View className="w-12 h-12 rounded-xl items-center justify-center mb-3 bg-pink-100" style={{ position: "relative" }}>
+                <Ionicons name="chatbubbles" size={24} color="#DB2777" />
+                {unreadMessageCount > 0 && (
+                  <View style={{
+                    position: "absolute", top: -2, right: -2,
+                    backgroundColor: COLORS.destructive, borderRadius: 10,
+                    minWidth: 18, height: 18, alignItems: "center", justifyContent: "center",
+                    paddingHorizontal: 4,
+                  }}>
+                    <Text style={{ color: "#fff", fontSize: 10, fontWeight: "700" }}>
+                      {unreadMessageCount > 9 ? "9+" : unreadMessageCount}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <Text className="text-sm font-semibold text-foreground">Messages</Text>
             </TouchableOpacity>
           </View>
         )}

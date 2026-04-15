@@ -252,6 +252,7 @@ export default function MyRentals() {
                                     flexDirection: "row",
                                     gap: 8,
                                     paddingTop: 8,
+                                    flexWrap: "wrap",
                                 }}>
                                     <TouchableOpacity
                                         style={{
@@ -285,6 +286,30 @@ export default function MyRentals() {
                                             Documents
                                         </Text>
                                     </TouchableOpacity>
+                                    {rental.propertyId?.landlordId?._id && (
+                                        <TouchableOpacity
+                                            style={{
+                                                flex: 1,
+                                                paddingVertical: 10,
+                                                paddingHorizontal: 16,
+                                                borderRadius: 8,
+                                                backgroundColor: "#EFF6FF",
+                                                borderWidth: 1,
+                                                borderColor: COLORS.primary,
+                                                alignItems: "center",
+                                            }}
+                                            onPress={() => {
+                                                const landlordId = rental.propertyId.landlordId._id;
+                                                const landlordName = rental.propertyId.landlordId.name;
+                                                const threadId = `${landlordId}_${rental.propertyId._id}`;
+                                                router.push(`/messages/${threadId}?name=${encodeURIComponent(landlordName || "Landlord")}&property=${encodeURIComponent(rental.propertyId?.title || "")}`);
+                                            }}
+                                        >
+                                            <Text style={{ fontSize: 14, fontWeight: "600", color: COLORS.primary }}>
+                                                Message Landlord
+                                            </Text>
+                                        </TouchableOpacity>
+                                    )}
                                 </View>
                             </View>
                         ))}

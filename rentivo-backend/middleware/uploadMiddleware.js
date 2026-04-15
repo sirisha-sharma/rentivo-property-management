@@ -67,3 +67,26 @@ export const uploadPropertyImages = multer({
     fileFilter: imageFileFilter,
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max per image
 });
+
+// ==================== Message Attachment Upload Configuration ====================
+
+const messageAttachmentDir = "uploads/messages";
+if (!fs.existsSync(messageAttachmentDir)) {
+    fs.mkdirSync(messageAttachmentDir, { recursive: true });
+}
+
+const messageAttachmentStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, messageAttachmentDir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueName = `message-${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`;
+        cb(null, uniqueName);
+    },
+});
+
+export const uploadMessageAttachment = multer({
+    storage: messageAttachmentStorage,
+    fileFilter,
+    limits: { fileSize: 10 * 1024 * 1024 },
+});
