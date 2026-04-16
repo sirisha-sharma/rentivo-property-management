@@ -6,7 +6,7 @@ import { createNotification } from "./notificationController.js";
 // Create a new maintenance request
 export const createRequest = async (req, res) => {
     try {
-        const { propertyId, title, description, priority } = req.body;
+        const { propertyId, title, description, priority, urgency } = req.body;
 
         const tenant = await Tenant.findOne({ userId: req.user._id, propertyId, status: "Active" });
         if (!tenant) {
@@ -18,7 +18,7 @@ export const createRequest = async (req, res) => {
             tenantId: tenant._id,
             title,
             description,
-            priority: priority || "Medium",
+            priority: urgency || priority || "Medium",
         });
 
         // Notify the landlord about the new request
@@ -85,6 +85,19 @@ export const getRequestById = async (req, res) => {
 
         if (!request) {
             return res.status(404).json({ message: "Maintenance request not found" });
+        }
+
+        const propertyLandlordId = request.propertyId?.landlordId?.toString();
+        const tenantUserId = request.tenantId?.userId?._id?.toString();
+        const currentUserId = req.user._id.toString();
+
+        const isAuthorizedLandlord =
+            req.user.role === "landlord" && propertyLandlordId === currentUserId;
+        const isAuthorizedTenant =
+            req.user.role === "tenant" && tenantUserId === currentUserId;
+
+        if (!isAuthorizedLandlord && !isAuthorizedTenant) {
+            return res.status(403).json({ message: "Not authorized to view this maintenance request" });
         }
 
         res.json(request);

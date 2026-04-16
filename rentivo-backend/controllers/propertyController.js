@@ -68,6 +68,10 @@ export const createProperty = async (req, res) => {
     }
 
     try {
+        if (req.user?.role !== "landlord") {
+            return res.status(403).json({ message: "Only landlords can create properties" });
+        }
+
         // Handle uploaded images
         let imagePaths = [];
         if (req.files && req.files.length > 0) {
@@ -213,6 +217,17 @@ export const deleteProperty = async (req, res) => {
         // Make sure the logged in user matches the property landlord
         if (property.landlordId.toString() !== req.user._id.toString()) {
             return res.status(401).json({ message: "User not authorized" });
+        }
+
+        const activeTenantCount = await Tenant.countDocuments({
+            propertyId: property._id,
+            status: "Active",
+        });
+
+        if (activeTenantCount > 0) {
+            return res.status(400).json({
+                message: "Cannot delete a property that still has active tenants",
+            });
         }
 
         await property.deleteOne();

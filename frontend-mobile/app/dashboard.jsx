@@ -457,7 +457,7 @@ export default function DashboardScreen() {
                       {landlordCharts.maintenanceStats.pending}
                     </Text>
                     <Text className="text-xs text-mutedForeground mt-1">
-                      Pending/In Progress requests
+                      Open/In Progress requests
                     </Text>
                   </View>
                   <View className="w-[48%] bg-muted rounded-xl p-4">
@@ -601,7 +601,7 @@ export default function DashboardScreen() {
                       {tenantCharts.maintenanceStats.pending + tenantCharts.maintenanceStats.inProgress}
                     </Text>
                     <Text className="text-xs text-mutedForeground mt-1">
-                      Pending or in-progress maintenance
+                      Open or in-progress maintenance
                     </Text>
                   </View>
                   <View className="w-[48%] bg-muted rounded-xl p-4">

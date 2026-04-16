@@ -14,6 +14,8 @@ export default function MaintenanceList() {
     const router = useRouter();
     const [filter, setFilter] = useState("all");
 
+    const getDisplayStatus = (status) => (status === "Pending" ? "Open" : status);
+
     // Fetch maintenance requests when screen loads
     useEffect(() => {
         fetchRequests();
@@ -22,7 +24,7 @@ export default function MaintenanceList() {
     // Filter requests based on selected status filter
     const filteredRequests = requests.filter((req) => {
         if (filter === "all") return true;
-        return req.status?.toLowerCase() === filter.toLowerCase();
+        return getDisplayStatus(req.status)?.toLowerCase() === filter.toLowerCase();
     });
 
     // Handle marking a request as "In Progress"
@@ -37,7 +39,7 @@ export default function MaintenanceList() {
                     onPress: async () => {
                         try {
                             await updateRequestStatus(request._id, "In Progress");
-                        } catch (e) {
+                        } catch (_e) {
                             Alert.alert("Error", "Failed to update status");
                         }
                     },
@@ -58,7 +60,7 @@ export default function MaintenanceList() {
                     onPress: async () => {
                         try {
                             await updateRequestStatus(request._id, "Resolved");
-                        } catch (e) {
+                        } catch (_e) {
                             Alert.alert("Error", "Failed to update status");
                         }
                     },
@@ -80,7 +82,7 @@ export default function MaintenanceList() {
                     onPress: async () => {
                         try {
                             await deleteRequest(request._id);
-                        } catch (e) {
+                        } catch (_e) {
                             Alert.alert("Error", "Failed to delete request");
                         }
                     },
@@ -112,6 +114,7 @@ export default function MaintenanceList() {
     // Render each maintenance request card
     const renderItem = ({ item }) => {
         const priorityColor = getPriorityColor(item.priority);
+        const displayStatus = getDisplayStatus(item.status || "Open");
         return (
             <TouchableOpacity
                 style={styles.card}
@@ -131,7 +134,7 @@ export default function MaintenanceList() {
                             </Text>
                         </View>
                     </View>
-                    <StatusBadge status={item.status || "Pending"} />
+                    <StatusBadge status={displayStatus} />
                 </View>
 
                 <View style={styles.divider} />
@@ -144,13 +147,13 @@ export default function MaintenanceList() {
                         </View>
                     </View>
                     <View style={styles.actionRow}>
-                        {item.status === "Pending" && (
+                        {displayStatus === "Open" && (
                             <TouchableOpacity style={styles.progressBtn} onPress={() => handleMarkInProgress(item)}>
                                 <Ionicons name="play-circle-outline" size={16} color="#1E40AF" />
                                 <Text style={styles.progressBtnText}>Start</Text>
                             </TouchableOpacity>
                         )}
-                        {item.status === "In Progress" && (
+                        {displayStatus === "In Progress" && (
                             <TouchableOpacity style={styles.completeBtn} onPress={() => handleMarkResolved(item)}>
                                 <Ionicons name="checkmark-circle-outline" size={16} color={COLORS.success} />
                                 <Text style={styles.completeBtnText}>Done</Text>
@@ -171,7 +174,7 @@ export default function MaintenanceList() {
 
             {/* Filter Tabs */}
             <View style={styles.filterRow}>
-                {["all", "pending", "in progress", "resolved"].map((f) => (
+                {["all", "open", "in progress", "resolved"].map((f) => (
                     <TouchableOpacity
                         key={f}
                         style={[styles.filterChip, filter === f && styles.filterChipActive]}

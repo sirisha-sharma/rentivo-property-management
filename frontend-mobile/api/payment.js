@@ -44,7 +44,7 @@ export const getPaymentConfig = async () => {
 /**
  * Initiate payment for an invoice
  * @param {string} invoiceId - Invoice ID
- * @param {string} gateway - Payment gateway (esewa, khalti, fonepay)
+ * @param {string} gateway - Payment gateway (esewa or khalti)
  */
 export const initiatePayment = async (invoiceId, gateway) => {
     try {

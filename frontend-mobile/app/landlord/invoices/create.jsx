@@ -11,7 +11,7 @@ import {
     Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { TopBar } from "../../../components/TopBar";
 import { InvoiceContext } from "../../../context/InvoiceContext";
 import { PropertyContext } from "../../../context/PropertyContext";
@@ -21,12 +21,13 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 
 export default function CreateInvoice() {
     const router = useRouter();
+    const { propertyId: initialPropertyId, tenantId: initialTenantId } = useLocalSearchParams();
     const { createInvoice, loading } = useContext(InvoiceContext);
     const { properties, fetchProperties } = useContext(PropertyContext);
     const { tenants, fetchTenants } = useContext(TenantContext);
 
-    const [selectedPropertyId, setSelectedPropertyId] = useState("");
-    const [selectedTenantId, setSelectedTenantId] = useState("");
+    const [selectedPropertyId, setSelectedPropertyId] = useState(initialPropertyId ? String(initialPropertyId) : "");
+    const [selectedTenantId, setSelectedTenantId] = useState(initialTenantId ? String(initialTenantId) : "");
     const [amount, setAmount] = useState("");
     const [type, setType] = useState("Rent");
     const [dueDate, setDueDate] = useState(new Date());

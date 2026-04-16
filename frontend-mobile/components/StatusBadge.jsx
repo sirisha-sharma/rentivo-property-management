@@ -12,6 +12,7 @@ export const StatusBadge = ({ status }) => {
                 return { bg: "#DCFCE7", text: "#166534" }; // green-100, green-800
             case "vacant":
             case "submitted":
+            case "Open":
             case "Pending":
                 return { bg: "#FEF9C3", text: "#854D0E" }; // yellow-100, yellow-800
             case "maintenance":

@@ -67,7 +67,6 @@ export default function PaymentHistory() {
         const colors = {
             esewa: "#2563EB",
             khalti: "#5C2D91",
-            fonepay: "#DC2626",
         };
         return colors[gateway?.toLowerCase()] || COLORS.primary;
     };
@@ -76,7 +75,6 @@ export default function PaymentHistory() {
         const names = {
             esewa: "eSewa",
             khalti: "Khalti",
-            fonepay: "Fonepay",
         };
         return names[gateway?.toLowerCase()] || gateway;
     };

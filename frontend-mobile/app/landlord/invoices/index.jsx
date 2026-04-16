@@ -1,7 +1,7 @@
 import React, { useContext, useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from "react-native";
 import { InvoiceContext } from "../../../context/InvoiceContext";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { TopBar } from "../../../components/TopBar";
 import { StatusBadge } from "../../../components/StatusBadge";
@@ -11,6 +11,7 @@ import { useFocusEffect } from "@react-navigation/native";
 export default function InvoiceList() {
     const { invoices, fetchInvoices, updateInvoiceStatus, deleteInvoice, loading } = useContext(InvoiceContext);
     const router = useRouter();
+    const { propertyId } = useLocalSearchParams();
     const [filter, setFilter] = useState("all");
 
     useFocusEffect(
@@ -25,7 +26,13 @@ export default function InvoiceList() {
         }, [fetchInvoices])
     );
 
-    const filteredInvoices = invoices.filter((inv) => {
+    const propertyScopedInvoices = propertyId
+        ? invoices.filter(
+            (invoice) => String(invoice.propertyId?._id || invoice.propertyId) === String(propertyId)
+        )
+        : invoices;
+
+    const filteredInvoices = propertyScopedInvoices.filter((inv) => {
         if (filter === "all") return true;
         return inv.status?.toLowerCase() === filter;
     });
@@ -130,7 +137,7 @@ export default function InvoiceList() {
 
     return (
         <View style={styles.container}>
-            <TopBar title="Invoices" showBack />
+            <TopBar title={propertyId ? "Property Invoices" : "Invoices"} showBack />
 
             {/* Filter Tabs */}
             <View style={styles.filterRow}>
@@ -159,7 +166,11 @@ export default function InvoiceList() {
                         <View style={styles.emptyContainer}>
                             <Ionicons name="document-text" size={48} color={COLORS.border} />
                             <Text style={styles.emptyTitle}>No invoices yet</Text>
-                            <Text style={styles.emptyText}>Create invoices for your tenants to track payments.</Text>
+                            <Text style={styles.emptyText}>
+                                {propertyId
+                                    ? "No invoices are linked to this property yet."
+                                    : "Create invoices for your tenants to track payments."}
+                            </Text>
                         </View>
                     }
                     refreshing={loading}
@@ -169,7 +180,13 @@ export default function InvoiceList() {
 
             <TouchableOpacity
                 style={styles.fab}
-                onPress={() => router.push("/landlord/invoices/create")}
+                onPress={() =>
+                    router.push(
+                        propertyId
+                            ? `/landlord/invoices/create?propertyId=${encodeURIComponent(String(propertyId))}`
+                            : "/landlord/invoices/create"
+                    )
+                }
             >
                 <Ionicons name="add" size={24} color="#fff" />
             </TouchableOpacity>

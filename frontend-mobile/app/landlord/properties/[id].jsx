@@ -7,12 +7,8 @@ import { StatusBadge } from "../../../components/StatusBadge";
 import { COLORS } from "../../../constants/theme";
 import { PropertyContext } from "../../../context/PropertyContext";
 import { TenantContext } from "../../../context/TenantContext";
-
-// Placeholder for now as we don't have maintenance context yet
-const maintenanceRequests = [
-    { id: 1, issue: "Plumbing", status: "in-progress", date: "Dec 20, 2024" },
-    { id: 2, issue: "Electricity", status: "submitted", date: "Dec 22, 2024" },
-];
+import { MaintenanceContext } from "../../../context/MaintenanceContext";
+import { InvoiceContext } from "../../../context/InvoiceContext";
 
 export default function PropertyDetails() {
     const { id } = useLocalSearchParams();
@@ -22,11 +18,15 @@ export default function PropertyDetails() {
     const [loading, setLoading] = useState(true);
     const { tenants, fetchTenants } = useContext(TenantContext);
     const { getPropertyById, deleteProperty } = useContext(PropertyContext);
+    const { requests, fetchRequests } = useContext(MaintenanceContext);
+    const { invoices, fetchInvoices } = useContext(InvoiceContext);
+
+    const getDisplayMaintenanceStatus = (status) => (status === "Pending" ? "Open" : status);
 
     useEffect(() => {
-        fetchTenants();
         const fetchPropertyDetails = async () => {
             try {
+                await Promise.allSettled([fetchTenants(), fetchRequests(), fetchInvoices()]);
                 const data = await getPropertyById(id);
                 setProperty(data);
             } catch (e) {
@@ -39,6 +39,29 @@ export default function PropertyDetails() {
     }, [id]);
 
     const propertyTenants = tenants.filter(t => String(t.propertyId?._id) === String(id) || String(t.propertyId) === String(id));
+    const propertyMaintenanceRequests = requests.filter(
+        (request) => String(request.propertyId?._id || request.propertyId) === String(id)
+    );
+    const unresolvedMaintenanceCount = propertyMaintenanceRequests.filter((request) => {
+        const status = getDisplayMaintenanceStatus(request.status);
+        return status === "Open" || status === "In Progress";
+    }).length;
+    const recentMaintenanceRequests = propertyMaintenanceRequests
+        .slice()
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 3);
+    const propertyInvoices = invoices.filter(
+        (invoice) => String(invoice.propertyId?._id || invoice.propertyId) === String(id)
+    );
+    const activeTenant = propertyTenants.find((tenant) => tenant.status === "Active");
+
+    const formatCurrency = (amount) =>
+        Number.isFinite(Number(amount)) && Number(amount) > 0
+            ? `NPR ${Number(amount).toLocaleString()}`
+            : "-";
+
+    const formatDate = (dateValue) =>
+        dateValue ? new Date(dateValue).toLocaleDateString() : "N/A";
 
     const handleDelete = () => {
         Alert.alert(
@@ -54,7 +77,10 @@ export default function PropertyDetails() {
                             await deleteProperty(id);
                             router.replace("/landlord/properties");
                         } catch (e) {
-                            Alert.alert("Error", "Failed to delete property");
+                            Alert.alert(
+                                "Error",
+                                e?.response?.data?.message || "Failed to delete property"
+                            );
                         }
                     },
                 },
@@ -64,6 +90,23 @@ export default function PropertyDetails() {
 
     const handleEdit = () => {
         router.push(`/landlord/properties/edit?id=${id}`);
+    };
+
+    const handleGenerateInvoice = () => {
+        if (!activeTenant?._id) {
+            Alert.alert("No active tenant", "Add or activate a tenant before creating an invoice.");
+            return;
+        }
+
+        router.push(
+            `/landlord/invoices/create?propertyId=${encodeURIComponent(String(id))}&tenantId=${encodeURIComponent(
+                activeTenant._id
+            )}`
+        );
+    };
+
+    const handleViewInvoices = () => {
+        router.push(`/landlord/invoices?propertyId=${encodeURIComponent(String(id))}`);
     };
 
     if (loading) {
@@ -144,12 +187,12 @@ export default function PropertyDetails() {
                     </View>
                     <View className="flex-1 bg-card rounded-xl border border-border p-3 items-center">
                         <Ionicons name="cash-outline" size={20} color={COLORS.success} />
-                        <Text className="text-lg font-bold text-foreground my-1">-</Text>
+                        <Text className="text-lg font-bold text-foreground my-1">{formatCurrency(property.rent)}</Text>
                         <Text className="text-[10px] text-mutedForeground">Monthly</Text>
                     </View>
                     <View className="flex-1 bg-card rounded-xl border border-border p-3 items-center">
                         <Ionicons name="construct-outline" size={20} color={COLORS.warning} />
-                        <Text className="text-lg font-bold text-foreground my-1">2</Text>
+                        <Text className="text-lg font-bold text-foreground my-1">{unresolvedMaintenanceCount}</Text>
                         <Text className="text-[10px] text-mutedForeground">Issues</Text>
                     </View>
                 </View>
@@ -211,31 +254,51 @@ export default function PropertyDetails() {
                 {/* Recent Maintenance */}
                 <View className="flex-row justify-between items-center mb-3">
                     <Text className="text-sm font-semibold text-foreground">Recent Maintenance</Text>
-                    <TouchableOpacity><Text className="text-xs text-primary font-medium">View all</Text></TouchableOpacity>
+                    <TouchableOpacity onPress={() => router.push("/landlord/maintenance")}>
+                        <Text className="text-xs text-primary font-medium">View all</Text>
+                    </TouchableOpacity>
                 </View>
 
                 <View className="gap-2 mb-4">
-                    {maintenanceRequests.map((req) => (
-                        <View key={req.id} className="bg-card rounded-xl border border-border p-3 flex-row justify-between items-center">
-                            <View>
-                                <Text className="text-sm font-medium text-foreground">{req.issue}</Text>
-                                <Text className="text-xs text-mutedForeground">{req.date}</Text>
-                            </View>
-                            <StatusBadge status={req.status} />
+                    {recentMaintenanceRequests.length === 0 ? (
+                        <View className="bg-card rounded-xl border border-border p-4">
+                            <Text className="text-sm text-mutedForeground">No maintenance requests for this property yet.</Text>
                         </View>
+                    ) : recentMaintenanceRequests.map((request) => (
+                        <TouchableOpacity
+                            key={request._id}
+                            className="bg-card rounded-xl border border-border p-3 flex-row justify-between items-center"
+                            onPress={() => router.push(`/landlord/maintenance/${request._id}`)}
+                        >
+                            <View className="flex-1 pr-3">
+                                <Text className="text-sm font-medium text-foreground">{request.title}</Text>
+                                <Text className="text-xs text-mutedForeground">{formatDate(request.createdAt)}</Text>
+                            </View>
+                            <StatusBadge status={getDisplayMaintenanceStatus(request.status)} />
+                        </TouchableOpacity>
                     ))}
                 </View>
 
                 {/* Actions */}
                 <View className="flex-row gap-2">
-                    <TouchableOpacity className="flex-1 h-11 rounded-lg items-center justify-center flex-row gap-2 bg-primary">
+                    <TouchableOpacity
+                        className="flex-1 h-11 rounded-lg items-center justify-center flex-row gap-2 bg-primary"
+                        onPress={handleGenerateInvoice}
+                    >
                         <Ionicons name="document-text-outline" size={18} color="white" />
                         <Text className="text-white font-semibold">Generate Invoice</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity className="flex-1 h-11 rounded-lg items-center justify-center flex-row gap-2 border border-border">
+                    <TouchableOpacity
+                        className="flex-1 h-11 rounded-lg items-center justify-center flex-row gap-2 border border-border"
+                        onPress={handleViewInvoices}
+                    >
                         <Text className="text-foreground font-semibold">View Invoices</Text>
                     </TouchableOpacity>
                 </View>
+
+                <Text className="text-xs text-mutedForeground mt-3">
+                    {propertyInvoices.length} invoice{propertyInvoices.length === 1 ? "" : "s"} linked to this property
+                </Text>
 
             </ScrollView>
         </View>

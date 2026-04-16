@@ -56,6 +56,11 @@ const isTerminalEsewaIntentStatus = (status) =>
 const isMobileEsewaBrowser = (userAgent = "") =>
     /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent) && !/wv|Flutter/i.test(userAgent);
 
+const isEsewaIntentEnabled = () =>
+    String(process.env.ESEWA_ENABLE_INTENT || "")
+        .trim()
+        .toLowerCase() === "true";
+
 const getPublicBaseUrl = () =>
     (process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3000}`)
         .trim()
@@ -397,7 +402,7 @@ export const serveEsewaPaymentLaunchPage = async (req, res) => {
             );
         }
 
-        if (isMobileEsewaBrowser(req.get("user-agent") || "")) {
+        if (isEsewaIntentEnabled() && isMobileEsewaBrowser(req.get("user-agent") || "")) {
             try {
                 let intentSession = getEsewaIntentState(payment);
                 const canReuseIntentSession =
@@ -788,13 +793,35 @@ export const getPaymentById = async (req, res) => {
 
         if (
             payment.gateway === "esewa" &&
-            ["initiated", "pending"].includes(payment.status) &&
-            getEsewaIntentState(payment)
+            ["initiated", "pending"].includes(payment.status)
         ) {
             try {
-                await reconcileEsewaIntentStatus(payment);
-            } catch (intentError) {
-                console.error("Failed to reconcile eSewa intent payment status:", intentError);
+                if (getEsewaIntentState(payment)) {
+                    await reconcileEsewaIntentStatus(payment);
+                } else {
+                    const esewaStatus = await reconcileEsewaStatus({
+                        payment,
+                        transactionId: payment.transactionId,
+                        totalAmount: payment.amount,
+                        productCode: payment.gatewayResponse?.product_code || getEsewaMerchantId(),
+                    });
+
+                    if (esewaStatus && payment.status !== "completed") {
+                        payment.gatewayResponse = mergeGatewayResponse(payment.gatewayResponse, esewaStatus);
+
+                        if (isRetryableEsewaStatus(esewaStatus.status)) {
+                            payment.status = "pending";
+                            payment.failureReason = undefined;
+                        } else if (esewaStatus.status && esewaStatus.status !== "COMPLETE") {
+                            payment.status = "failed";
+                            payment.failureReason = `eSewa status: ${esewaStatus.status}`;
+                        }
+
+                        await payment.save();
+                    }
+                }
+            } catch (esewaStatusError) {
+                console.error("Failed to reconcile eSewa payment status:", esewaStatusError);
             }
         }
 

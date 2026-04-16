@@ -191,6 +191,7 @@ export const PropertyProvider = ({ children }) => {
         } catch (err) {
             console.log(err);
             setError(err.response?.data?.message || "Failed to delete property");
+            throw err;
         } finally {
             setLoading(false);
         }

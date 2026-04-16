@@ -20,9 +20,11 @@ import { COLORS } from "../../../constants/theme";
 export default function MaintenanceDetail() {
     const { id } = useLocalSearchParams();
     const router = useRouter();
-    const { getRequestById, updateRequestStatus, deleteRequest, loading } = useContext(MaintenanceContext);
+    const { getRequestById, updateRequestStatus, deleteRequest } = useContext(MaintenanceContext);
     const [request, setRequest] = useState(null);
     const [pageLoading, setPageLoading] = useState(true);
+
+    const getDisplayStatus = (status) => (status === "Pending" ? "Open" : status);
 
     // Fetch request details when screen loads
     useEffect(() => {
@@ -33,7 +35,7 @@ export default function MaintenanceDetail() {
         try {
             const data = await getRequestById(id);
             setRequest(data);
-        } catch (err) {
+        } catch (_err) {
             Alert.alert("Error", "Failed to load maintenance request");
             router.back();
         } finally {
@@ -74,7 +76,7 @@ export default function MaintenanceDetail() {
                         try {
                             const updated = await updateRequestStatus(id, newStatus);
                             setRequest(updated);
-                        } catch (e) {
+                        } catch (_e) {
                             Alert.alert("Error", "Failed to update status");
                         }
                     },
@@ -97,7 +99,7 @@ export default function MaintenanceDetail() {
                         try {
                             await deleteRequest(id);
                             router.back();
-                        } catch (e) {
+                        } catch (_e) {
                             Alert.alert("Error", "Failed to delete request");
                         }
                     },
@@ -118,6 +120,7 @@ export default function MaintenanceDetail() {
     if (!request) return null;
 
     const priorityColor = getPriorityColor(request.priority);
+    const displayStatus = getDisplayStatus(request.status || "Open");
 
     return (
         <View style={styles.container}>
@@ -126,10 +129,10 @@ export default function MaintenanceDetail() {
             <ScrollView contentContainerStyle={styles.content}>
                 {/* Status and Priority Header */}
                 <View style={styles.headerRow}>
-                    <StatusBadge status={request.status || "Pending"} />
+                    <StatusBadge status={displayStatus} />
                     <View style={[styles.priorityBadge, { backgroundColor: priorityColor.bg }]}>
                         <Text style={[styles.priorityText, { color: priorityColor.text }]}>
-                            {request.priority} Priority
+                            {request.priority} Urgency
                         </Text>
                     </View>
                 </View>
@@ -184,7 +187,7 @@ export default function MaintenanceDetail() {
 
                 {/* Action Buttons */}
                 <View style={styles.actionSection}>
-                    {request.status === "Pending" && (
+                    {displayStatus === "Open" && (
                         <TouchableOpacity
                             style={styles.inProgressBtn}
                             onPress={() => handleStatusUpdate("In Progress")}
@@ -194,7 +197,7 @@ export default function MaintenanceDetail() {
                         </TouchableOpacity>
                     )}
 
-                    {request.status === "In Progress" && (
+                    {displayStatus === "In Progress" && (
                         <TouchableOpacity
                             style={styles.completedBtn}
                             onPress={() => handleStatusUpdate("Resolved")}

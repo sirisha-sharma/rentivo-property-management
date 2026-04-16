@@ -23,6 +23,8 @@ export default function TenantMaintenanceDetail() {
     const [request, setRequest] = useState(null);
     const [pageLoading, setPageLoading] = useState(true);
 
+    const getDisplayStatus = (status) => (status === "Pending" ? "Open" : status);
+
     // Fetch request details when screen loads
     useEffect(() => {
         loadRequest();
@@ -32,7 +34,7 @@ export default function TenantMaintenanceDetail() {
         try {
             const data = await getRequestById(id);
             setRequest(data);
-        } catch (err) {
+        } catch (_err) {
             Alert.alert("Error", "Failed to load maintenance request");
             router.back();
         } finally {
@@ -72,6 +74,7 @@ export default function TenantMaintenanceDetail() {
     if (!request) return null;
 
     const priorityColor = getPriorityColor(request.priority);
+    const displayStatus = getDisplayStatus(request.status || "Open");
 
     return (
         <View style={styles.container}>
@@ -80,10 +83,10 @@ export default function TenantMaintenanceDetail() {
             <ScrollView contentContainerStyle={styles.content}>
                 {/* Status and Priority Header */}
                 <View style={styles.headerRow}>
-                    <StatusBadge status={request.status || "Pending"} />
+                    <StatusBadge status={displayStatus} />
                     <View style={[styles.priorityBadge, { backgroundColor: priorityColor.bg }]}>
                         <Text style={[styles.priorityText, { color: priorityColor.text }]}>
-                            {request.priority} Priority
+                            {request.priority} Urgency
                         </Text>
                     </View>
                 </View>
@@ -138,23 +141,23 @@ export default function TenantMaintenanceDetail() {
                 </View>
 
                 {/* Status Info */}
-                {request.status === "Pending" && (
+                {displayStatus === "Open" && (
                     <View style={styles.infoBox}>
                         <Ionicons name="information-circle-outline" size={20} color="#854D0E" />
-                        <Text style={styles.infoText}>Your request is pending. The landlord will review it soon.</Text>
+                        <Text style={styles.infoText}>Your request is open. The landlord will review it soon.</Text>
                     </View>
                 )}
 
-                {request.status === "In Progress" && (
+                {displayStatus === "In Progress" && (
                     <View style={[styles.infoBox, { backgroundColor: "#DBEAFE" }]}>
                         <Ionicons name="construct-outline" size={20} color="#1E40AF" />
                         <Text style={[styles.infoText, { color: "#1E40AF" }]}>
-                            Your request is being worked on. You will be notified when it's resolved.
+                            Your request is being worked on. You will be notified when it is resolved.
                         </Text>
                     </View>
                 )}
 
-                {request.status === "Resolved" && (
+                {displayStatus === "Resolved" && (
                     <View style={[styles.infoBox, { backgroundColor: "#DCFCE7" }]}>
                         <Ionicons name="checkmark-circle-outline" size={20} color="#166534" />
                         <Text style={[styles.infoText, { color: "#166534" }]}>

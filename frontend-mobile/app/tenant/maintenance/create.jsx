@@ -28,6 +28,8 @@ export default function CreateMaintenanceRequest() {
     const [description, setDescription] = useState("");
     const [priority, setPriority] = useState("Medium");
 
+    const formatUrgencyLabel = (value) => `${value} Urgency`;
+
     // Fetch properties when screen loads
     useEffect(() => {
         fetchProperties();
@@ -45,17 +47,17 @@ export default function CreateMaintenanceRequest() {
                 propertyId: selectedPropertyId,
                 title,
                 description,
-                priority,
+                urgency: priority,
             });
             Alert.alert("Success", "Maintenance request submitted successfully", [
                 { text: "OK", onPress: () => router.back() },
             ]);
-        } catch (err) {
+        } catch (_err) {
             Alert.alert("Error", "Failed to submit maintenance request");
         }
     };
 
-    // Priority options for the request
+    // Urgency options for the request
     const priorities = ["Low", "Medium", "High"];
 
     return (
@@ -97,8 +99,8 @@ export default function CreateMaintenanceRequest() {
                     placeholderTextColor={COLORS.mutedForeground}
                 />
 
-                {/* Priority */}
-                <Text style={styles.label}>Priority *</Text>
+                {/* Urgency */}
+                <Text style={styles.label}>Urgency *</Text>
                 <View style={styles.typeRow}>
                     {priorities.map((p) => (
                         <TouchableOpacity
@@ -107,7 +109,7 @@ export default function CreateMaintenanceRequest() {
                             onPress={() => setPriority(p)}
                         >
                             <Text style={[styles.typeChipText, priority === p && styles.typeChipTextActive]}>
-                                {p}
+                                {formatUrgencyLabel(p)}
                             </Text>
                         </TouchableOpacity>
                     ))}

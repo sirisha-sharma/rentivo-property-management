@@ -14,6 +14,8 @@ export default function TenantMaintenance() {
     const router = useRouter();
     const [filter, setFilter] = useState("all");
 
+    const getDisplayStatus = (status) => (status === "Pending" ? "Open" : status);
+
     // Fetch maintenance requests when screen loads
     useEffect(() => {
         fetchRequests();
@@ -22,7 +24,7 @@ export default function TenantMaintenance() {
     // Filter requests based on selected status filter
     const filteredRequests = requests.filter((req) => {
         if (filter === "all") return true;
-        return req.status?.toLowerCase() === filter.toLowerCase();
+        return getDisplayStatus(req.status)?.toLowerCase() === filter.toLowerCase();
     });
 
     // Format date string to readable format
@@ -48,6 +50,7 @@ export default function TenantMaintenance() {
     // Render each maintenance request card
     const renderItem = ({ item }) => {
         const priorityColor = getPriorityColor(item.priority);
+        const displayStatus = getDisplayStatus(item.status || "Open");
         return (
             <TouchableOpacity
                 style={styles.card}
@@ -61,7 +64,7 @@ export default function TenantMaintenance() {
                             <Text style={styles.cardSubtitle}>{item.propertyId?.title || "Unknown Property"}</Text>
                         </View>
                     </View>
-                    <StatusBadge status={item.status || "Pending"} />
+                    <StatusBadge status={displayStatus} />
                 </View>
 
                 <View style={styles.divider} />
@@ -88,7 +91,7 @@ export default function TenantMaintenance() {
 
             {/* Filter Tabs */}
             <View style={styles.filterRow}>
-                {["all", "pending", "in progress", "completed"].map((f) => (
+                {["all", "open", "in progress", "resolved"].map((f) => (
                     <TouchableOpacity
                         key={f}
                         style={[styles.filterChip, filter === f && styles.filterChipActive]}

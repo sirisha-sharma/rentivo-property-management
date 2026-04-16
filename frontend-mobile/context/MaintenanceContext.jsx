@@ -78,7 +78,7 @@ export const MaintenanceProvider = ({ children }) => {
     };
 
     // Update maintenance request status (landlord only)
-    // Allowed statuses: Pending, In Progress, Completed
+    // Allowed statuses: Open, In Progress, Resolved
     const updateRequestStatus = async (id, status) => {
         try {
             const response = await axios.put(`${API_URL}/${id}/status`, { status }, getAuthHeader());
