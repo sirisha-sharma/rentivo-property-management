@@ -3,7 +3,16 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet } from "react-native
 import { DocumentContext } from "../../../context/DocumentContext";
 import { Ionicons } from "@expo/vector-icons";
 import { TopBar } from "../../../components/TopBar";
+import { FilterChips } from "../../../components/FilterChips";
+import { EmptyState } from "../../../components/EmptyState";
 import { COLORS } from "../../../constants/theme";
+
+const FILTERS = [
+    { key: "all", label: "All" },
+    { key: "Lease Agreement", label: "Lease" },
+    { key: "ID Proof", label: "ID Proof" },
+    { key: "Other", label: "Other" },
+];
 
 export default function TenantDocumentList() {
     const { documents, fetchDocuments, loading } = useContext(DocumentContext);
@@ -66,19 +75,7 @@ export default function TenantDocumentList() {
         <View style={styles.container}>
             <TopBar title="Documents" showBack />
 
-            <View style={styles.filterRow}>
-                {["all", "Lease Agreement", "ID Proof", "Other"].map((f) => (
-                    <TouchableOpacity
-                        key={f}
-                        style={[styles.filterChip, filter === f && styles.filterChipActive]}
-                        onPress={() => setFilter(f)}
-                    >
-                        <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
-                            {f === "all" ? "All" : f}
-                        </Text>
-                    </TouchableOpacity>
-                ))}
-            </View>
+            <FilterChips options={FILTERS} selected={filter} onSelect={setFilter} />
 
             <FlatList
                 data={filteredDocs}
@@ -86,11 +83,11 @@ export default function TenantDocumentList() {
                 renderItem={renderItem}
                 contentContainerStyle={styles.listContent}
                 ListEmptyComponent={
-                    <View style={styles.emptyContainer}>
-                        <Ionicons name="folder-open" size={48} color={COLORS.border} />
-                        <Text style={styles.emptyTitle}>No documents yet</Text>
-                        <Text style={styles.emptyText}>Documents from your landlord will appear here.</Text>
-                    </View>
+                    <EmptyState
+                        icon="folder-open-outline"
+                        title="No documents yet"
+                        subtitle="Documents from your landlord will appear here."
+                    />
                 }
                 refreshing={loading}
                 onRefresh={fetchDocuments}
@@ -153,45 +150,5 @@ const styles = StyleSheet.create({
     dateText: {
         fontSize: 12,
         color: COLORS.mutedForeground,
-    },
-    emptyContainer: {
-        alignItems: "center",
-        justifyContent: "center",
-        paddingTop: 60,
-    },
-    emptyTitle: {
-        fontSize: 18,
-        fontWeight: "bold",
-        color: COLORS.foreground,
-        marginTop: 16,
-        marginBottom: 8,
-    },
-    emptyText: {
-        textAlign: "center",
-        color: COLORS.mutedForeground,
-        paddingHorizontal: 40,
-    },
-    filterRow: {
-        flexDirection: "row",
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        gap: 8,
-    },
-    filterChip: {
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: 20,
-        backgroundColor: COLORS.muted,
-    },
-    filterChipActive: {
-        backgroundColor: COLORS.primary,
-    },
-    filterText: {
-        fontSize: 13,
-        fontWeight: "500",
-        color: COLORS.mutedForeground,
-    },
-    filterTextActive: {
-        color: "#fff",
     },
 });

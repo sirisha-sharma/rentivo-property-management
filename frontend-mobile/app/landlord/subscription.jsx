@@ -526,9 +526,16 @@ export default function LandlordSubscriptionScreen() {
                                         </View>
 
                                         <View style={styles.planBullets}>
-                                            <Text style={styles.planBullet}>Unlimited properties</Text>
-                                            <Text style={styles.planBullet}>Unlimited tenant invites</Text>
-                                            <Text style={styles.planBullet}>Separate platform billing from rent collection</Text>
+                                            {[
+                                                "Unlimited properties",
+                                                "Unlimited tenant invites",
+                                                "Separate billing from rent collection",
+                                            ].map((bullet) => (
+                                                <View key={bullet} style={styles.planBulletRow}>
+                                                    <Ionicons name="checkmark-circle" size={15} color={COLORS.success} />
+                                                    <Text style={styles.planBullet}>{bullet}</Text>
+                                                </View>
+                                            ))}
                                         </View>
 
                                         <View style={styles.gatewayRow}>
@@ -703,12 +710,12 @@ const styles = StyleSheet.create({
         borderColor: COLORS.border,
         borderRadius: 18,
         padding: 16,
-        backgroundColor: "#fff",
+        backgroundColor: COLORS.card,
         gap: 14,
     },
     planCardActive: {
-        borderColor: "#99F6E4",
-        backgroundColor: "#F0FDFA",
+        borderColor: "#93C5FD",
+        backgroundColor: "#EFF6FF",
     },
     planHeader: {
         flexDirection: "row",
@@ -751,10 +758,16 @@ const styles = StyleSheet.create({
     planBullets: {
         gap: 8,
     },
+    planBulletRow: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        gap: 8,
+    },
     planBullet: {
         fontSize: 13,
         color: COLORS.foreground,
         lineHeight: 19,
+        flex: 1,
     },
     gatewayRow: {
         flexDirection: "row",
@@ -777,9 +790,10 @@ const styles = StyleSheet.create({
     },
     gatewayButtonText: {
         color: "#fff",
-        fontSize: 13,
+        fontSize: 12,
         fontWeight: "700",
         textAlign: "center",
+        flexShrink: 1,
     },
     gatewayButtonAltText: {
         color: COLORS.primary,

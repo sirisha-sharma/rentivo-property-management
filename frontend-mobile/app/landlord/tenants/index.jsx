@@ -8,7 +8,6 @@ import { TopBar } from "../../../components/TopBar";
 import { StatusBadge } from "../../../components/StatusBadge";
 import { FilterChips } from "../../../components/FilterChips";
 import { EmptyState } from "../../../components/EmptyState";
-import { SubscriptionGateBanner } from "../../../components/SubscriptionGateBanner";
 import { COLORS } from "../../../constants/theme";
 import { SubscriptionContext } from "../../../context/SubscriptionContext";
 import {
@@ -120,29 +119,34 @@ export default function TenantList() {
         </View>
     );
 
-    const renderHeader = () => (
-        <View style={styles.listHeader}>
-            {shouldShowBanner ? (
-                <SubscriptionGateBanner
-                    title={actionPrompt.title}
-                    message={actionPrompt.message}
-                    actionLabel={actionPrompt.cta}
-                    onActionPress={() => router.push("/landlord/subscription")}
-                    tone={canInviteTenant ? "info" : "warning"}
-                />
-            ) : null}
-            <FilterChips
-                options={FILTERS}
-                selected={filter}
-                onSelect={setFilter}
-                contentContainerStyle={{ paddingHorizontal: 0 }}
-            />
-        </View>
-    );
-
     return (
         <View style={styles.container}>
             <TopBar title="My Tenants" showBack />
+
+            {shouldShowBanner ? (
+                <TouchableOpacity
+                    style={[styles.subscriptionBar, !canInviteTenant && styles.subscriptionBarWarning]}
+                    onPress={() => router.push("/landlord/subscription")}
+                    activeOpacity={0.8}
+                >
+                    <View style={styles.subscriptionBarLeft}>
+                        <Ionicons
+                            name="sparkles-outline"
+                            size={14}
+                            color={canInviteTenant ? COLORS.primary : "#92400E"}
+                        />
+                        <Text style={[styles.subscriptionBarText, !canInviteTenant && styles.subscriptionBarTextWarning]}>
+                            {canInviteTenant ? "Trial plan active" : actionPrompt.title}
+                        </Text>
+                    </View>
+                    <View style={styles.subscriptionBarBtn}>
+                        <Text style={styles.subscriptionBarBtnText}>Upgrade</Text>
+                        <Ionicons name="arrow-forward" size={12} color={COLORS.primary} />
+                    </View>
+                </TouchableOpacity>
+            ) : null}
+
+            <FilterChips options={FILTERS} selected={filter} onSelect={setFilter} />
 
             {loading ? (
                 <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 20 }} />
@@ -152,7 +156,6 @@ export default function TenantList() {
                     data={filteredTenants}
                     keyExtractor={(item) => item._id}
                     renderItem={renderItem}
-                    ListHeaderComponent={renderHeader}
                     contentContainerStyle={styles.listContent}
                     ListEmptyComponent={
                         <EmptyState
@@ -198,9 +201,53 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingBottom: 120,
     },
-    listHeader: {
-        paddingTop: 12,
-        paddingBottom: 8,
+    subscriptionBar: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginHorizontal: 16,
+        marginTop: 10,
+        marginBottom: 2,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        backgroundColor: "#EFF6FF",
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: "#BFDBFE",
+    },
+    subscriptionBarWarning: {
+        backgroundColor: "#FFFBEB",
+        borderColor: "#FDE68A",
+    },
+    subscriptionBarLeft: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        flex: 1,
+    },
+    subscriptionBarText: {
+        fontSize: 13,
+        color: COLORS.primary,
+        fontWeight: "500",
+    },
+    subscriptionBarTextWarning: {
+        color: "#92400E",
+    },
+    subscriptionBarBtn: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        backgroundColor: COLORS.card,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+    },
+    subscriptionBarBtnText: {
+        fontSize: 12,
+        color: COLORS.primary,
+        fontWeight: "700",
     },
     card: {
         backgroundColor: COLORS.card,

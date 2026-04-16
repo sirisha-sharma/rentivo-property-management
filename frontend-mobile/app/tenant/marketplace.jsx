@@ -1,14 +1,24 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   View, Text, FlatList, StyleSheet, ActivityIndicator,
-  RefreshControl, TouchableOpacity, TextInput, Image,
+  RefreshControl, Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { TopBar } from "../../components/TopBar";
+import { SearchBar } from "../../components/SearchBar";
+import { FilterChips } from "../../components/FilterChips";
+import { EmptyState } from "../../components/EmptyState";
 import { COLORS } from "../../constants/theme";
 import { getMarketplaceProperties } from "../../api/marketplace";
 import { BASE_URL } from "../../constants/config";
+
+const TYPE_FILTERS = [
+  { key: "all", label: "All" },
+  { key: "Apartment", label: "Apartment" },
+  { key: "House", label: "House" },
+  { key: "Room", label: "Room" },
+];
 
 export default function MarketplaceBrowse() {
   const router = useRouter();
@@ -137,47 +147,21 @@ export default function MarketplaceBrowse() {
     <View style={styles.container}>
       <TopBar title="Browse Properties" showBack />
 
-      <View style={styles.searchContainer}>
-        <Ionicons name="search-outline" size={20} color={COLORS.mutedForeground} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search properties..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholderTextColor={COLORS.mutedForeground}
-        />
-      </View>
+      <SearchBar
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        placeholder="Search properties..."
+        style={{ marginHorizontal: 16, marginTop: 12 }}
+      />
 
-      <View style={styles.filterContainer}>
-        {["all", "Apartment", "House", "Room"].map((type) => (
-          <TouchableOpacity
-            key={type}
-            style={[
-              styles.filterChip,
-              typeFilter === type && styles.filterChipActive,
-            ]}
-            onPress={() => setTypeFilter(type)}
-          >
-            <Text
-              style={[
-                styles.filterText,
-                typeFilter === type && styles.filterTextActive,
-              ]}
-            >
-              {type === "all" ? "All" : type}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <FilterChips options={TYPE_FILTERS} selected={typeFilter} onSelect={setTypeFilter} />
 
       {filteredProperties.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="home-outline" size={64} color={COLORS.mutedForeground} />
-          <Text style={styles.emptyText}>No properties found</Text>
-          <Text style={styles.emptySubtext}>
-            Check back later for new listings
-          </Text>
-        </View>
+        <EmptyState
+          icon="home-outline"
+          title="No properties found"
+          subtitle="Check back later for new listings"
+        />
       ) : (
         <FlatList
           data={filteredProperties}
@@ -200,40 +184,6 @@ export default function MarketplaceBrowse() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLORS.input,
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  searchInput: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    fontSize: 14,
-    color: COLORS.foreground,
-  },
-  filterContainer: {
-    flexDirection: "row",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    gap: 8,
-  },
-  filterChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: COLORS.muted,
-  },
-  filterChipActive: { backgroundColor: COLORS.primary },
-  filterText: { fontSize: 13, fontWeight: "500", color: COLORS.mutedForeground },
-  filterTextActive: { color: "#fff" },
   listContainer: { padding: 16 },
   propertyCard: {
     backgroundColor: COLORS.card,
@@ -275,12 +225,4 @@ const styles = StyleSheet.create({
   rentText: { fontSize: 12, fontWeight: "600", color: COLORS.success },
   landlordInfo: { flexDirection: "row", alignItems: "center", gap: 6 },
   landlordText: { fontSize: 13, color: COLORS.mutedForeground },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingTop: 60,
-  },
-  emptyText: { fontSize: 18, fontWeight: "600", color: COLORS.foreground, marginTop: 16 },
-  emptySubtext: { fontSize: 14, color: COLORS.mutedForeground, marginTop: 8 },
 });

@@ -6,13 +6,21 @@ import {
     StyleSheet,
     ActivityIndicator,
     RefreshControl,
-    TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { TopBar } from "../../components/TopBar";
+import { FilterChips } from "../../components/FilterChips";
+import { EmptyState } from "../../components/EmptyState";
 import { COLORS } from "../../constants/theme";
 import { getPaymentHistory } from "../../api/payment";
 import { useFocusEffect } from "@react-navigation/native";
+
+const FILTERS = [
+    { key: "all", label: "All" },
+    { key: "completed", label: "Completed" },
+    { key: "pending", label: "Pending" },
+    { key: "failed", label: "Failed" },
+];
 
 export default function PaymentHistory() {
     const [payments, setPayments] = useState([]);
@@ -178,54 +186,14 @@ export default function PaymentHistory() {
         <View style={styles.container}>
             <TopBar title="Payment History" showBack />
 
-            {/* Filter Tabs */}
-            <View style={styles.filterContainer}>
-                <TouchableOpacity
-                    style={[styles.filterTab, filter === "all" && styles.filterTabActive]}
-                    onPress={() => setFilter("all")}
-                >
-                    <Text style={[styles.filterText, filter === "all" && styles.filterTextActive]}>
-                        All
-                    </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={[styles.filterTab, filter === "completed" && styles.filterTabActive]}
-                    onPress={() => setFilter("completed")}
-                >
-                    <Text
-                        style={[styles.filterText, filter === "completed" && styles.filterTextActive]}
-                    >
-                        Completed
-                    </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={[styles.filterTab, filter === "pending" && styles.filterTabActive]}
-                    onPress={() => setFilter("pending")}
-                >
-                    <Text
-                        style={[styles.filterText, filter === "pending" && styles.filterTextActive]}
-                    >
-                        Pending
-                    </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={[styles.filterTab, filter === "failed" && styles.filterTabActive]}
-                    onPress={() => setFilter("failed")}
-                >
-                    <Text style={[styles.filterText, filter === "failed" && styles.filterTextActive]}>
-                        Failed
-                    </Text>
-                </TouchableOpacity>
-            </View>
+            <FilterChips options={FILTERS} selected={filter} onSelect={setFilter} />
 
             {filteredPayments.length === 0 ? (
-                <View style={styles.emptyContainer}>
-                    <Ionicons name="receipt-outline" size={64} color={COLORS.mutedForeground} />
-                    <Text style={styles.emptyText}>No payment history found</Text>
-                    <Text style={styles.emptySubtext}>
-                        Your completed payments will appear here
-                    </Text>
-                </View>
+                <EmptyState
+                    icon="receipt-outline"
+                    title="No payment history"
+                    subtitle="Your completed payments will appear here"
+                />
             ) : (
                 <FlatList
                     data={filteredPayments}
@@ -259,31 +227,6 @@ const styles = StyleSheet.create({
         marginTop: 12,
         fontSize: 14,
         color: COLORS.mutedForeground,
-    },
-    filterContainer: {
-        flexDirection: "row",
-        padding: 16,
-        paddingBottom: 8,
-        gap: 8,
-    },
-    filterTab: {
-        flex: 1,
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        borderRadius: 8,
-        backgroundColor: COLORS.muted,
-        alignItems: "center",
-    },
-    filterTabActive: {
-        backgroundColor: COLORS.primary,
-    },
-    filterText: {
-        fontSize: 13,
-        fontWeight: "500",
-        color: COLORS.mutedForeground,
-    },
-    filterTextActive: {
-        color: "#fff",
     },
     listContainer: {
         padding: 16,
@@ -364,23 +307,5 @@ const styles = StyleSheet.create({
         fontSize: 13,
         color: COLORS.mutedForeground,
         flex: 1,
-    },
-    emptyContainer: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        padding: 32,
-    },
-    emptyText: {
-        fontSize: 18,
-        fontWeight: "600",
-        color: COLORS.foreground,
-        marginTop: 16,
-    },
-    emptySubtext: {
-        fontSize: 14,
-        color: COLORS.mutedForeground,
-        marginTop: 8,
-        textAlign: "center",
     },
 });

@@ -10,6 +10,8 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { TopBar } from "../../components/TopBar";
+import { StatusBadge } from "../../components/StatusBadge";
+import { EmptyState } from "../../components/EmptyState";
 import { COLORS } from "../../constants/theme";
 import { TenantContext } from "../../context/TenantContext";
 
@@ -51,19 +53,6 @@ export default function MyRentals() {
         }
     }, [invitations]);
 
-    const getStatusColor = (status) => {
-        switch (status) {
-            case "Active":
-                return COLORS.success;
-            case "Pending":
-                return COLORS.warning;
-            case "Past":
-                return COLORS.mutedForeground;
-            default:
-                return COLORS.mutedForeground;
-        }
-    };
-
     const formatDate = (dateString) => {
         if (!dateString) return "N/A";
         const date = new Date(dateString);
@@ -97,40 +86,11 @@ export default function MyRentals() {
                 }
             >
                 {activeRentals.length === 0 ? (
-                    <View style={{
-                        flex: 1,
-                        alignItems: "center",
-                        justifyContent: "center",
-                        paddingVertical: 80
-                    }}>
-                        <View style={{
-                            width: 80,
-                            height: 80,
-                            borderRadius: 40,
-                            backgroundColor: COLORS.muted,
-                            alignItems: "center",
-                            justifyContent: "center",
-                            marginBottom: 16,
-                        }}>
-                            <Ionicons name="home-outline" size={40} color={COLORS.mutedForeground} />
-                        </View>
-                        <Text style={{
-                            fontSize: 18,
-                            fontWeight: "600",
-                            color: COLORS.foreground,
-                            marginBottom: 8,
-                        }}>
-                            No Active Rentals
-                        </Text>
-                        <Text style={{
-                            fontSize: 14,
-                            color: COLORS.mutedForeground,
-                            textAlign: "center",
-                            paddingHorizontal: 32,
-                        }}>
-                            You do not have any active rental properties yet. Check your invitations!
-                        </Text>
-                    </View>
+                    <EmptyState
+                        icon="home-outline"
+                        title="No Active Rentals"
+                        subtitle="You don't have any active rental properties yet. Check your invitations!"
+                    />
                 ) : (
                     <View style={{ gap: 16 }}>
                         {activeRentals.map((rental) => (
@@ -167,20 +127,7 @@ export default function MyRentals() {
                                             </Text>
                                         </View>
                                     </View>
-                                    <View style={{
-                                        paddingHorizontal: 10,
-                                        paddingVertical: 4,
-                                        borderRadius: 6,
-                                        backgroundColor: `${getStatusColor(rental.status)}20`,
-                                    }}>
-                                        <Text style={{
-                                            fontSize: 12,
-                                            fontWeight: "600",
-                                            color: getStatusColor(rental.status)
-                                        }}>
-                                            {rental.status}
-                                        </Text>
-                                    </View>
+                                    <StatusBadge status={rental.status || "Active"} />
                                 </View>
 
                                 {/* Property Details */}
