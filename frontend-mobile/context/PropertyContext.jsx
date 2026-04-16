@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext } from "react";
+import React, { createContext, useState, useContext, useCallback } from "react";
 import axios from "axios";
 import { AuthContext } from "./AuthContext";
 import { API_BASE_URL } from "../constants/config";
@@ -15,15 +15,15 @@ export const PropertyProvider = ({ children }) => {
     // Use your local updated IP if on physical device, or localhost for simulator
     const API_URL = `${API_BASE_URL}/properties`;
 
-    const getAuthHeader = () => {
+    const getAuthHeader = useCallback(() => {
         return {
             headers: {
                 Authorization: `Bearer ${user?.token}`,
             },
         };
-    };
+    }, [user?.token]);
 
-    const fetchProperties = async () => {
+    const fetchProperties = useCallback(async () => {
         setLoading(true);
         try {
             const response = await axios.get(API_URL, getAuthHeader());
@@ -35,9 +35,9 @@ export const PropertyProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [API_URL, getAuthHeader]);
 
-    const getPropertyById = async (id) => {
+    const getPropertyById = useCallback(async (id) => {
         try {
             const response = await axios.get(`${API_URL}/${id}`, getAuthHeader());
             return response.data;
@@ -45,9 +45,9 @@ export const PropertyProvider = ({ children }) => {
             console.log(err);
             throw err;
         }
-    };
+    }, [API_URL, getAuthHeader]);
 
-    const addProperty = async (propertyData) => {
+    const addProperty = useCallback(async (propertyData) => {
         setLoading(true);
         try {
             const formData = new FormData();
@@ -102,7 +102,7 @@ export const PropertyProvider = ({ children }) => {
                     'Content-Type': 'multipart/form-data',
                 },
             });
-            setProperties([...properties, response.data]);
+            setProperties((prev) => [...prev, response.data]);
             setError(null);
             return response.data;
         } catch (err) {
@@ -112,9 +112,9 @@ export const PropertyProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [API_URL, user?.token]);
 
-    const updateProperty = async (id, propertyData) => {
+    const updateProperty = useCallback(async (id, propertyData) => {
         setLoading(true);
         try {
             const formData = new FormData();
@@ -170,7 +170,7 @@ export const PropertyProvider = ({ children }) => {
                     'Content-Type': 'multipart/form-data',
                 },
             });
-            setProperties(properties.map(p => p._id === id ? response.data : p));
+            setProperties((prev) => prev.map((p) => (p._id === id ? response.data : p)));
             setError(null);
             return response.data;
         } catch (err) {
@@ -180,13 +180,13 @@ export const PropertyProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [API_URL, user?.token]);
 
-    const deleteProperty = async (id) => {
+    const deleteProperty = useCallback(async (id) => {
         setLoading(true);
         try {
             await axios.delete(`${API_URL}/${id}`, getAuthHeader());
-            setProperties(properties.filter((prop) => prop._id !== id));
+            setProperties((prev) => prev.filter((prop) => prop._id !== id));
             setError(null);
         } catch (err) {
             console.log(err);
@@ -195,7 +195,7 @@ export const PropertyProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [API_URL, getAuthHeader]);
 
     return (
         <PropertyContext.Provider

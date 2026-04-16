@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState, useCallback } from "react";
 import {
     View,
     Text,
@@ -25,12 +25,7 @@ export default function TenantMaintenanceDetail() {
 
     const getDisplayStatus = (status) => (status === "Pending" ? "Open" : status);
 
-    // Fetch request details when screen loads
-    useEffect(() => {
-        loadRequest();
-    }, [id]);
-
-    const loadRequest = async () => {
+    const loadRequest = useCallback(async () => {
         try {
             const data = await getRequestById(id);
             setRequest(data);
@@ -40,7 +35,12 @@ export default function TenantMaintenanceDetail() {
         } finally {
             setPageLoading(false);
         }
-    };
+    }, [getRequestById, id, router]);
+
+    // Fetch request details when screen loads
+    useEffect(() => {
+        loadRequest();
+    }, [loadRequest]);
 
     // Format date string to readable format
     const formatDate = (dateStr) => {

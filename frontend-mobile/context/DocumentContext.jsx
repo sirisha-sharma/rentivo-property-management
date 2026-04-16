@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext } from "react";
+import React, { createContext, useState, useContext, useCallback } from "react";
 import axios from "axios";
 import { AuthContext } from "./AuthContext";
 import { API_BASE_URL } from "../constants/config";
@@ -14,12 +14,12 @@ export const DocumentProvider = ({ children }) => {
 
     const API_URL = `${API_BASE_URL}/documents`;
 
-    const getAuthHeader = () => ({
+    const getAuthHeader = useCallback(() => ({
         headers: { Authorization: `Bearer ${user?.token}` },
-    });
+    }), [user?.token]);
 
     // Fetch all documents
-    const fetchDocuments = async () => {
+    const fetchDocuments = useCallback(async () => {
         setLoading(true);
         try {
             const response = await axios.get(API_URL, getAuthHeader());
@@ -31,10 +31,10 @@ export const DocumentProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [API_URL, getAuthHeader]);
 
     // Upload a new document with file
-    const uploadDocument = async (formData) => {
+    const uploadDocument = useCallback(async (formData) => {
         setLoading(true);
         try {
             const response = await axios.post(API_URL, formData, {
@@ -53,10 +53,10 @@ export const DocumentProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [API_URL, user?.token]);
 
     // Delete a document
-    const deleteDocument = async (id) => {
+    const deleteDocument = useCallback(async (id) => {
         try {
             await axios.delete(`${API_URL}/${id}`, getAuthHeader());
             setDocuments((prev) => prev.filter((d) => d._id !== id));
@@ -66,7 +66,7 @@ export const DocumentProvider = ({ children }) => {
             setError(err.response?.data?.message || "Failed to delete document");
             throw err;
         }
-    };
+    }, [API_URL, getAuthHeader]);
 
     return (
         <DocumentContext.Provider

@@ -145,7 +145,7 @@ export default function AddProperty() {
             Alert.alert("Success", "Property added successfully", [
                 { text: "OK", onPress: () => router.back() }
             ]);
-        } catch (e) {
+        } catch (_error) {
             Alert.alert("Error", "Failed to add property");
         } finally {
             setLoading(false);

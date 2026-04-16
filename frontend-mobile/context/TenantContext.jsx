@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext } from "react";
+import React, { createContext, useState, useContext, useCallback } from "react";
 import axios from "axios";
 import { AuthContext } from "./AuthContext";
 import { API_BASE_URL } from "../constants/config";
@@ -15,15 +15,15 @@ export const TenantProvider = ({ children }) => {
 
     const API_URL = `${API_BASE_URL}/tenants`;
 
-    const getAuthHeader = () => {
+    const getAuthHeader = useCallback(() => {
         return {
             headers: {
                 Authorization: `Bearer ${user?.token}`,
             },
         };
-    };
+    }, [user?.token]);
 
-    const fetchTenants = async () => {
+    const fetchTenants = useCallback(async () => {
         setLoading(true);
         try {
             const response = await axios.get(API_URL, getAuthHeader());
@@ -35,13 +35,13 @@ export const TenantProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [API_URL, getAuthHeader]);
 
-    const inviteTenant = async (tenantData) => {
+    const inviteTenant = useCallback(async (tenantData) => {
         setLoading(true);
         try {
             const response = await axios.post(API_URL, tenantData, getAuthHeader());
-            setTenants([...tenants, response.data]);
+            setTenants((prev) => [...prev, response.data]);
             setError(null);
             return response.data;
         } catch (err) {
@@ -51,22 +51,22 @@ export const TenantProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [API_URL, getAuthHeader]);
 
-    const deleteTenant = async (id) => {
+    const deleteTenant = useCallback(async (id) => {
         try {
             await axios.delete(`${API_URL}/${id}`, getAuthHeader());
-            setTenants(tenants.filter((t) => t._id !== id));
+            setTenants((prev) => prev.filter((t) => t._id !== id));
             setError(null);
         } catch (err) {
             console.log(err);
             setError(err.response?.data?.message || "Failed to remove tenant");
             throw err;
         }
-    };
+    }, [API_URL, getAuthHeader]);
 
     // Tenant-specific methods
-    const fetchMyInvitations = async () => {
+    const fetchMyInvitations = useCallback(async () => {
         setLoading(true);
         try {
             const response = await axios.get(`${API_URL}/my-invitations`, getAuthHeader());
@@ -78,12 +78,12 @@ export const TenantProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [API_URL, getAuthHeader]);
 
-    const acceptInvitation = async (id) => {
+    const acceptInvitation = useCallback(async (id) => {
         try {
             const response = await axios.put(`${API_URL}/${id}/accept`, {}, getAuthHeader());
-            setInvitations(invitations.map(inv => inv._id === id ? response.data : inv));
+            setInvitations((prev) => prev.map((inv) => (inv._id === id ? response.data : inv)));
             setError(null);
             return response.data;
         } catch (err) {
@@ -91,19 +91,19 @@ export const TenantProvider = ({ children }) => {
             setError(err.response?.data?.message || "Failed to accept invitation");
             throw err;
         }
-    };
+    }, [API_URL, getAuthHeader]);
 
-    const rejectInvitation = async (id) => {
+    const rejectInvitation = useCallback(async (id) => {
         try {
             await axios.put(`${API_URL}/${id}/reject`, {}, getAuthHeader());
-            setInvitations(invitations.filter(inv => inv._id !== id));
+            setInvitations((prev) => prev.filter((inv) => inv._id !== id));
             setError(null);
         } catch (err) {
             console.log(err);
             setError(err.response?.data?.message || "Failed to reject invitation");
             throw err;
         }
-    };
+    }, [API_URL, getAuthHeader]);
 
     return (
         <TenantContext.Provider

@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState, useCallback } from "react";
 import {
     View,
     Text,
@@ -12,18 +12,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { TopBar } from "../../components/TopBar";
 import { COLORS } from "../../constants/theme";
 import { TenantContext } from "../../context/TenantContext";
-import { PropertyContext } from "../../context/PropertyContext";
 
 export default function MyRentals() {
     const router = useRouter();
     const { invitations, fetchMyInvitations } = useContext(TenantContext);
-    const { getPropertyById } = useContext(PropertyContext);
 
     const [activeRentals, setActiveRentals] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
-    const loadRentals = async () => {
+    const loadRentals = useCallback(async () => {
         try {
             setLoading(true);
             // Fetch tenant's own invitation/rental records
@@ -33,7 +31,7 @@ export default function MyRentals() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [fetchMyInvitations]);
 
     const onRefresh = async () => {
         setRefreshing(true);
@@ -43,7 +41,7 @@ export default function MyRentals() {
 
     useEffect(() => {
         loadRentals();
-    }, []);
+    }, [loadRentals]);
 
     // Filter for active rentals only
     useEffect(() => {
@@ -130,7 +128,7 @@ export default function MyRentals() {
                             textAlign: "center",
                             paddingHorizontal: 32,
                         }}>
-                            You don't have any active rental properties yet. Check your invitations!
+                            You do not have any active rental properties yet. Check your invitations!
                         </Text>
                     </View>
                 ) : (

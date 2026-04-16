@@ -35,12 +35,6 @@ export default function PaymentHistory() {
     useFocusEffect(
         React.useCallback(() => {
             void fetchPayments();
-
-            const intervalId = setInterval(() => {
-                void fetchPayments();
-            }, 5000);
-
-            return () => clearInterval(intervalId);
         }, [fetchPayments])
     );
 

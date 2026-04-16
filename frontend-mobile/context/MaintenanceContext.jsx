@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext } from "react";
+import React, { createContext, useState, useContext, useCallback } from "react";
 import axios from "axios";
 import { AuthContext } from "./AuthContext";
 import { API_BASE_URL } from "../constants/config";
@@ -23,18 +23,18 @@ export const MaintenanceProvider = ({ children }) => {
     const API_URL = `${API_BASE_URL}/maintenance`;
 
     // Helper function to get authorization header with JWT token
-    const getAuthHeader = () => {
+    const getAuthHeader = useCallback(() => {
         return {
             headers: {
                 Authorization: `Bearer ${user?.token}`,
             },
         };
-    };
+    }, [user?.token]);
 
     // Fetch all maintenance requests from API
     // For landlords: returns requests for their properties
     // For tenants: returns requests they submitted
-    const fetchRequests = async () => {
+    const fetchRequests = useCallback(async () => {
         setLoading(true);
         try {
             const response = await axios.get(API_URL, getAuthHeader());
@@ -46,10 +46,10 @@ export const MaintenanceProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [API_URL, getAuthHeader]);
 
     // Get a single maintenance request by ID
-    const getRequestById = async (id) => {
+    const getRequestById = useCallback(async (id) => {
         try {
             const response = await axios.get(`${API_URL}/${id}`, getAuthHeader());
             return response.data;
@@ -57,15 +57,15 @@ export const MaintenanceProvider = ({ children }) => {
             console.log(err);
             throw err;
         }
-    };
+    }, [API_URL, getAuthHeader]);
 
     // Create a new maintenance request (tenant only)
     // Adds the new request to the local state after creation
-    const createRequest = async (requestData) => {
+    const createRequest = useCallback(async (requestData) => {
         setLoading(true);
         try {
             const response = await axios.post(API_URL, requestData, getAuthHeader());
-            setRequests([...requests, response.data]);
+            setRequests((prev) => [...prev, response.data]);
             setError(null);
             return response.data;
         } catch (err) {
@@ -75,14 +75,14 @@ export const MaintenanceProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [API_URL, getAuthHeader]);
 
     // Update maintenance request status (landlord only)
     // Allowed statuses: Open, In Progress, Resolved
-    const updateRequestStatus = async (id, status) => {
+    const updateRequestStatus = useCallback(async (id, status) => {
         try {
             const response = await axios.put(`${API_URL}/${id}/status`, { status }, getAuthHeader());
-            setRequests(requests.map((req) => (req._id === id ? response.data : req)));
+            setRequests((prev) => prev.map((req) => (req._id === id ? response.data : req)));
             setError(null);
             return response.data;
         } catch (err) {
@@ -90,21 +90,21 @@ export const MaintenanceProvider = ({ children }) => {
             setError(err.response?.data?.message || "Failed to update request status");
             throw err;
         }
-    };
+    }, [API_URL, getAuthHeader]);
 
     // Delete a maintenance request (landlord only)
     // Removes the request from local state after deletion
-    const deleteRequest = async (id) => {
+    const deleteRequest = useCallback(async (id) => {
         try {
             await axios.delete(`${API_URL}/${id}`, getAuthHeader());
-            setRequests(requests.filter((req) => req._id !== id));
+            setRequests((prev) => prev.filter((req) => req._id !== id));
             setError(null);
         } catch (err) {
             console.log(err);
             setError(err.response?.data?.message || "Failed to delete maintenance request");
             throw err;
         }
-    };
+    }, [API_URL, getAuthHeader]);
 
     // Provide maintenance state and methods to child components
     return (

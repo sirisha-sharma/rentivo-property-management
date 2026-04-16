@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext, useCallback } from "react";
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, Image } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -23,20 +23,21 @@ export default function PropertyDetails() {
 
     const getDisplayMaintenanceStatus = (status) => (status === "Pending" ? "Open" : status);
 
+    const fetchPropertyDetails = useCallback(async () => {
+        try {
+            await Promise.allSettled([fetchTenants(), fetchRequests(), fetchInvoices()]);
+            const data = await getPropertyById(id);
+            setProperty(data);
+        } catch (error) {
+            console.log(error);
+        } finally {
+            setLoading(false);
+        }
+    }, [fetchInvoices, fetchRequests, fetchTenants, getPropertyById, id]);
+
     useEffect(() => {
-        const fetchPropertyDetails = async () => {
-            try {
-                await Promise.allSettled([fetchTenants(), fetchRequests(), fetchInvoices()]);
-                const data = await getPropertyById(id);
-                setProperty(data);
-            } catch (e) {
-                console.log(e);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchPropertyDetails();
-    }, [id]);
+    }, [fetchPropertyDetails]);
 
     const propertyTenants = tenants.filter(t => String(t.propertyId?._id) === String(id) || String(t.propertyId) === String(id));
     const propertyMaintenanceRequests = requests.filter(

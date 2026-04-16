@@ -11,7 +11,7 @@ export default function TenantDocumentList() {
 
     useEffect(() => {
         fetchDocuments();
-    }, []);
+    }, [fetchDocuments]);
 
     const filteredDocs = documents.filter((doc) => {
         if (filter === "all") return true;

@@ -25,12 +25,6 @@ export default function TenantInvoices() {
     useFocusEffect(
         React.useCallback(() => {
             void fetchInvoices();
-
-            const intervalId = setInterval(() => {
-                void fetchInvoices();
-            }, 5000);
-
-            return () => clearInterval(intervalId);
         }, [fetchInvoices])
     );
 

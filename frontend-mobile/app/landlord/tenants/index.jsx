@@ -22,7 +22,7 @@ export default function TenantList() {
 
     useEffect(() => {
         fetchTenants();
-    }, []);
+    }, [fetchTenants]);
 
     const filteredTenants = tenants.filter(t => {
         if (filter === "all") return true;
@@ -41,7 +41,7 @@ export default function TenantList() {
                     onPress: async () => {
                         try {
                             await deleteTenant(tenant._id);
-                        } catch (e) {
+                        } catch (_error) {
                             Alert.alert("Error", "Failed to remove tenant");
                         }
                     },
@@ -53,7 +53,7 @@ export default function TenantList() {
     const renderItem = ({ item }) => (
         <View style={styles.card}>
             <View style={styles.cardHeader}>
-                <View>
+                <View style={{ flex: 1, marginRight: 12 }}>
                     <Text style={styles.cardTitle}>{item.userId?.name || "Pending User"}</Text>
                     <View style={styles.subtextContainer}>
                         <Ionicons name="home-outline" size={12} color={COLORS.mutedForeground} />
@@ -71,7 +71,7 @@ export default function TenantList() {
 
             <View style={styles.cardFooter}>
                 <Text style={styles.dateText}>Lease ends: {item.leaseEnd ? new Date(item.leaseEnd).toLocaleDateString() : "N/A"}</Text>
-                <View style={{ flexDirection: "row", gap: 8 }}>
+                <View style={styles.actionRow}>
                     {item.status?.toLowerCase() === "active" && item.userId?._id && item.propertyId?._id && (
                         <TouchableOpacity
                             style={styles.messageBtn}
@@ -93,19 +93,30 @@ export default function TenantList() {
         </View>
     );
 
+    const renderHeader = () => (
+        <View style={styles.listHeader}>
+            <FilterChips
+                options={FILTERS}
+                selected={filter}
+                onSelect={setFilter}
+                contentContainerStyle={{ paddingHorizontal: 0 }}
+            />
+        </View>
+    );
+
     return (
         <View style={styles.container}>
             <TopBar title="My Tenants" showBack />
-
-            <FilterChips options={FILTERS} selected={filter} onSelect={setFilter} />
 
             {loading ? (
                 <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 20 }} />
             ) : (
                 <FlatList
+                    style={{ flex: 1 }}
                     data={filteredTenants}
                     keyExtractor={(item) => item._id}
                     renderItem={renderItem}
+                    ListHeaderComponent={renderHeader}
                     contentContainerStyle={styles.listContent}
                     ListEmptyComponent={
                         <EmptyState
@@ -135,7 +146,12 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.background,
     },
     listContent: {
-        padding: 16,
+        paddingHorizontal: 16,
+        paddingBottom: 120,
+    },
+    listHeader: {
+        paddingTop: 12,
+        paddingBottom: 8,
     },
     card: {
         backgroundColor: COLORS.card,
@@ -171,13 +187,16 @@ const styles = StyleSheet.create({
         marginVertical: 12,
     },
     cardFooter: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
+        gap: 12,
     },
     dateText: {
         fontSize: 12,
         color: COLORS.mutedForeground,
+    },
+    actionRow: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 8,
     },
     fab: {
         position: "absolute",
@@ -199,10 +218,10 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         gap: 4,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
         backgroundColor: "#DBEAFE",
-        borderRadius: 6,
+        borderRadius: 8,
     },
     messageBtnText: {
         fontSize: 12,
@@ -213,10 +232,10 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         gap: 4,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
         backgroundColor: "#FEE2E2",
-        borderRadius: 6,
+        borderRadius: 8,
     },
     removeBtnText: {
         fontSize: 12,

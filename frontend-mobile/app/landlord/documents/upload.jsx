@@ -30,7 +30,7 @@ export default function UploadDocument() {
 
     useEffect(() => {
         fetchProperties();
-    }, []);
+    }, [fetchProperties]);
 
     const handlePickFile = async () => {
         try {
@@ -43,7 +43,7 @@ export default function UploadDocument() {
             if (!result.canceled && result.assets && result.assets.length > 0) {
                 setPickedFile(result.assets[0]);
             }
-        } catch (err) {
+        } catch (_error) {
             Alert.alert("Error", "Failed to pick file");
         }
     };
@@ -77,7 +77,7 @@ export default function UploadDocument() {
             Alert.alert("Success", "Document uploaded successfully", [
                 { text: "OK", onPress: () => router.back() },
             ]);
-        } catch (err) {
+        } catch (_error) {
             Alert.alert("Error", "Failed to upload document");
         }
     };

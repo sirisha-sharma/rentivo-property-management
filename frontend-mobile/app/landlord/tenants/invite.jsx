@@ -22,7 +22,7 @@ export default function InviteTenant() {
 
     useEffect(() => {
         fetchProperties();
-    }, []);
+    }, [fetchProperties]);
 
     const handleStartChange = (event, selectedDate) => {
         setShowStartPicker(Platform.OS === "ios");
@@ -68,7 +68,7 @@ export default function InviteTenant() {
                 { text: "OK", onPress: () => router.back() }
             ]);
 
-        } catch (e) {
+        } catch (_error) {
             Alert.alert("Error", "Failed to invite tenant");
         }
     };

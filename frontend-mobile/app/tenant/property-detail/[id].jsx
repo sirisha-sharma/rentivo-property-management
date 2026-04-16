@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View, Text, StyleSheet, ScrollView, ActivityIndicator,
   Image, TouchableOpacity, Linking, Alert,
@@ -18,11 +18,7 @@ export default function PropertyDetail() {
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-  useEffect(() => {
-    fetchPropertyDetails();
-  }, [id]);
-
-  const fetchPropertyDetails = async () => {
+  const fetchPropertyDetails = useCallback(async () => {
     try {
       const userData = await AsyncStorage.getItem("user");
       const user = JSON.parse(userData);
@@ -34,13 +30,17 @@ export default function PropertyDetail() {
 
       const propertyData = response.data.properties.find(p => p._id === id);
       setProperty(propertyData);
-    } catch (error) {
+    } catch (_error) {
       Alert.alert("Error", "Failed to load property details");
       router.back();
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, router]);
+
+  useEffect(() => {
+    fetchPropertyDetails();
+  }, [fetchPropertyDetails]);
 
   // Helper function to construct proper image URI
   const getImageUri = (img) => {

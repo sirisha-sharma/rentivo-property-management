@@ -13,7 +13,7 @@ export default function DocumentList() {
 
     useEffect(() => {
         fetchDocuments();
-    }, []);
+    }, [fetchDocuments]);
 
     const filteredDocs = documents.filter((doc) => {
         if (filter === "all") return true;
@@ -29,7 +29,7 @@ export default function DocumentList() {
                 onPress: async () => {
                     try {
                         await deleteDocument(doc._id);
-                    } catch (e) {
+                    } catch (_error) {
                         Alert.alert("Error", "Failed to delete document");
                     }
                 },

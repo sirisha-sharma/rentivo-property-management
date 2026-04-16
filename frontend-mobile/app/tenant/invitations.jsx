@@ -1,7 +1,6 @@
 import React, { useContext, useEffect } from "react";
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from "react-native";
 import { TenantContext } from "../../context/TenantContext";
-import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { TopBar } from "../../components/TopBar";
 import { StatusBadge } from "../../components/StatusBadge";
@@ -9,18 +8,17 @@ import { COLORS } from "../../constants/theme";
 
 export default function TenantInvitations() {
     const { invitations, fetchMyInvitations, acceptInvitation, rejectInvitation, loading } = useContext(TenantContext);
-    const router = useRouter();
 
     useEffect(() => {
         fetchMyInvitations();
-    }, []);
+    }, [fetchMyInvitations]);
 
     const handleAccept = async (id) => {
         try {
             await acceptInvitation(id);
             Alert.alert("Success", "Invitation accepted!");
             fetchMyInvitations();
-        } catch (e) {
+        } catch (_error) {
             Alert.alert("Error", "Failed to accept invitation");
         }
     };
@@ -38,7 +36,7 @@ export default function TenantInvitations() {
                         try {
                             await rejectInvitation(id);
                             fetchMyInvitations();
-                        } catch (e) {
+                        } catch (_error) {
                             Alert.alert("Error", "Failed to reject invitation");
                         }
                     },
@@ -103,7 +101,7 @@ export default function TenantInvitations() {
                         <View style={styles.emptyContainer}>
                             <Ionicons name="mail-outline" size={48} color={COLORS.border} />
                             <Text style={styles.emptyTitle}>No invitations</Text>
-                            <Text style={styles.emptyText}>You don't have any property invitations yet.</Text>
+                            <Text style={styles.emptyText}>You do not have any property invitations yet.</Text>
                         </View>
                     }
                     refreshing={loading}

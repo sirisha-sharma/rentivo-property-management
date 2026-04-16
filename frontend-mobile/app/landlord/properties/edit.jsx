@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useContext, useEffect, useCallback } from "react";
 import {
     View,
     Text,
@@ -43,32 +43,33 @@ export default function EditProperty() {
     const [saving, setSaving] = useState(false);
     const [errors, setErrors] = useState({});
 
+    const loadProperty = useCallback(async () => {
+        try {
+            const property = await getPropertyById(id);
+            setFormData({
+                title: property.title || "",
+                address: property.address || "",
+                type: property.type || "",
+                units: property.units?.toString() || "",
+                splitMethod: property.splitMethod || "",
+                status: property.status || "vacant",
+                rent: property.rent?.toString() || "",
+                description: property.description || "",
+            });
+            setRoomSizes(property.roomSizes || []);
+            setImages(property.images || []);
+            setAmenities(property.amenities || []);
+        } catch (_error) {
+            Alert.alert("Error", "Failed to load property");
+            router.back();
+        } finally {
+            setLoading(false);
+        }
+    }, [getPropertyById, id, router]);
+
     useEffect(() => {
-        const loadProperty = async () => {
-            try {
-                const property = await getPropertyById(id);
-                setFormData({
-                    title: property.title || "",
-                    address: property.address || "",
-                    type: property.type || "",
-                    units: property.units?.toString() || "",
-                    splitMethod: property.splitMethod || "",
-                    status: property.status || "vacant",
-                    rent: property.rent?.toString() || "",
-                    description: property.description || "",
-                });
-                setRoomSizes(property.roomSizes || []);
-                setImages(property.images || []);
-                setAmenities(property.amenities || []);
-            } catch (e) {
-                Alert.alert("Error", "Failed to load property");
-                router.back();
-            } finally {
-                setLoading(false);
-            }
-        };
         loadProperty();
-    }, [id]);
+    }, [loadProperty]);
 
     const updateField = (field, value) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
@@ -170,7 +171,7 @@ export default function EditProperty() {
             Alert.alert("Success", "Property updated successfully", [
                 { text: "OK", onPress: () => router.back() }
             ]);
-        } catch (e) {
+        } catch (_error) {
             Alert.alert("Error", "Failed to update property");
         } finally {
             setSaving(false);

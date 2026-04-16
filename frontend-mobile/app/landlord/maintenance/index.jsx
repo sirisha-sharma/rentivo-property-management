@@ -28,7 +28,7 @@ export default function MaintenanceList() {
     // Fetch maintenance requests when screen loads
     useEffect(() => {
         fetchRequests();
-    }, []);
+    }, [fetchRequests]);
 
     // Filter requests based on selected status filter
     const filteredRequests = requests.filter((req) => {
@@ -149,7 +149,7 @@ export default function MaintenanceList() {
                 <View style={styles.divider} />
 
                 <View style={styles.cardFooter}>
-                    <View style={styles.footerLeft}>
+                    <View style={styles.footerMetaRow}>
                         <Text style={styles.dateText}>Submitted: {formatDate(item.createdAt)}</Text>
                         <View style={[styles.priorityBadge, { backgroundColor: priorityColor.bg }]}>
                             <Text style={[styles.priorityText, { color: priorityColor.text }]}>{item.priority}</Text>
@@ -177,19 +177,30 @@ export default function MaintenanceList() {
         );
     };
 
+    const renderHeader = () => (
+        <View style={styles.listHeader}>
+            <FilterChips
+                options={FILTERS}
+                selected={filter}
+                onSelect={setFilter}
+                contentContainerStyle={{ paddingHorizontal: 0 }}
+            />
+        </View>
+    );
+
     return (
         <View style={styles.container}>
             <TopBar title="Maintenance Requests" showBack />
-
-            <FilterChips options={FILTERS} selected={filter} onSelect={setFilter} />
 
             {loading ? (
                 <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 20 }} />
             ) : (
                 <FlatList
+                    style={{ flex: 1 }}
                     data={filteredRequests}
                     keyExtractor={(item) => item._id}
                     renderItem={renderItem}
+                    ListHeaderComponent={renderHeader}
                     contentContainerStyle={styles.listContent}
                     ListEmptyComponent={
                         <EmptyState
@@ -212,7 +223,12 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.background,
     },
     listContent: {
-        padding: 16,
+        paddingHorizontal: 16,
+        paddingBottom: 120,
+    },
+    listHeader: {
+        paddingTop: 12,
+        paddingBottom: 8,
     },
     card: {
         backgroundColor: COLORS.card,
@@ -249,13 +265,12 @@ const styles = StyleSheet.create({
         marginVertical: 12,
     },
     cardFooter: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
+        gap: 12,
     },
-    footerLeft: {
+    footerMetaRow: {
         flexDirection: "row",
         alignItems: "center",
+        flexWrap: "wrap",
         gap: 8,
     },
     dateText: {
@@ -273,16 +288,17 @@ const styles = StyleSheet.create({
     },
     actionRow: {
         flexDirection: "row",
+        flexWrap: "wrap",
         gap: 8,
     },
     progressBtn: {
         flexDirection: "row",
         alignItems: "center",
         gap: 4,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
         backgroundColor: "#DBEAFE",
-        borderRadius: 6,
+        borderRadius: 8,
     },
     progressBtnText: {
         fontSize: 12,
@@ -293,10 +309,10 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         gap: 4,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
         backgroundColor: "#D1FAE5",
-        borderRadius: 6,
+        borderRadius: 8,
     },
     completeBtnText: {
         fontSize: 12,
@@ -304,10 +320,10 @@ const styles = StyleSheet.create({
         fontWeight: "500",
     },
     deleteBtn: {
-        paddingHorizontal: 10,
-        paddingVertical: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
         backgroundColor: "#FEE2E2",
-        borderRadius: 6,
+        borderRadius: 8,
     },
     fab: {
         position: "absolute",

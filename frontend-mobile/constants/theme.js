@@ -13,6 +13,27 @@ export const COLORS = {
     warning: "#F59E0B", // Amber-500
 };
 
+// Expo's starter TypeScript utilities still reference a `Colors.light/dark`
+// shape, so we keep this compatibility export aligned with our flat token set.
+export const Colors = {
+    light: {
+        text: COLORS.foreground,
+        background: COLORS.background,
+        tint: COLORS.primary,
+        icon: COLORS.mutedForeground,
+        tabIconDefault: COLORS.mutedForeground,
+        tabIconSelected: COLORS.primary,
+    },
+    dark: {
+        text: COLORS.foreground,
+        background: COLORS.background,
+        tint: COLORS.primary,
+        icon: COLORS.mutedForeground,
+        tabIconDefault: COLORS.mutedForeground,
+        tabIconSelected: COLORS.primary,
+    },
+};
+
 export const SIZES = {
     base: 8,
     small: 12,

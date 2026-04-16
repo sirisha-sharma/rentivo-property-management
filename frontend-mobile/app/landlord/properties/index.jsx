@@ -27,7 +27,7 @@ export default function PropertyList() {
     useEffect(() => {
         fetchProperties();
         fetchTenants();
-    }, []);
+    }, [fetchProperties, fetchTenants]);
 
     const filteredProperties = properties.filter((property) => {
         const matchesSearch =
@@ -77,50 +77,57 @@ export default function PropertyList() {
                     <StatusBadge status={status} />
                 </View>
 
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                        <Ionicons name="business-outline" size={14} color={COLORS.mutedForeground} />
-                        <Text style={{ fontSize: 13, color: COLORS.mutedForeground }}>{item.units} units</Text>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 14, flexWrap: "wrap", flex: 1 }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                            <Ionicons name="business-outline" size={14} color={COLORS.mutedForeground} />
+                            <Text style={{ fontSize: 13, color: COLORS.mutedForeground }}>{item.units} units</Text>
+                        </View>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                            <Ionicons name="people-outline" size={14} color={COLORS.mutedForeground} />
+                            <Text style={{ fontSize: 13, color: COLORS.mutedForeground }}>{tenantCount} tenants</Text>
+                        </View>
                     </View>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
-                        <Ionicons name="people-outline" size={14} color={COLORS.mutedForeground} />
-                        <Text style={{ fontSize: 13, color: COLORS.mutedForeground }}>{tenantCount} tenants</Text>
-                    </View>
-                    {item.type && (
-                        <View style={{ marginLeft: "auto", backgroundColor: COLORS.muted, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+                    {item.type ? (
+                        <View style={{ backgroundColor: COLORS.muted, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 7, alignSelf: "flex-start" }}>
                             <Text style={{ fontSize: 12, color: COLORS.mutedForeground, fontWeight: "500" }}>{item.type}</Text>
                         </View>
-                    )}
+                    ) : null}
                 </View>
             </TouchableOpacity>
         );
     };
 
-    return (
-        <View style={{ flex: 1, backgroundColor: COLORS.background }}>
-            <TopBar title="Properties" showBack />
-
+    const renderHeader = () => (
+        <View style={{ paddingTop: 12, paddingBottom: 8, gap: 8 }}>
             <SearchBar
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 placeholder="Search properties…"
-                style={{ marginHorizontal: 16, marginTop: 12 }}
             />
-
             <FilterChips
                 options={FILTERS}
                 selected={filter}
                 onSelect={setFilter}
+                contentContainerStyle={{ paddingHorizontal: 0 }}
             />
+        </View>
+    );
+
+    return (
+        <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+            <TopBar title="Properties" showBack />
 
             {loading ? (
                 <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 20 }} />
             ) : (
                 <FlatList
+                    style={{ flex: 1 }}
                     data={filteredProperties}
                     keyExtractor={(item) => item._id}
                     renderItem={renderItem}
-                    contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}
+                    ListHeaderComponent={renderHeader}
+                    contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 120 }}
                     ListEmptyComponent={
                         <EmptyState
                             icon="business-outline"

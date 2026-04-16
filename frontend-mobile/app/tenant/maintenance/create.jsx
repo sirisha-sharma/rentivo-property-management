@@ -33,7 +33,7 @@ export default function CreateMaintenanceRequest() {
     // Fetch properties when screen loads
     useEffect(() => {
         fetchProperties();
-    }, []);
+    }, [fetchProperties]);
 
     // Handle form submission
     const handleSubmit = async () => {

@@ -47,7 +47,7 @@ export default function CreateInvoice() {
     useEffect(() => {
         fetchProperties();
         fetchTenants();
-    }, []);
+    }, [fetchProperties, fetchTenants]);
 
     // Auto-calculate total amount from breakdown fields
     useEffect(() => {

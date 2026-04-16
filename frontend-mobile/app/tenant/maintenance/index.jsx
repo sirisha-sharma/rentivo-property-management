@@ -28,7 +28,7 @@ export default function TenantMaintenance() {
     // Fetch maintenance requests when screen loads
     useEffect(() => {
         fetchRequests();
-    }, []);
+    }, [fetchRequests]);
 
     // Filter requests based on selected status filter
     const filteredRequests = requests.filter((req) => {

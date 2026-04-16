@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View, Text, FlatList, StyleSheet, ActivityIndicator,
   RefreshControl, TouchableOpacity, TextInput, Image,
@@ -19,15 +19,7 @@ export default function MarketplaceBrowse() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  useEffect(() => {
-    fetchProperties();
-  }, []);
-
-  useEffect(() => {
-    applyFilters();
-  }, [typeFilter, searchQuery, properties]);
-
-  const fetchProperties = async () => {
+  const fetchProperties = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getMarketplaceProperties();
@@ -37,15 +29,9 @@ export default function MarketplaceBrowse() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchProperties();
-    setRefreshing(false);
-  };
-
-  const applyFilters = () => {
+  const applyFilters = useCallback(() => {
     let filtered = properties;
 
     if (typeFilter !== "all") {
@@ -62,6 +48,20 @@ export default function MarketplaceBrowse() {
     }
 
     setFilteredProperties(filtered);
+  }, [properties, searchQuery, typeFilter]);
+
+  useEffect(() => {
+    fetchProperties();
+  }, [fetchProperties]);
+
+  useEffect(() => {
+    applyFilters();
+  }, [applyFilters]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchProperties();
+    setRefreshing(false);
   };
 
   // Helper function to construct proper image URI

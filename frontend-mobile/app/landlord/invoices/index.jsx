@@ -26,12 +26,6 @@ export default function InvoiceList() {
     useFocusEffect(
         React.useCallback(() => {
             void fetchInvoices();
-
-            const intervalId = setInterval(() => {
-                void fetchInvoices();
-            }, 5000);
-
-            return () => clearInterval(intervalId);
         }, [fetchInvoices])
     );
 
@@ -95,7 +89,7 @@ export default function InvoiceList() {
     const renderItem = ({ item }) => (
         <View style={styles.card}>
             <View style={styles.cardHeader}>
-                <View style={{ flex: 1 }}>
+                <View style={{ flex: 1, marginRight: 12 }}>
                     <Text style={styles.cardTitle}>NPR {item.amount?.toLocaleString()}</Text>
                     <View style={styles.subtextContainer}>
                         <Ionicons name="pricetag-outline" size={12} color={COLORS.mutedForeground} />
@@ -144,19 +138,30 @@ export default function InvoiceList() {
         </View>
     );
 
+    const renderHeader = () => (
+        <View style={styles.listHeader}>
+            <FilterChips
+                options={FILTERS}
+                selected={filter}
+                onSelect={setFilter}
+                contentContainerStyle={{ paddingHorizontal: 0 }}
+            />
+        </View>
+    );
+
     return (
         <View style={styles.container}>
             <TopBar title={propertyId ? "Property Invoices" : "Invoices"} showBack />
-
-            <FilterChips options={FILTERS} selected={filter} onSelect={setFilter} />
 
             {loading ? (
                 <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 20 }} />
             ) : (
                 <FlatList
+                    style={{ flex: 1 }}
                     data={filteredInvoices}
                     keyExtractor={(item) => item._id}
                     renderItem={renderItem}
+                    ListHeaderComponent={renderHeader}
                     contentContainerStyle={styles.listContent}
                     ListEmptyComponent={
                         <EmptyState
@@ -196,7 +201,12 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.background,
     },
     listContent: {
-        padding: 16,
+        paddingHorizontal: 16,
+        paddingBottom: 128,
+    },
+    listHeader: {
+        paddingTop: 12,
+        paddingBottom: 8,
     },
     card: {
         backgroundColor: COLORS.card,
@@ -247,9 +257,7 @@ const styles = StyleSheet.create({
         fontWeight: "500",
     },
     cardFooter: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
+        gap: 12,
     },
     dateText: {
         fontSize: 12,
@@ -257,16 +265,17 @@ const styles = StyleSheet.create({
     },
     actionRow: {
         flexDirection: "row",
+        flexWrap: "wrap",
         gap: 8,
     },
     paidBtn: {
         flexDirection: "row",
         alignItems: "center",
         gap: 4,
-        paddingHorizontal: 10,
-        paddingVertical: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
         backgroundColor: "#D1FAE5",
-        borderRadius: 6,
+        borderRadius: 8,
     },
     paidBtnText: {
         fontSize: 12,
@@ -274,10 +283,10 @@ const styles = StyleSheet.create({
         fontWeight: "500",
     },
     deleteBtn: {
-        paddingHorizontal: 10,
-        paddingVertical: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
         backgroundColor: "#FEE2E2",
-        borderRadius: 6,
+        borderRadius: 8,
     },
     fab: {
         position: "absolute",
