@@ -29,23 +29,34 @@ const getKhaltiConfig = () => {
  * Initialize Khalti payment
  * @param {Number} amount - Payment amount in NPR
  * @param {String} transactionId - Transaction ID
- * @param {String} invoiceId - Invoice ID
+ * @param {String} referenceId - Reference ID
  * @param {Object} customerInfo - Customer information
+ * @param {Object} options - Optional configuration overrides
  * @returns {Promise<Object>} Payment initialization response
  */
-export const initializeKhaltiPayment = async (amount, transactionId, invoiceId, customerInfo) => {
+export const initializeKhaltiPayment = async (
+    amount,
+    transactionId,
+    referenceId,
+    customerInfo,
+    options = {}
+) => {
     const config = getKhaltiConfig();
+    const returnUrl = options.returnUrl || config.returnUrl;
+    const websiteUrl = options.websiteUrl || config.websiteUrl;
+    const purchaseOrderName =
+        options.purchaseOrderName || `Invoice Payment - ${referenceId}`;
 
     try {
         // Khalti requires amount in paisa (1 NPR = 100 paisa)
         const amountInPaisa = Math.round(amount * 100);
 
         const payload = {
-            return_url: config.returnUrl,
-            website_url: config.websiteUrl,
+            return_url: returnUrl,
+            website_url: websiteUrl,
             amount: amountInPaisa,
             purchase_order_id: transactionId,
-            purchase_order_name: `Invoice Payment - ${invoiceId}`,
+            purchase_order_name: purchaseOrderName,
             customer_info: {
                 name: customerInfo.name || "Customer",
                 email: customerInfo.email || "customer@example.com",

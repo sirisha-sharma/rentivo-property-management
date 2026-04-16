@@ -2,7 +2,9 @@ import {
     buildSubscriptionSnapshot,
     getLandlordUsage,
     getOrCreateLandlordSubscription,
+    getSubscriptionPlansForClient,
     getTenantSubscriptionSnapshot,
+    SUBSCRIPTION_GATEWAYS,
 } from "../utils/subscriptionService.js";
 
 export const getCurrentSubscription = async (req, res) => {
@@ -12,6 +14,8 @@ export const getCurrentSubscription = async (req, res) => {
                 success: true,
                 requiresSubscription: false,
                 subscription: getTenantSubscriptionSnapshot(),
+                availableGateways: SUBSCRIPTION_GATEWAYS,
+                plans: getSubscriptionPlansForClient(),
             });
         }
 
@@ -25,6 +29,8 @@ export const getCurrentSubscription = async (req, res) => {
             success: true,
             requiresSubscription: true,
             subscription: buildSubscriptionSnapshot(subscription, usage, now),
+            availableGateways: SUBSCRIPTION_GATEWAYS,
+            plans: getSubscriptionPlansForClient(),
         });
     } catch (error) {
         return res.status(500).json({

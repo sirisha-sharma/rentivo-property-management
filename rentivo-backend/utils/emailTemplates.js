@@ -30,6 +30,11 @@ const TYPE_META = {
         heading: "Payment Notification",
         accent: "#10b981", // green
     },
+    subscription: {
+        subject: "Subscription Update - Rentivo",
+        heading: "Subscription Notification",
+        accent: "#0f766e", // teal
+    },
     general: {
         subject: "Notification - Rentivo",
         heading: "Notification",

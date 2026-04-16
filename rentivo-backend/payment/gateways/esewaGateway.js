@@ -110,11 +110,17 @@ const getEsewaIntentConfig = () => {
  * Generate eSewa payment signature using HMAC-SHA256
  * @param {Number} totalAmount - Total payment amount
  * @param {String} transactionUuid - Unique transaction ID
+ * @param {String} productCode - Optional product code override
  * @returns {String} Base64 encoded signature
  */
-export const generateEsewaSignature = (totalAmount, transactionUuid) => {
+export const generateEsewaSignature = (
+    totalAmount,
+    transactionUuid,
+    productCode = null
+) => {
     const config = getEsewaConfig();
-    const message = `total_amount=${totalAmount},transaction_uuid=${transactionUuid},product_code=${config.merchantId}`;
+    const resolvedProductCode = productCode || config.merchantId;
+    const message = `total_amount=${totalAmount},transaction_uuid=${transactionUuid},product_code=${resolvedProductCode}`;
 
     try {
         return signEsewaMessage(message, config.secretKey);
@@ -128,22 +134,27 @@ export const generateEsewaSignature = (totalAmount, transactionUuid) => {
  * Initialize eSewa payment
  * @param {Number} amount - Payment amount
  * @param {String} transactionId - Transaction ID
+ * @param {Object} options - Optional callback URL overrides
  * @returns {Object} Payment initialization data
  */
-export const initializeEsewaPayment = (amount, transactionId) => {
+export const initializeEsewaPayment = (amount, transactionId, options = {}) => {
     const config = getEsewaConfig();
-    const signature = generateEsewaSignature(amount, transactionId);
-    const failureUrl = `${config.failureUrlBase}/${encodeURIComponent(transactionId)}`;
+    const productCode = options.productCode || config.merchantId;
+    const signature = generateEsewaSignature(amount, transactionId, productCode);
+    const failureUrl =
+        options.failureUrl ||
+        `${config.failureUrlBase}/${encodeURIComponent(transactionId)}`;
+    const successUrl = options.successUrl || config.returnUrl;
 
     return {
         amount: amount.toString(),
         tax_amount: "0",
         total_amount: amount.toString(),
         transaction_uuid: transactionId,
-        product_code: config.merchantId,
+        product_code: productCode,
         product_service_charge: "0",
         product_delivery_charge: "0",
-        success_url: config.returnUrl,
+        success_url: successUrl,
         failure_url: failureUrl,
         signed_field_names: "total_amount,transaction_uuid,product_code",
         signature: signature,

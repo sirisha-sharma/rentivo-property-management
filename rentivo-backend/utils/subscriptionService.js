@@ -7,12 +7,33 @@ export const SUBSCRIPTION_ACTIONS = Object.freeze({
     INVITE_TENANT: "invite_tenant",
 });
 
+export const SUBSCRIPTION_GATEWAYS = Object.freeze(["esewa", "khalti"]);
+
 export const TRIAL_DURATION_DAYS = 14;
 
 export const TRIAL_LIMITS = Object.freeze({
     properties: 1,
     tenantSeats: 1,
     tenantStatuses: ["Active", "Pending"],
+});
+
+const PAID_PLAN_DEFAULTS = Object.freeze({
+    monthly: {
+        plan: "monthly",
+        label: "Monthly",
+        billingCycle: "monthly",
+        durationDays: 30,
+        amount: 999,
+        fullAccess: true,
+    },
+    yearly: {
+        plan: "yearly",
+        label: "Yearly",
+        billingCycle: "yearly",
+        durationDays: 365,
+        amount: 9999,
+        fullAccess: true,
+    },
 });
 
 const SUBSCRIPTION_BLOCKED_STATUSES = new Set([
@@ -27,6 +48,67 @@ const addDays = (date, days) => {
     const result = new Date(date);
     result.setDate(result.getDate() + days);
     return result;
+};
+
+const parsePlanAmount = (value, fallback) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+export const getSubscriptionPlanCatalog = () => {
+    const monthlyAmount = parsePlanAmount(
+        process.env.SUBSCRIPTION_MONTHLY_PRICE,
+        PAID_PLAN_DEFAULTS.monthly.amount
+    );
+    const yearlyAmount = parsePlanAmount(
+        process.env.SUBSCRIPTION_YEARLY_PRICE,
+        PAID_PLAN_DEFAULTS.yearly.amount
+    );
+
+    return {
+        trial: {
+            plan: "trial",
+            label: "Trial",
+            billingCycle: "trial",
+            durationDays: TRIAL_DURATION_DAYS,
+            amount: 0,
+            fullAccess: false,
+            limits: {
+                properties: TRIAL_LIMITS.properties,
+                tenantSeats: TRIAL_LIMITS.tenantSeats,
+            },
+        },
+        monthly: {
+            ...PAID_PLAN_DEFAULTS.monthly,
+            amount: monthlyAmount,
+        },
+        yearly: {
+            ...PAID_PLAN_DEFAULTS.yearly,
+            amount: yearlyAmount,
+        },
+    };
+};
+
+export const getSubscriptionPlansForClient = () =>
+    Object.values(getSubscriptionPlanCatalog()).map((plan) => ({
+        plan: plan.plan,
+        label: plan.label,
+        billingCycle: plan.billingCycle,
+        amount: plan.amount,
+        durationDays: plan.durationDays,
+        fullAccess: plan.fullAccess,
+        limits: plan.limits || null,
+    }));
+
+export const getPaidSubscriptionPlan = (planKey) => {
+    const catalog = getSubscriptionPlanCatalog();
+    const plan = catalog[planKey];
+
+    if (!plan || plan.plan === "trial") {
+        return null;
+    }
+
+    return plan;
 };
 
 const calculateDaysRemaining = (endDate, now = new Date()) => {
@@ -121,6 +203,51 @@ export const getLandlordUsage = async (landlordId) => {
         propertyCount: propertyIds.length,
         activeTenantCount,
         managedTenantCount,
+    };
+};
+
+export const applyPaidSubscriptionPlan = async ({
+    subscription,
+    planKey,
+    gateway,
+    paymentReference,
+    now = new Date(),
+}) => {
+    const plan = getPaidSubscriptionPlan(planKey);
+
+    if (!plan) {
+        throw new Error("Invalid subscription plan selected");
+    }
+
+    const normalizedNow = new Date(now);
+    const hasActivePaidAccess =
+        subscription.plan !== "trial" &&
+        subscription.status === "active" &&
+        subscription.endDate &&
+        new Date(subscription.endDate).getTime() > normalizedNow.getTime();
+
+    const periodStart = hasActivePaidAccess
+        ? new Date(subscription.endDate)
+        : normalizedNow;
+    const periodEnd = addDays(periodStart, plan.durationDays);
+
+    subscription.plan = plan.plan;
+    subscription.billingCycle = plan.billingCycle;
+    subscription.status = "active";
+    subscription.startDate = normalizedNow;
+    subscription.endDate = periodEnd;
+    subscription.paymentStatus = "paid";
+    subscription.paymentReference = paymentReference || subscription.paymentReference;
+    subscription.gateway = gateway || subscription.gateway;
+    subscription.cancelledAt = undefined;
+
+    await subscription.save();
+
+    return {
+        subscription,
+        plan,
+        periodStart,
+        periodEnd,
     };
 };
 
