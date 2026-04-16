@@ -4,6 +4,7 @@ import {
   Text,
   TouchableOpacity,
   ActivityIndicator,
+  StatusBar,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -27,63 +28,213 @@ export default function VerifyEmailScreen() {
       await axios.post(`${API_BASE_URL}/auth/resend-verification`, { email });
       setResent(true);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to resend. Please try again.");
+      setError(
+        err.response?.data?.message || "Failed to resend. Please try again."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
-      <View className="flex-1 items-center justify-center p-6">
-        <View className="w-20 h-20 rounded-full bg-blue-100 items-center justify-center mb-6">
-          <Ionicons name="mail-outline" size={40} color={COLORS.primary} />
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+
+      <View
+        style={{
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          paddingHorizontal: 32,
+        }}
+      >
+        {/* Icon */}
+        <View
+          style={{
+            width: 96,
+            height: 96,
+            borderRadius: 48,
+            backgroundColor: "#EFF6FF",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 28,
+            shadowColor: COLORS.primary,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.15,
+            shadowRadius: 12,
+            elevation: 4,
+          }}
+        >
+          <Ionicons name="mail" size={46} color={COLORS.primary} />
         </View>
 
-        <Text className="text-2xl font-bold text-foreground mb-2 text-center">
-          Check your email
+        {/* Heading */}
+        <Text
+          style={{
+            fontSize: 24,
+            fontWeight: "700",
+            color: COLORS.foreground,
+            textAlign: "center",
+            marginBottom: 10,
+            letterSpacing: -0.3,
+          }}
+        >
+          Verify your email
         </Text>
-        <Text className="text-mutedForeground text-center text-base mb-2">
+
+        {/* Body */}
+        <Text
+          style={{
+            fontSize: 15,
+            color: COLORS.mutedForeground,
+            textAlign: "center",
+            lineHeight: 22,
+            marginBottom: 4,
+          }}
+        >
           We sent a verification link to
         </Text>
-        <Text className="text-foreground font-semibold text-center text-base mb-6">
+        <Text
+          style={{
+            fontSize: 15,
+            fontWeight: "700",
+            color: COLORS.foreground,
+            textAlign: "center",
+            marginBottom: 12,
+          }}
+        >
           {email}
         </Text>
-        <Text className="text-mutedForeground text-center text-sm mb-8">
-          Click the link in the email to activate your account. The link expires in 24 hours.
+        <Text
+          style={{
+            fontSize: 14,
+            color: COLORS.mutedForeground,
+            textAlign: "center",
+            lineHeight: 21,
+            marginBottom: 36,
+          }}
+        >
+          Click the link in the email to activate your account. It expires in 24 hours.
         </Text>
 
-        {resent && (
-          <View className="flex-row items-center bg-green-50 border border-green-200 rounded-lg p-3 mb-4 gap-2 w-full">
-            <Ionicons name="checkmark-circle" size={16} color="#16a34a" />
-            <Text className="text-green-700 text-sm">Verification email resent.</Text>
-          </View>
-        )}
-
-        {error ? (
-          <View className="flex-row items-center bg-red-50 border border-red-200 rounded-lg p-3 mb-4 gap-2 w-full">
-            <Ionicons name="alert-circle" size={16} color={COLORS.destructive} />
-            <Text className="text-destructive text-sm">{error}</Text>
+        {/* Feedback banners */}
+        {resent ? (
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              backgroundColor: "#ECFDF5",
+              borderWidth: 1,
+              borderColor: "#A7F3D0",
+              borderRadius: 12,
+              padding: 14,
+              marginBottom: 16,
+              width: "100%",
+              gap: 10,
+            }}
+          >
+            <Ionicons
+              name="checkmark-circle"
+              size={18}
+              color={COLORS.success}
+            />
+            <Text
+              style={{
+                color: "#065F46",
+                fontSize: 14,
+                flex: 1,
+                lineHeight: 20,
+              }}
+            >
+              Verification email resent successfully.
+            </Text>
           </View>
         ) : null}
 
+        {error ? (
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              backgroundColor: "#FEF2F2",
+              borderWidth: 1,
+              borderColor: "#FECACA",
+              borderRadius: 12,
+              padding: 14,
+              marginBottom: 16,
+              width: "100%",
+              gap: 10,
+            }}
+          >
+            <Ionicons
+              name="alert-circle"
+              size={18}
+              color={COLORS.destructive}
+            />
+            <Text
+              style={{
+                color: COLORS.destructive,
+                fontSize: 14,
+                flex: 1,
+                lineHeight: 20,
+              }}
+            >
+              {error}
+            </Text>
+          </View>
+        ) : null}
+
+        {/* Resend button */}
         <TouchableOpacity
-          className="w-full bg-primary h-12 rounded-lg items-center justify-center mb-4"
           onPress={handleResend}
           disabled={loading}
+          activeOpacity={0.85}
+          style={{
+            width: "100%",
+            backgroundColor: loading ? "#93C5FD" : COLORS.primary,
+            borderRadius: 14,
+            paddingVertical: 16,
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 14,
+            shadowColor: COLORS.primary,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: loading ? 0 : 0.25,
+            shadowRadius: 10,
+            elevation: loading ? 0 : 4,
+            flexDirection: "row",
+            gap: 8,
+          }}
         >
           {loading ? (
-            <View className="flex-row items-center gap-2">
+            <>
               <ActivityIndicator size="small" color="#fff" />
-              <Text className="text-white text-base font-semibold">Sending...</Text>
-            </View>
+              <Text
+                style={{ color: "#fff", fontSize: 16, fontWeight: "600" }}
+              >
+                Sending…
+              </Text>
+            </>
           ) : (
-            <Text className="text-white text-base font-semibold">Resend verification email</Text>
+            <Text
+              style={{ color: "#fff", fontSize: 16, fontWeight: "700" }}
+            >
+              Resend verification email
+            </Text>
           )}
         </TouchableOpacity>
 
+        {/* Back to sign in */}
         <TouchableOpacity onPress={() => router.replace("/")}>
-          <Text className="text-primary font-medium text-sm">Back to sign in</Text>
+          <Text
+            style={{
+              color: COLORS.mutedForeground,
+              fontSize: 14,
+              fontWeight: "500",
+            }}
+          >
+            Back to sign in
+          </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

@@ -1,22 +1,25 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useRef } from "react";
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
+  StatusBar,
+  useWindowDimensions,
+  findNodeHandle,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import axios from "axios";
 import { AuthContext } from "../context/AuthContext";
 import { API_BASE_URL } from "../constants/config";
 import { COLORS } from "../constants/theme";
+import AuthInput from "../components/AuthInput";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -29,10 +32,50 @@ export default function LoginScreen() {
 
   const { login } = useContext(AuthContext);
   const router = useRouter();
+  const { height } = useWindowDimensions();
+
+  const scrollViewRef = useRef(null);
+  const passwordRef = useRef(null);
+  const KeyboardContainer = Platform.OS === "ios" ? KeyboardAvoidingView : View;
+  const keyboardContainerProps =
+    Platform.OS === "ios"
+      ? {
+          behavior: "padding",
+          keyboardVerticalOffset: 0,
+        }
+      : {};
+  const isCompactAndroid = Platform.OS === "android" && height < 780;
+  const heroSize = isCompactAndroid ? 64 : 72;
+  const heroMarginBottom = isCompactAndroid ? 28 : 36;
+  const surfacePadding = isCompactAndroid ? 18 : 22;
+
+  const scrollToInput = (inputRef, extraOffset = 140) => {
+    if (Platform.OS !== "android") {
+      return;
+    }
+
+    const nodeHandle = findNodeHandle(inputRef?.current);
+    const scrollResponder =
+      scrollViewRef.current?.getScrollResponder?.() ?? scrollViewRef.current;
+
+    if (!nodeHandle || !scrollResponder) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        scrollResponder.scrollResponderScrollNativeHandleToKeyboard?.(
+          nodeHandle,
+          extraOffset,
+          true
+        );
+      }, 120);
+    });
+  };
 
   const validateForm = () => {
     if (!email || !/\S+@\S+\.\S+/.test(email)) {
-      setError("Please enter a valid email");
+      setError("Please enter a valid email address");
       return false;
     }
     if (!password) {
@@ -50,14 +93,17 @@ export default function LoginScreen() {
 
     try {
       const response = await axios.post(`${API_BASE_URL}/auth/login`, {
-        email,
+        email: email.trim().toLowerCase(),
         password,
       });
 
       await login(response.data);
       router.replace("/dashboard");
     } catch (err) {
-      if (err.response?.status === 403 && err.response?.data?.needsVerification) {
+      if (
+        err.response?.status === 403 &&
+        err.response?.data?.needsVerification
+      ) {
         setUnverifiedEmail(err.response.data.email || email);
         setError("Please verify your email before logging in.");
       } else {
@@ -70,145 +116,382 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        className="flex-1"
-      >
-        <ScrollView contentContainerClassName="flex-grow p-6 justify-center">
-          {/* Logo and Header */}
-          <View className="items-center mb-8">
-            <View className="w-16 h-16 rounded-2xl bg-primary items-center justify-center mb-4 shadow-sm shadow-primary">
-              <Ionicons name="home" size={32} color={COLORS.primaryForeground} />
-            </View>
-            <Text className="text-2xl font-bold text-foreground mb-1">Welcome back</Text>
-            <Text className="text-base text-mutedForeground">Sign in to continue to Rentivo</Text>
-          </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
 
-          {/* Error Banner */}
-          {error ? (
-            <View className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
-              <View className="flex-row items-center gap-2">
-                <Ionicons name="alert-circle" size={16} color={COLORS.destructive} />
-                <Text className="text-destructive text-sm flex-1">{error}</Text>
-              </View>
-              {unverifiedEmail ? (
-                <TouchableOpacity
-                  className="mt-2"
-                  onPress={() =>
-                    router.push(`/verify-email?email=${encodeURIComponent(unverifiedEmail)}`)
-                  }
-                >
-                  <Text className="text-primary text-sm font-medium">
-                    Resend verification email →
-                  </Text>
-                </TouchableOpacity>
-              ) : null}
-            </View>
-          ) : null}
-
-          {/* Role Selector */}
-          <View className="mb-6">
-            <Text className="text-sm font-semibold mb-2 text-foreground">I am a</Text>
-            <View className="flex-row bg-muted p-1 rounded-xl gap-1">
-              <TouchableOpacity
-                className="flex-1 py-3 items-center rounded-lg"
-                style={role === "landlord" ? { backgroundColor: COLORS.card, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 } : {}}
-                onPress={() => setRole("landlord")}
-              >
-                <Text
-                  className={`text-sm font-medium ${role === "landlord" ? "text-foreground font-semibold" : "text-mutedForeground"}`}
-                >
-                  Landlord
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                className="flex-1 py-3 items-center rounded-lg"
-                style={role === "tenant" ? { backgroundColor: COLORS.card, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 } : {}}
-                onPress={() => setRole("tenant")}
-              >
-                <Text
-                  className={`text-sm font-medium ${role === "tenant" ? "text-foreground font-semibold" : "text-mutedForeground"}`}
-                >
-                  Tenant
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Form Fields */}
-          <View className="gap-4">
-            <View className="gap-2">
-              <Text className="text-sm font-semibold text-foreground">Email</Text>
-              <TextInput
-                className="h-12 border border-border rounded-lg px-4 text-base bg-input text-foreground"
-                placeholder="you@example.com"
-                value={email}
-                onChangeText={(text) => {
-                  setEmail(text);
-                  setError("");
+      <KeyboardContainer style={{ flex: 1 }} {...keyboardContainerProps}>
+        <ScrollView
+          ref={scrollViewRef}
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: Platform.OS === "ios" ? "center" : undefined,
+            paddingHorizontal: 24,
+            paddingTop: Platform.OS === "ios" ? 32 : isCompactAndroid ? 24 : 36,
+            paddingBottom: Platform.OS === "android" ? 148 : 40,
+          }}
+          keyboardShouldPersistTaps="always"
+          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "none"}
+          showsVerticalScrollIndicator={false}
+        >
+          <View
+            style={{
+              width: "100%",
+              maxWidth: 460,
+              alignSelf: "center",
+            }}
+          >
+            {/* ── Brand / Hero ── */}
+            <View style={{ alignItems: "center", marginBottom: heroMarginBottom }}>
+              <LinearGradient
+                colors={["#3B82F6", "#1D4ED8"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{
+                  width: heroSize,
+                  height: heroSize,
+                  borderRadius: isCompactAndroid ? 18 : 20,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginBottom: isCompactAndroid ? 14 : 16,
+                  shadowColor: "#2563EB",
+                  shadowOffset: { width: 0, height: 8 },
+                  shadowOpacity: 0.35,
+                  shadowRadius: 16,
+                  elevation: 10,
                 }}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                placeholderTextColor={COLORS.mutedForeground}
-              />
+              >
+                <Ionicons
+                  name="home"
+                  size={isCompactAndroid ? 30 : 34}
+                  color="#fff"
+                />
+              </LinearGradient>
+
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontWeight: "700",
+                  letterSpacing: 3,
+                  color: COLORS.primary,
+                  textTransform: "uppercase",
+                  marginBottom: 8,
+                }}
+              >
+                Rentivo
+              </Text>
+              <Text
+                style={{
+                  fontSize: isCompactAndroid ? 24 : 26,
+                  fontWeight: "700",
+                  color: COLORS.foreground,
+                  marginBottom: 6,
+                  letterSpacing: -0.3,
+                }}
+              >
+                Welcome back
+              </Text>
+              <Text
+                style={{
+                  fontSize: 15,
+                  color: COLORS.mutedForeground,
+                  textAlign: "center",
+                }}
+              >
+                Sign in to manage your properties
+              </Text>
             </View>
 
-            <View className="gap-2">
-              <Text className="text-sm font-semibold text-foreground">Password</Text>
-              <View className="flex-row items-center border border-border rounded-lg bg-input">
-                <TextInput
-                  className="flex-1 h-12 px-4 text-base text-foreground"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChangeText={(text) => {
-                    setPassword(text);
-                    setError("");
+            <View
+              style={{
+                backgroundColor: COLORS.card,
+                borderRadius: 24,
+                borderWidth: 1,
+                borderColor: COLORS.border,
+                padding: surfacePadding,
+                shadowColor: "#0F172A",
+                shadowOffset: { width: 0, height: 10 },
+                shadowOpacity: 0.06,
+                shadowRadius: 24,
+                elevation: 4,
+              }}
+            >
+              {/* ── Error Banner ── */}
+              {error ? (
+                <View
+                  style={{
+                    backgroundColor: "#FEF2F2",
+                    borderWidth: 1,
+                    borderColor: "#FECACA",
+                    borderRadius: 12,
+                    padding: 14,
+                    marginBottom: 20,
+                    flexDirection: "row",
+                    alignItems: "flex-start",
+                    gap: 10,
                   }}
-                  secureTextEntry={!showPassword}
-                  placeholderTextColor={COLORS.mutedForeground}
-                />
-                <TouchableOpacity
-                  onPress={() => setShowPassword(!showPassword)}
-                  className="p-3"
                 >
                   <Ionicons
-                    name={showPassword ? "eye-off" : "eye"}
-                    size={20}
-                    color={COLORS.mutedForeground}
+                    name="alert-circle"
+                    size={18}
+                    color={COLORS.destructive}
+                    style={{ marginTop: 1 }}
                   />
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={{
+                        color: COLORS.destructive,
+                        fontSize: 14,
+                        lineHeight: 20,
+                      }}
+                    >
+                      {error}
+                    </Text>
+                    {unverifiedEmail ? (
+                      <TouchableOpacity
+                        style={{ marginTop: 6 }}
+                        onPress={() =>
+                          router.push(
+                            `/verify-email?email=${encodeURIComponent(
+                              unverifiedEmail
+                            )}`
+                          )
+                        }
+                      >
+                        <Text
+                          style={{
+                            color: COLORS.primary,
+                            fontSize: 13,
+                            fontWeight: "600",
+                          }}
+                        >
+                          Resend verification email →
+                        </Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
+                </View>
+              ) : null}
+
+              {/* ── Role Selector ── */}
+              <View style={{ marginBottom: 24 }}>
+                <Text
+                  style={{
+                    fontSize: 13,
+                    fontWeight: "600",
+                    color: COLORS.mutedForeground,
+                    marginBottom: 8,
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  I am a
+                </Text>
+                <View
+                  style={{
+                    flexDirection: "row",
+                    backgroundColor: COLORS.muted,
+                    borderRadius: 14,
+                    padding: 4,
+                    gap: 4,
+                  }}
+                >
+                  {[
+                    { key: "landlord", label: "Landlord", icon: "home-outline" },
+                    { key: "tenant", label: "Tenant", icon: "person-outline" },
+                  ].map(({ key, label, icon }) => (
+                    <TouchableOpacity
+                      key={key}
+                      onPress={() => setRole(key)}
+                      activeOpacity={0.8}
+                      style={[
+                        {
+                          flex: 1,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          paddingVertical: 11,
+                          borderRadius: 10,
+                          gap: 6,
+                        },
+                        role === key
+                          ? {
+                              backgroundColor: COLORS.card,
+                              shadowColor: "#000",
+                              shadowOffset: { width: 0, height: 1 },
+                              shadowOpacity: 0.08,
+                              shadowRadius: 4,
+                              elevation: 2,
+                            }
+                          : {},
+                      ]}
+                    >
+                      <Ionicons
+                        name={icon}
+                        size={16}
+                        color={
+                          role === key ? COLORS.primary : COLORS.mutedForeground
+                        }
+                      />
+                      <Text
+                        style={{
+                          fontSize: 14,
+                          fontWeight: role === key ? "600" : "500",
+                          color:
+                            role === key
+                              ? COLORS.foreground
+                              : COLORS.mutedForeground,
+                        }}
+                      >
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* ── Form ── */}
+              <View style={{ gap: 16 }}>
+                <AuthInput
+                  label="Email"
+                  value={email}
+                  onChangeText={(t) => {
+                    setEmail(t);
+                    if (error) setError("");
+                  }}
+                  placeholder="you@example.com"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  leftIcon="mail-outline"
+                  returnKeyType="next"
+                  onSubmitEditing={() => passwordRef.current?.focus()}
+                  textContentType="emailAddress"
+                />
+
+                <AuthInput
+                  ref={passwordRef}
+                  label="Password"
+                  value={password}
+                  onChangeText={(t) => {
+                    setPassword(t);
+                    if (error) setError("");
+                  }}
+                  placeholder="Enter your password"
+                  isPassword
+                  showPassword={showPassword}
+                  onTogglePassword={() => setShowPassword((s) => !s)}
+                  leftIcon="lock-closed-outline"
+                  returnKeyType="done"
+                  onSubmitEditing={handleLogin}
+                  onFocus={() => scrollToInput(passwordRef, 160)}
+                  textContentType="password"
+                />
+
+                <TouchableOpacity
+                  onPress={() => router.push("/forgot-password")}
+                  style={{ alignSelf: "flex-end", marginTop: -4 }}
+                >
+                  <Text
+                    style={{
+                      color: COLORS.primary,
+                      fontSize: 13,
+                      fontWeight: "600",
+                    }}
+                  >
+                    Forgot password?
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Sign In Button */}
+                <TouchableOpacity
+                  onPress={handleLogin}
+                  disabled={loading}
+                  activeOpacity={0.85}
+                  style={{
+                    backgroundColor: loading ? "#93C5FD" : COLORS.primary,
+                    borderRadius: 14,
+                    paddingVertical: 16,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginTop: 4,
+                    shadowColor: COLORS.primary,
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: loading ? 0 : 0.25,
+                    shadowRadius: 10,
+                    elevation: loading ? 0 : 4,
+                    flexDirection: "row",
+                    gap: 8,
+                  }}
+                >
+                  {loading ? (
+                    <>
+                      <ActivityIndicator size="small" color="#fff" />
+                      <Text
+                        style={{
+                          color: "#fff",
+                          fontSize: 16,
+                          fontWeight: "600",
+                        }}
+                      >
+                        Signing in…
+                      </Text>
+                    </>
+                  ) : (
+                    <Text
+                      style={{ color: "#fff", fontSize: 16, fontWeight: "700" }}
+                    >
+                      Sign in
+                    </Text>
+                  )}
+                </TouchableOpacity>
+
+                {/* Divider */}
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    marginTop: 8,
+                    gap: 12,
+                  }}
+                >
+                  <View
+                    style={{ flex: 1, height: 1, backgroundColor: COLORS.border }}
+                  />
+                  <Text
+                    style={{ fontSize: 12, color: COLORS.mutedForeground }}
+                  >
+                    New to Rentivo?
+                  </Text>
+                  <View
+                    style={{ flex: 1, height: 1, backgroundColor: COLORS.border }}
+                  />
+                </View>
+
+                <TouchableOpacity
+                  onPress={() => router.push("/register")}
+                  activeOpacity={0.8}
+                  style={{
+                    borderWidth: 1.5,
+                    borderColor: COLORS.border,
+                    borderRadius: 14,
+                    paddingVertical: 15,
+                    alignItems: "center",
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: COLORS.foreground,
+                      fontSize: 15,
+                      fontWeight: "600",
+                    }}
+                  >
+                    Create an account
+                  </Text>
                 </TouchableOpacity>
               </View>
-            </View>
-
-            <TouchableOpacity className="self-end" onPress={() => router.push("/forgot-password")}>
-              <Text className="text-primary font-semibold text-sm">Forgot password?</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              className="bg-primary h-12 rounded-lg items-center justify-center mt-2"
-              onPress={handleLogin}
-              disabled={loading}
-            >
-              {loading ? (
-                <View className="flex-row items-center gap-2">
-                  <ActivityIndicator size="small" color="#fff" />
-                  <Text className="text-white text-base font-semibold">Signing in...</Text>
-                </View>
-              ) : (
-                <Text className="text-white text-base font-semibold">Sign in</Text>
-              )}
-            </TouchableOpacity>
-
-            <View className="flex-row justify-center mt-6">
-              <Text className="text-mutedForeground text-sm">Don't have an account? </Text>
-              <TouchableOpacity onPress={() => router.push("/register")}>
-                <Text className="text-primary font-semibold text-sm">Create account</Text>
-              </TouchableOpacity>
             </View>
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardContainer>
     </SafeAreaView>
   );
 }
