@@ -1,17 +1,20 @@
 import React, { useContext, useEffect, useState } from "react";
-import {
-    View,
-    Text,
-    FlatList,
-    TouchableOpacity,
-    TextInput,
-    ActivityIndicator,
-} from "react-native";
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { PropertyContext } from "../../../context/PropertyContext";
 import { TopBar } from "../../../components/TopBar";
+import { StatusBadge } from "../../../components/StatusBadge";
+import { SearchBar } from "../../../components/SearchBar";
+import { FilterChips } from "../../../components/FilterChips";
+import { EmptyState } from "../../../components/EmptyState";
 import { COLORS } from "../../../constants/theme";
+
+const FILTERS = [
+    { key: "all", label: "All" },
+    { key: "occupied", label: "Occupied" },
+    { key: "vacant", label: "Vacant" },
+];
 
 export default function PropertyList() {
     const { properties, fetchProperties, loading } = useContext(PropertyContext);
@@ -27,122 +30,124 @@ export default function PropertyList() {
         const matchesSearch =
             property.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             property.address.toLowerCase().includes(searchQuery.toLowerCase());
-        const status = property.status || "vacant"; // Handle missing status
+        const status = property.status || "vacant";
         const matchesFilter = filter === "all" || status === filter;
         return matchesSearch && matchesFilter;
     });
 
     const renderItem = ({ item }) => {
         const status = item.status || "vacant";
-        const statusColor =
-            status === "occupied"
-                ? { bg: "#DCFCE7", text: "#166534" }
-                : { bg: "#FEF9C3", text: "#854D0E" };
 
         return (
             <TouchableOpacity
-                className="bg-card rounded-xl border border-border p-4 mb-3"
                 onPress={() => router.push(`/landlord/properties/${item._id}`)}
+                activeOpacity={0.8}
+                style={{
+                    backgroundColor: COLORS.card,
+                    borderRadius: 16,
+                    borderWidth: 1,
+                    borderColor: COLORS.border,
+                    padding: 16,
+                    marginBottom: 12,
+                    shadowColor: "#0F172A",
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: 0.04,
+                    shadowRadius: 4,
+                    elevation: 1,
+                }}
             >
-                <View className="flex-row justify-between items-start mb-3">
-                    <View>
-                        <Text className="text-base font-semibold text-foreground mb-1">{item.title}</Text>
-                        <View className="flex-row items-center gap-1">
-                            <Ionicons name="location-outline" size={12} color={COLORS.mutedForeground} />
-                            <Text className="text-sm text-mutedForeground">{item.address}</Text>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                    <View style={{ flex: 1, marginRight: 10 }}>
+                        <Text style={{ fontSize: 15, fontWeight: "700", color: COLORS.foreground, marginBottom: 4, letterSpacing: -0.1 }}>
+                            {item.title}
+                        </Text>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                            <Ionicons name="location-outline" size={13} color={COLORS.mutedForeground} />
+                            <Text style={{ fontSize: 13, color: COLORS.mutedForeground }} numberOfLines={1}>
+                                {item.address}
+                            </Text>
                         </View>
                     </View>
-                    <View className="px-2.5 py-1 rounded-xl" style={{ backgroundColor: statusColor.bg }}>
-                        <Text className="text-xs font-semibold capitalize" style={{ color: statusColor.text }}>
-                            {status}
-                        </Text>
-                    </View>
+                    <StatusBadge status={status} />
                 </View>
 
-                <View className="flex-row items-center gap-4">
-                    <View className="flex-row items-center gap-1.5">
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
                         <Ionicons name="business-outline" size={14} color={COLORS.mutedForeground} />
-                        <Text className="text-sm text-mutedForeground">{item.units || 1} units</Text>
+                        <Text style={{ fontSize: 13, color: COLORS.mutedForeground }}>{item.units || 1} units</Text>
                     </View>
-                    <View className="flex-row items-center gap-1.5">
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
                         <Ionicons name="people-outline" size={14} color={COLORS.mutedForeground} />
-                        <Text className="text-sm text-mutedForeground">{item.tenants || 0} tenants</Text>
+                        <Text style={{ fontSize: 13, color: COLORS.mutedForeground }}>{item.tenants || 0} tenants</Text>
                     </View>
-                    <View className="bg-muted px-2 py-0.5 rounded ml-auto">
-                        <Text className="text-xs text-mutedForeground">{item.type}</Text>
-                    </View>
+                    {item.type && (
+                        <View style={{ marginLeft: "auto", backgroundColor: COLORS.muted, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+                            <Text style={{ fontSize: 12, color: COLORS.mutedForeground, fontWeight: "500" }}>{item.type}</Text>
+                        </View>
+                    )}
                 </View>
             </TouchableOpacity>
         );
     };
 
     return (
-        <View className="flex-1 bg-background">
+        <View style={{ flex: 1, backgroundColor: COLORS.background }}>
             <TopBar title="Properties" showBack />
 
-            <View className="px-4 pb-3">
-                {/* Search */}
-                <View className="flex-row items-center bg-input rounded-xl border border-border px-3 mb-3">
-                    <Ionicons
-                        name="search"
-                        size={16}
-                        color={COLORS.mutedForeground}
-                        className="mr-2"
-                    />
-                    <TextInput
-                        className="flex-1 h-11 text-foreground"
-                        placeholder="Search properties..."
-                        placeholderTextColor={COLORS.mutedForeground}
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                    />
-                </View>
+            <SearchBar
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Search properties…"
+                style={{ marginHorizontal: 16, marginTop: 12 }}
+            />
 
-                {/* Filters */}
-                <View className="flex-row gap-2">
-                    {["all", "occupied", "vacant"].map((f) => (
-                        <TouchableOpacity
-                            key={f}
-                            className={`px-4 py-2 rounded-full ${filter === f ? "bg-primary" : "bg-muted"
-                                }`}
-                            onPress={() => setFilter(f)}
-                        >
-                            <Text
-                                className={`text-sm font-medium capitalize ${filter === f ? "text-white" : "text-mutedForeground"
-                                    }`}
-                            >
-                                {f}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-            </View>
+            <FilterChips
+                options={FILTERS}
+                selected={filter}
+                onSelect={setFilter}
+            />
 
             {loading ? (
-                <ActivityIndicator size="large" color={COLORS.primary} className="mt-5" />
+                <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 20 }} />
             ) : (
                 <FlatList
                     data={filteredProperties}
                     keyExtractor={(item) => item._id}
                     renderItem={renderItem}
-                    contentContainerClassName="p-4 pt-0"
+                    contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}
                     ListEmptyComponent={
-                        <View className="items-center justify-center pt-16">
-                            <Ionicons name="business" size={48} color={COLORS.border} />
-                            <Text className="text-lg font-bold text-foreground mt-4 mb-2">No properties yet</Text>
-                            <Text className="text-center text-mutedForeground px-10">
-                                Add your first property to start managing your rentals
-                            </Text>
-                        </View>
+                        <EmptyState
+                            icon="business-outline"
+                            title="No properties yet"
+                            subtitle="Add your first property to start managing your rentals"
+                        />
                     }
+                    showsVerticalScrollIndicator={false}
                 />
             )}
 
+            {/* FAB */}
             <TouchableOpacity
-                className="absolute bottom-6 right-6 w-14 h-14 rounded-full bg-primary items-center justify-center shadow-lg shadow-primary"
                 onPress={() => router.push("/landlord/properties/add")}
+                activeOpacity={0.85}
+                style={{
+                    position: "absolute",
+                    bottom: 24,
+                    right: 20,
+                    width: 56,
+                    height: 56,
+                    borderRadius: 28,
+                    backgroundColor: COLORS.primary,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    shadowColor: COLORS.primary,
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.35,
+                    shadowRadius: 10,
+                    elevation: 6,
+                }}
             >
-                <Ionicons name="add" size={24} color="#fff" />
+                <Ionicons name="add" size={26} color="#fff" />
             </TouchableOpacity>
         </View>
     );

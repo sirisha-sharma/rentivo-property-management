@@ -5,8 +5,17 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { TopBar } from "../../../components/TopBar";
 import { StatusBadge } from "../../../components/StatusBadge";
+import { FilterChips } from "../../../components/FilterChips";
+import { EmptyState } from "../../../components/EmptyState";
 import { COLORS } from "../../../constants/theme";
 import { useFocusEffect } from "@react-navigation/native";
+
+const FILTERS = [
+    { key: "all", label: "All" },
+    { key: "pending", label: "Pending" },
+    { key: "paid", label: "Paid" },
+    { key: "overdue", label: "Overdue" },
+];
 
 export default function InvoiceList() {
     const { invoices, fetchInvoices, updateInvoiceStatus, deleteInvoice, loading } = useContext(InvoiceContext);
@@ -139,20 +148,7 @@ export default function InvoiceList() {
         <View style={styles.container}>
             <TopBar title={propertyId ? "Property Invoices" : "Invoices"} showBack />
 
-            {/* Filter Tabs */}
-            <View style={styles.filterRow}>
-                {["all", "pending", "paid", "overdue"].map((f) => (
-                    <TouchableOpacity
-                        key={f}
-                        style={[styles.filterChip, filter === f && styles.filterChipActive]}
-                        onPress={() => setFilter(f)}
-                    >
-                        <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
-                            {f.charAt(0).toUpperCase() + f.slice(1)}
-                        </Text>
-                    </TouchableOpacity>
-                ))}
-            </View>
+            <FilterChips options={FILTERS} selected={filter} onSelect={setFilter} />
 
             {loading ? (
                 <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 20 }} />
@@ -163,15 +159,15 @@ export default function InvoiceList() {
                     renderItem={renderItem}
                     contentContainerStyle={styles.listContent}
                     ListEmptyComponent={
-                        <View style={styles.emptyContainer}>
-                            <Ionicons name="document-text" size={48} color={COLORS.border} />
-                            <Text style={styles.emptyTitle}>No invoices yet</Text>
-                            <Text style={styles.emptyText}>
-                                {propertyId
+                        <EmptyState
+                            icon="document-text-outline"
+                            title="No invoices yet"
+                            subtitle={
+                                propertyId
                                     ? "No invoices are linked to this property yet."
-                                    : "Create invoices for your tenants to track payments."}
-                            </Text>
-                        </View>
+                                    : "Create invoices for your tenants to track payments."
+                            }
+                        />
                     }
                     refreshing={loading}
                     onRefresh={fetchInvoices}
@@ -298,45 +294,5 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 8,
         elevation: 4,
-    },
-    emptyContainer: {
-        alignItems: "center",
-        justifyContent: "center",
-        paddingTop: 60,
-    },
-    emptyTitle: {
-        fontSize: 18,
-        fontWeight: "bold",
-        color: COLORS.foreground,
-        marginTop: 16,
-        marginBottom: 8,
-    },
-    emptyText: {
-        textAlign: "center",
-        color: COLORS.mutedForeground,
-        paddingHorizontal: 40,
-    },
-    filterRow: {
-        flexDirection: "row",
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        gap: 8,
-    },
-    filterChip: {
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: 20,
-        backgroundColor: COLORS.muted,
-    },
-    filterChipActive: {
-        backgroundColor: COLORS.primary,
-    },
-    filterText: {
-        fontSize: 13,
-        fontWeight: "500",
-        color: COLORS.mutedForeground,
-    },
-    filterTextActive: {
-        color: "#fff",
     },
 });

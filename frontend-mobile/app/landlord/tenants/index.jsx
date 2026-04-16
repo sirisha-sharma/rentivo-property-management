@@ -5,7 +5,15 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { TopBar } from "../../../components/TopBar";
 import { StatusBadge } from "../../../components/StatusBadge";
+import { FilterChips } from "../../../components/FilterChips";
+import { EmptyState } from "../../../components/EmptyState";
 import { COLORS } from "../../../constants/theme";
+
+const FILTERS = [
+    { key: "all", label: "All" },
+    { key: "active", label: "Active" },
+    { key: "pending", label: "Pending" },
+];
 
 export default function TenantList() {
     const { tenants, fetchTenants, deleteTenant, loading } = useContext(TenantContext);
@@ -89,20 +97,7 @@ export default function TenantList() {
         <View style={styles.container}>
             <TopBar title="My Tenants" showBack />
 
-            {/* Filter Tabs */}
-            <View style={styles.filterRow}>
-                {["all", "active", "pending"].map((f) => (
-                    <TouchableOpacity
-                        key={f}
-                        style={[styles.filterChip, filter === f && styles.filterChipActive]}
-                        onPress={() => setFilter(f)}
-                    >
-                        <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
-                            {f.charAt(0).toUpperCase() + f.slice(1)}
-                        </Text>
-                    </TouchableOpacity>
-                ))}
-            </View>
+            <FilterChips options={FILTERS} selected={filter} onSelect={setFilter} />
 
             {loading ? (
                 <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 20 }} />
@@ -113,11 +108,11 @@ export default function TenantList() {
                     renderItem={renderItem}
                     contentContainerStyle={styles.listContent}
                     ListEmptyComponent={
-                        <View style={styles.emptyContainer}>
-                            <Ionicons name="people" size={48} color={COLORS.border} />
-                            <Text style={styles.emptyTitle}>No tenants yet</Text>
-                            <Text style={styles.emptyText}>Invite tenants to your properties to see them here.</Text>
-                        </View>
+                        <EmptyState
+                            icon="people-outline"
+                            title="No tenants yet"
+                            subtitle="Invite tenants to your properties to see them here."
+                        />
                     }
                     refreshing={loading}
                     onRefresh={fetchTenants}
@@ -199,46 +194,6 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 8,
         elevation: 4,
-    },
-    emptyContainer: {
-        alignItems: "center",
-        justifyContent: "center",
-        paddingTop: 60,
-    },
-    emptyTitle: {
-        fontSize: 18,
-        fontWeight: "bold",
-        color: COLORS.foreground,
-        marginTop: 16,
-        marginBottom: 8,
-    },
-    emptyText: {
-        textAlign: "center",
-        color: COLORS.mutedForeground,
-        paddingHorizontal: 40,
-    },
-    filterRow: {
-        flexDirection: "row",
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        gap: 8,
-    },
-    filterChip: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 20,
-        backgroundColor: COLORS.muted,
-    },
-    filterChipActive: {
-        backgroundColor: COLORS.primary,
-    },
-    filterText: {
-        fontSize: 14,
-        fontWeight: "500",
-        color: COLORS.mutedForeground,
-    },
-    filterTextActive: {
-        color: "#fff",
     },
     messageBtn: {
         flexDirection: "row",

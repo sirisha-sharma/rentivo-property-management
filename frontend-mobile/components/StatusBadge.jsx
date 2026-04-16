@@ -2,37 +2,58 @@ import React from "react";
 import { View, Text } from "react-native";
 import { COLORS } from "../constants/theme";
 
+const STATUS_MAP = {
+  // property states
+  occupied: { bg: "#DCFCE7", text: "#166534" },
+  vacant: { bg: "#FEF9C3", text: "#854D0E" },
+  maintenance: { bg: "#DBEAFE", text: "#1E40AF" },
+
+  // tenant states
+  Active: { bg: "#DCFCE7", text: "#166534" },
+  Pending: { bg: "#FEF9C3", text: "#854D0E" },
+
+  // maintenance states
+  Open: { bg: "#FEF9C3", text: "#854D0E" },
+  submitted: { bg: "#FEF9C3", text: "#854D0E" },
+  "In Progress": { bg: "#DBEAFE", text: "#1E40AF" },
+  "in-progress": { bg: "#DBEAFE", text: "#1E40AF" },
+  Resolved: { bg: "#DCFCE7", text: "#166534" },
+
+  // invoice states
+  Paid: { bg: "#DCFCE7", text: "#166534" },
+  Overdue: { bg: "#FEE2E2", text: "#991B1B" },
+};
+
+/**
+ * Pill badge for showing status labels on cards.
+ * Handles all known status strings with correct color coding.
+ */
 export const StatusBadge = ({ status }) => {
-    const getStatusColor = () => {
-        switch (status) {
-            case "occupied":
-            case "Active":
-            case "Resolved":
-            case "Paid":
-                return { bg: "#DCFCE7", text: "#166534" }; // green-100, green-800
-            case "vacant":
-            case "submitted":
-            case "Open":
-            case "Pending":
-                return { bg: "#FEF9C3", text: "#854D0E" }; // yellow-100, yellow-800
-            case "maintenance":
-            case "in-progress":
-            case "In Progress":
-                return { bg: "#DBEAFE", text: "#1E40AF" }; // blue-100, blue-800
-            case "Overdue":
-                return { bg: "#FEE2E2", text: "#991B1B" }; // red-100, red-800
-            default:
-                return { bg: COLORS.muted, text: COLORS.mutedForeground };
-        }
-    };
+  const colors = STATUS_MAP[status] ?? {
+    bg: COLORS.muted,
+    text: COLORS.mutedForeground,
+  };
 
-    const colors = getStatusColor();
-
-    return (
-        <View className="px-2.5 py-1 rounded-xl" style={{ backgroundColor: colors.bg }}>
-            <Text className="text-xs font-semibold capitalize" style={{ color: colors.text }}>
-                {status}
-            </Text>
-        </View>
-    );
+  return (
+    <View
+      style={{
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 20,
+        backgroundColor: colors.bg,
+        alignSelf: "flex-start",
+      }}
+    >
+      <Text
+        style={{
+          fontSize: 12,
+          fontWeight: "600",
+          color: colors.text,
+          textTransform: "capitalize",
+        }}
+      >
+        {status}
+      </Text>
+    </View>
+  );
 };

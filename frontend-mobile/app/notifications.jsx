@@ -3,6 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert } from "react
 import { NotificationContext } from "../context/NotificationContext";
 import { Ionicons } from "@expo/vector-icons";
 import { TopBar } from "../components/TopBar";
+import { EmptyState } from "../components/EmptyState";
 import { COLORS } from "../constants/theme";
 import { useFocusEffect } from "@react-navigation/native";
 
@@ -95,11 +96,11 @@ export default function NotificationsScreen() {
                 renderItem={renderItem}
                 contentContainerStyle={styles.listContent}
                 ListEmptyComponent={
-                    <View style={styles.emptyContainer}>
-                        <Ionicons name="notifications-off-outline" size={48} color={COLORS.border} />
-                        <Text style={styles.emptyTitle}>No notifications</Text>
-                        <Text style={styles.emptyText}>You&apos;re all caught up!</Text>
-                    </View>
+                    <EmptyState
+                        icon="notifications-off-outline"
+                        title="No notifications"
+                        subtitle="You're all caught up!"
+                    />
                 }
                 refreshing={loading}
                 onRefresh={fetchNotifications}
@@ -159,22 +160,5 @@ const styles = StyleSheet.create({
         height: 8,
         borderRadius: 4,
         backgroundColor: COLORS.primary,
-    },
-    emptyContainer: {
-        alignItems: "center",
-        justifyContent: "center",
-        paddingTop: 60,
-    },
-    emptyTitle: {
-        fontSize: 18,
-        fontWeight: "bold",
-        color: COLORS.foreground,
-        marginTop: 16,
-        marginBottom: 8,
-    },
-    emptyText: {
-        textAlign: "center",
-        color: COLORS.mutedForeground,
-        paddingHorizontal: 40,
     },
 });
