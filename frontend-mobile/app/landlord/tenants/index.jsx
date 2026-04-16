@@ -1,13 +1,21 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from "react-native";
 import { TenantContext } from "../../../context/TenantContext";
 import { useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { TopBar } from "../../../components/TopBar";
 import { StatusBadge } from "../../../components/StatusBadge";
 import { FilterChips } from "../../../components/FilterChips";
 import { EmptyState } from "../../../components/EmptyState";
+import { SubscriptionGateBanner } from "../../../components/SubscriptionGateBanner";
 import { COLORS } from "../../../constants/theme";
+import { SubscriptionContext } from "../../../context/SubscriptionContext";
+import {
+    SUBSCRIPTION_ACTIONS,
+    getSubscriptionActionAccess,
+    getSubscriptionActionPrompt,
+} from "../../../utils/subscription";
 
 const FILTERS = [
     { key: "all", label: "All" },
@@ -17,12 +25,31 @@ const FILTERS = [
 
 export default function TenantList() {
     const { tenants, fetchTenants, deleteTenant, loading } = useContext(TenantContext);
+    const { subscription, fetchSubscription } = useContext(SubscriptionContext);
     const router = useRouter();
     const [filter, setFilter] = useState("all");
 
-    useEffect(() => {
-        fetchTenants();
-    }, [fetchTenants]);
+    useFocusEffect(
+        React.useCallback(() => {
+            void fetchTenants();
+            void fetchSubscription();
+        }, [fetchSubscription, fetchTenants])
+    );
+
+    const canInviteTenant = getSubscriptionActionAccess(
+        subscription,
+        SUBSCRIPTION_ACTIONS.INVITE_TENANT
+    );
+    const actionPrompt = getSubscriptionActionPrompt({
+        subscription,
+        action: SUBSCRIPTION_ACTIONS.INVITE_TENANT,
+    });
+    const shouldShowBanner = Boolean(
+        subscription &&
+        (subscription.plan === "trial" ||
+            !canInviteTenant ||
+            ["expired", "cancelled", "pending_payment"].includes(subscription.status))
+    );
 
     const filteredTenants = tenants.filter(t => {
         if (filter === "all") return true;
@@ -95,6 +122,15 @@ export default function TenantList() {
 
     const renderHeader = () => (
         <View style={styles.listHeader}>
+            {shouldShowBanner ? (
+                <SubscriptionGateBanner
+                    title={actionPrompt.title}
+                    message={actionPrompt.message}
+                    actionLabel={actionPrompt.cta}
+                    onActionPress={() => router.push("/landlord/subscription")}
+                    tone={canInviteTenant ? "info" : "warning"}
+                />
+            ) : null}
             <FilterChips
                 options={FILTERS}
                 selected={filter}
@@ -132,7 +168,20 @@ export default function TenantList() {
 
             <TouchableOpacity
                 style={styles.fab}
-                onPress={() => router.push("/landlord/tenants/invite")}
+                onPress={() => {
+                    if (canInviteTenant) {
+                        router.push("/landlord/tenants/invite");
+                        return;
+                    }
+
+                    Alert.alert(actionPrompt.title, actionPrompt.message, [
+                        { text: "Cancel", style: "cancel" },
+                        {
+                            text: actionPrompt.cta,
+                            onPress: () => router.push("/landlord/subscription"),
+                        },
+                    ]);
+                }}
             >
                 <Ionicons name="add" size={24} color="#fff" />
             </TouchableOpacity>

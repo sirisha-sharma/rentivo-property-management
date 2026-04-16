@@ -1,15 +1,23 @@
-import React, { useContext, useEffect, useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, ActivityIndicator } from "react-native";
+import React, { useContext, useState } from "react";
+import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
 import { useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { PropertyContext } from "../../../context/PropertyContext";
 import { TenantContext } from "../../../context/TenantContext";
+import { SubscriptionContext } from "../../../context/SubscriptionContext";
 import { TopBar } from "../../../components/TopBar";
 import { StatusBadge } from "../../../components/StatusBadge";
 import { SearchBar } from "../../../components/SearchBar";
 import { FilterChips } from "../../../components/FilterChips";
 import { EmptyState } from "../../../components/EmptyState";
+import { SubscriptionGateBanner } from "../../../components/SubscriptionGateBanner";
 import { COLORS } from "../../../constants/theme";
+import {
+    SUBSCRIPTION_ACTIONS,
+    getSubscriptionActionAccess,
+    getSubscriptionActionPrompt,
+} from "../../../utils/subscription";
 
 const FILTERS = [
     { key: "all", label: "All" },
@@ -20,14 +28,48 @@ const FILTERS = [
 export default function PropertyList() {
     const { properties, fetchProperties, loading } = useContext(PropertyContext);
     const { tenants, fetchTenants } = useContext(TenantContext);
+    const { subscription, fetchSubscription } = useContext(SubscriptionContext);
     const [searchQuery, setSearchQuery] = useState("");
     const [filter, setFilter] = useState("all");
     const router = useRouter();
 
-    useEffect(() => {
-        fetchProperties();
-        fetchTenants();
-    }, [fetchProperties, fetchTenants]);
+    useFocusEffect(
+        React.useCallback(() => {
+            void fetchProperties();
+            void fetchTenants();
+            void fetchSubscription();
+        }, [fetchProperties, fetchSubscription, fetchTenants])
+    );
+
+    const canAddProperty = getSubscriptionActionAccess(
+        subscription,
+        SUBSCRIPTION_ACTIONS.ADD_PROPERTY
+    );
+    const actionPrompt = getSubscriptionActionPrompt({
+        subscription,
+        action: SUBSCRIPTION_ACTIONS.ADD_PROPERTY,
+    });
+    const shouldShowBanner = Boolean(
+        subscription &&
+        (subscription.plan === "trial" ||
+            !canAddProperty ||
+            ["expired", "cancelled", "pending_payment"].includes(subscription.status))
+    );
+
+    const handleAddPropertyPress = () => {
+        if (canAddProperty) {
+            router.push("/landlord/properties/add");
+            return;
+        }
+
+        Alert.alert(actionPrompt.title, actionPrompt.message, [
+            { text: "Cancel", style: "cancel" },
+            {
+                text: actionPrompt.cta,
+                onPress: () => router.push("/landlord/subscription"),
+            },
+        ]);
+    };
 
     const filteredProperties = properties.filter((property) => {
         const matchesSearch =
@@ -100,6 +142,15 @@ export default function PropertyList() {
 
     const renderHeader = () => (
         <View style={{ paddingTop: 12, paddingBottom: 8, gap: 8 }}>
+            {shouldShowBanner ? (
+                <SubscriptionGateBanner
+                    title={actionPrompt.title}
+                    message={actionPrompt.message}
+                    actionLabel={actionPrompt.cta}
+                    onActionPress={() => router.push("/landlord/subscription")}
+                    tone={canAddProperty ? "info" : "warning"}
+                />
+            ) : null}
             <SearchBar
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -141,7 +192,7 @@ export default function PropertyList() {
 
             {/* FAB */}
             <TouchableOpacity
-                onPress={() => router.push("/landlord/properties/add")}
+                onPress={handleAddPropertyPress}
                 activeOpacity={0.85}
                 style={{
                     position: "absolute",

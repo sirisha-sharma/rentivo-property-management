@@ -29,6 +29,8 @@ export default function NotificationsScreen() {
                 return { name: "folder-open-outline", color: "#0D9488" };
             case "payment":
                 return { name: "card-outline", color: COLORS.primary };
+            case "subscription":
+                return { name: "sparkles-outline", color: "#0F766E" };
             default:
                 return { name: "notifications-outline", color: COLORS.primary };
         }

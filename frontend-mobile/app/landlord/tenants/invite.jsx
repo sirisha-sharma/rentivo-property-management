@@ -1,12 +1,22 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, { useState, useContext } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ScrollView, Platform } from "react-native";
 import { TenantContext } from "../../../context/TenantContext";
 import { PropertyContext } from "../../../context/PropertyContext";
 import { useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import { TopBar } from "../../../components/TopBar";
+import { SubscriptionGateBanner } from "../../../components/SubscriptionGateBanner";
 import { COLORS } from "../../../constants/theme";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
+import { SubscriptionContext } from "../../../context/SubscriptionContext";
+import {
+    SUBSCRIPTION_ACTIONS,
+    getSubscriptionActionAccess,
+    getSubscriptionActionPrompt,
+    getSubscriptionErrorPayload,
+    isSubscriptionErrorPayload,
+} from "../../../utils/subscription";
 
 export default function InviteTenant() {
     const [email, setEmail] = useState("");
@@ -18,11 +28,30 @@ export default function InviteTenant() {
 
     const { inviteTenant, loading: tenantLoading } = useContext(TenantContext);
     const { properties, fetchProperties, loading: propertyLoading } = useContext(PropertyContext);
+    const { subscription, fetchSubscription } = useContext(SubscriptionContext);
     const router = useRouter();
 
-    useEffect(() => {
-        fetchProperties();
-    }, [fetchProperties]);
+    useFocusEffect(
+        React.useCallback(() => {
+            void fetchProperties();
+            void fetchSubscription();
+        }, [fetchProperties, fetchSubscription])
+    );
+
+    const canInviteTenant = getSubscriptionActionAccess(
+        subscription,
+        SUBSCRIPTION_ACTIONS.INVITE_TENANT
+    );
+    const actionPrompt = getSubscriptionActionPrompt({
+        subscription,
+        action: SUBSCRIPTION_ACTIONS.INVITE_TENANT,
+    });
+    const shouldShowBanner = Boolean(
+        subscription &&
+        (subscription.plan === "trial" ||
+            !canInviteTenant ||
+            ["expired", "cancelled", "pending_payment"].includes(subscription.status))
+    );
 
     const handleStartChange = (event, selectedDate) => {
         setShowStartPicker(Platform.OS === "ios");
@@ -47,6 +76,17 @@ export default function InviteTenant() {
     };
 
     const handleInvite = async () => {
+        if (!canInviteTenant) {
+            Alert.alert(actionPrompt.title, actionPrompt.message, [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: actionPrompt.cta,
+                    onPress: () => router.push("/landlord/subscription"),
+                },
+            ]);
+            return;
+        }
+
         if (!email || !selectedProperty) {
             Alert.alert("Error", "Please fill in all fields");
             return;
@@ -68,8 +108,20 @@ export default function InviteTenant() {
                 { text: "OK", onPress: () => router.back() }
             ]);
 
-        } catch (_error) {
-            Alert.alert("Error", "Failed to invite tenant");
+        } catch (error) {
+            const payload = getSubscriptionErrorPayload(error);
+            if (isSubscriptionErrorPayload(payload)) {
+                Alert.alert(actionPrompt.title, payload.message || actionPrompt.message, [
+                    { text: "Cancel", style: "cancel" },
+                    {
+                        text: "View Plans",
+                        onPress: () => router.push("/landlord/subscription"),
+                    },
+                ]);
+                return;
+            }
+
+            Alert.alert("Error", payload?.message || "Failed to invite tenant");
         }
     };
 
@@ -78,6 +130,16 @@ export default function InviteTenant() {
             <TopBar title="Invite Tenant" showBack />
 
             <ScrollView contentContainerStyle={styles.content}>
+                {shouldShowBanner ? (
+                    <SubscriptionGateBanner
+                        title={actionPrompt.title}
+                        message={actionPrompt.message}
+                        actionLabel={actionPrompt.cta}
+                        onActionPress={() => router.push("/landlord/subscription")}
+                        tone={canInviteTenant ? "info" : "warning"}
+                    />
+                ) : null}
+
                 <View style={styles.inputGroup}>
                     <Text style={styles.label}>Tenant Email</Text>
                     <TextInput
@@ -163,7 +225,9 @@ export default function InviteTenant() {
                     {tenantLoading ? (
                         <ActivityIndicator color="white" />
                     ) : (
-                        <Text style={styles.submitButtonText}>Send Invitation</Text>
+                        <Text style={styles.submitButtonText}>
+                            {canInviteTenant ? "Send Invitation" : "Upgrade to Continue"}
+                        </Text>
                     )}
                 </TouchableOpacity>
             </ScrollView>

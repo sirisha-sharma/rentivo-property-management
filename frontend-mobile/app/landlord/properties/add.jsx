@@ -10,15 +10,26 @@ import {
     Image,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { PropertyContext } from "../../../context/PropertyContext";
+import { SubscriptionContext } from "../../../context/SubscriptionContext";
 import { TopBar } from "../../../components/TopBar";
+import { SubscriptionGateBanner } from "../../../components/SubscriptionGateBanner";
 import { COLORS } from "../../../constants/theme";
 import { BASE_URL } from "../../../constants/config";
+import {
+    SUBSCRIPTION_ACTIONS,
+    getSubscriptionActionAccess,
+    getSubscriptionActionPrompt,
+    getSubscriptionErrorPayload,
+    isSubscriptionErrorPayload,
+} from "../../../utils/subscription";
 
 export default function AddProperty() {
     const { addProperty } = useContext(PropertyContext);
+    const { subscription, fetchSubscription } = useContext(SubscriptionContext);
     const router = useRouter();
 
     const [formData, setFormData] = useState({
@@ -38,6 +49,27 @@ export default function AddProperty() {
     const [newAmenity, setNewAmenity] = useState("");
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState({});
+
+    useFocusEffect(
+        React.useCallback(() => {
+            void fetchSubscription();
+        }, [fetchSubscription])
+    );
+
+    const canAddProperty = getSubscriptionActionAccess(
+        subscription,
+        SUBSCRIPTION_ACTIONS.ADD_PROPERTY
+    );
+    const actionPrompt = getSubscriptionActionPrompt({
+        subscription,
+        action: SUBSCRIPTION_ACTIONS.ADD_PROPERTY,
+    });
+    const shouldShowBanner = Boolean(
+        subscription &&
+        (subscription.plan === "trial" ||
+            !canAddProperty ||
+            ["expired", "cancelled", "pending_payment"].includes(subscription.status))
+    );
 
     const updateField = (field, value) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
@@ -130,6 +162,17 @@ export default function AddProperty() {
     };
 
     const handleSave = async () => {
+        if (!canAddProperty) {
+            Alert.alert(actionPrompt.title, actionPrompt.message, [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: actionPrompt.cta,
+                    onPress: () => router.push("/landlord/subscription"),
+                },
+            ]);
+            return;
+        }
+
         if (!validateForm()) return;
 
         setLoading(true);
@@ -145,8 +188,20 @@ export default function AddProperty() {
             Alert.alert("Success", "Property added successfully", [
                 { text: "OK", onPress: () => router.back() }
             ]);
-        } catch (_error) {
-            Alert.alert("Error", "Failed to add property");
+        } catch (error) {
+            const payload = getSubscriptionErrorPayload(error);
+            if (isSubscriptionErrorPayload(payload)) {
+                Alert.alert(actionPrompt.title, payload.message || actionPrompt.message, [
+                    { text: "Cancel", style: "cancel" },
+                    {
+                        text: "View Plans",
+                        onPress: () => router.push("/landlord/subscription"),
+                    },
+                ]);
+                return;
+            }
+
+            Alert.alert("Error", payload?.message || "Failed to add property");
         } finally {
             setLoading(false);
         }
@@ -185,6 +240,16 @@ export default function AddProperty() {
             <TopBar title="Add Property" showBack />
 
             <ScrollView contentContainerClassName="p-4 gap-4">
+                {shouldShowBanner ? (
+                    <SubscriptionGateBanner
+                        title={actionPrompt.title}
+                        message={actionPrompt.message}
+                        actionLabel={actionPrompt.cta}
+                        onActionPress={() => router.push("/landlord/subscription")}
+                        tone={canAddProperty ? "info" : "warning"}
+                    />
+                ) : null}
+
                 <View className="gap-2">
                     <Text className="text-sm font-medium text-foreground">Property Name</Text>
                     <TextInput
@@ -411,7 +476,9 @@ export default function AddProperty() {
                     {loading ? (
                         <ActivityIndicator color="white" />
                     ) : (
-                        <Text className="text-base text-white font-semibold">Save Property</Text>
+                        <Text className="text-base text-white font-semibold">
+                            {canAddProperty ? "Save Property" : "Upgrade to Continue"}
+                        </Text>
                     )}
                 </TouchableOpacity>
             </View>

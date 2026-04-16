@@ -20,6 +20,8 @@ import axios from "axios";
 import { API_BASE_URL } from "../constants/config";
 import { NotificationContext } from "../context/NotificationContext";
 import { MessageContext } from "../context/MessageContext";
+import { SubscriptionContext } from "../context/SubscriptionContext";
+import { SubscriptionSummaryCard } from "../components/SubscriptionSummaryCard";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -223,6 +225,8 @@ export default function DashboardScreen() {
 
   const { unreadCount, fetchNotifications } = useContext(NotificationContext);
   const { unreadMessageCount, fetchUnreadCount } = useContext(MessageContext);
+  const { subscription, loading: subscriptionLoading, fetchSubscription } =
+    useContext(SubscriptionContext);
   const { width: screenWidth } = useWindowDimensions();
   // chart width = screen - horizontal page padding - card padding
   const chartWidth = screenWidth - 40 - 40 - 8;
@@ -374,9 +378,12 @@ export default function DashboardScreen() {
       void fetchStats();
       void fetchNotifications();
       void fetchUnreadCount();
+      if (user?.role === "landlord") {
+        void fetchSubscription();
+      }
 
       return undefined;
-    }, [fetchNotifications, fetchStats, fetchUnreadCount])
+    }, [fetchNotifications, fetchStats, fetchSubscription, fetchUnreadCount, user?.role])
   );
 
   const handleLogout = async () => {
@@ -430,6 +437,13 @@ export default function DashboardScreen() {
       color: "#DB2777",
       route: "/messages",
       badge: unreadMessageCount,
+    },
+    {
+      label: "Subscription",
+      icon: "sparkles",
+      bg: "#F0FDFA",
+      color: "#0F766E",
+      route: "/landlord/subscription",
     },
   ];
 
@@ -494,6 +508,10 @@ export default function DashboardScreen() {
   ];
 
   const actions = isLandlord ? landlordActions : tenantActions;
+  const subscriptionButtonLabel =
+    subscription?.plan === "trial" || subscription?.status !== "active"
+      ? "Upgrade Plan"
+      : "Manage Plan";
 
   // ─── Render ──────────────────────────────────────────────────────────────
   return (
@@ -633,6 +651,14 @@ export default function DashboardScreen() {
 
         {/* ── Content ── */}
         <View style={{ paddingHorizontal: 20, paddingTop: 24, gap: 16 }}>
+          {isLandlord ? (
+            <SubscriptionSummaryCard
+              subscription={subscription}
+              loading={subscriptionLoading}
+              buttonLabel={subscriptionButtonLabel}
+              onPress={() => router.push("/landlord/subscription")}
+            />
+          ) : null}
 
           {/* ── Stats Grid ── */}
           {isLandlord ? (
