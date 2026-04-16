@@ -509,8 +509,10 @@ export default function DashboardScreen() {
 
   const actions = isLandlord ? landlordActions : tenantActions;
   const subscriptionButtonLabel =
-    subscription?.plan === "trial" || subscription?.status !== "active"
+    subscription?.plan === "trial"
       ? "Upgrade Plan"
+      : subscription?.status !== "active" || subscription?.isExpiringSoon
+        ? "Renew Plan"
       : "Manage Plan";
 
   // ─── Render ──────────────────────────────────────────────────────────────

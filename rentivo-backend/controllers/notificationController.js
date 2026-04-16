@@ -78,7 +78,7 @@ export const createNotification = async (userId, type, message) => {
                 message,
             });
         }
-} catch (error) {
+    } catch (error) {
         console.log("Failed to create notification:", error.message);
     }
 };

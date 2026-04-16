@@ -4,8 +4,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../constants/theme";
 import { SubscriptionStatusPill } from "./SubscriptionStatusPill";
 import {
+    formatDaysRemaining,
     formatCurrencyNpr,
     formatSubscriptionDate,
+    getSubscriptionExpiryNotice,
     getSubscriptionOverviewMessage,
     getSubscriptionPlanLabel,
     isTrialSubscription,
@@ -42,6 +44,26 @@ export function SubscriptionSummaryCard({
 
     const isTrial = isTrialSubscription(subscription);
     const usage = subscription.usage || {};
+    const expiryNotice = getSubscriptionExpiryNotice(subscription);
+    const noticePalette = expiryNotice
+        ? expiryNotice.tone === "danger"
+            ? {
+                background: "#FEF2F2",
+                border: "#FECACA",
+                iconBackground: "#FEE2E2",
+                icon: "#B91C1C",
+                title: "#B91C1C",
+                text: "#991B1B",
+            }
+            : {
+                background: "#FFFBEB",
+                border: "#FDE68A",
+                iconBackground: "#FEF3C7",
+                icon: "#D97706",
+                title: "#92400E",
+                text: "#92400E",
+            }
+        : null;
 
     return (
         <View
@@ -118,6 +140,82 @@ export function SubscriptionSummaryCard({
             >
                 {getSubscriptionOverviewMessage(subscription)}
             </Text>
+
+            {expiryNotice ? (
+                <View
+                    style={{
+                        marginTop: 16,
+                        borderRadius: 16,
+                        borderWidth: 1,
+                        borderColor: noticePalette.border,
+                        backgroundColor: noticePalette.background,
+                        padding: 15,
+                        gap: 10,
+                    }}
+                >
+                    <View
+                        style={{
+                            flexDirection: "row",
+                            alignItems: "flex-start",
+                            gap: 12,
+                        }}
+                    >
+                        <View
+                            style={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: 12,
+                                backgroundColor: noticePalette.iconBackground,
+                                alignItems: "center",
+                                justifyContent: "center",
+                            }}
+                        >
+                            <Ionicons
+                                name={
+                                    expiryNotice.tone === "danger"
+                                        ? "alert-circle-outline"
+                                        : "time-outline"
+                                }
+                                size={18}
+                                color={noticePalette.icon}
+                            />
+                        </View>
+
+                        <View style={{ flex: 1, gap: 4 }}>
+                            <Text
+                                style={{
+                                    fontSize: 14,
+                                    fontWeight: "700",
+                                    color: noticePalette.title,
+                                }}
+                            >
+                                {expiryNotice.title}
+                            </Text>
+                            <Text
+                                style={{
+                                    fontSize: 13,
+                                    lineHeight: 19,
+                                    color: noticePalette.text,
+                                }}
+                            >
+                                {expiryNotice.message}
+                            </Text>
+                        </View>
+                    </View>
+
+                    {subscription.daysRemaining > 0 ? (
+                        <Text
+                            style={{
+                                fontSize: 12,
+                                fontWeight: "700",
+                                color: noticePalette.title,
+                            }}
+                        >
+                            {formatDaysRemaining(subscription.daysRemaining)} remaining
+                        </Text>
+                    ) : null}
+                </View>
+            ) : null}
 
             <View
                 style={{

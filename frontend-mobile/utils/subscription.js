@@ -77,11 +77,72 @@ export const formatSubscriptionDate = (value) => {
     });
 };
 
+export const formatDaysRemaining = (daysRemaining) => {
+    const normalizedDays = Number(daysRemaining);
+
+    if (!Number.isFinite(normalizedDays) || normalizedDays <= 0) {
+        return "0 days";
+    }
+
+    return normalizedDays === 1 ? "1 day" : `${normalizedDays} days`;
+};
+
 export const isTrialSubscription = (subscription) =>
     subscription?.plan === "trial";
 
 export const isPaidSubscription = (subscription) =>
     subscription?.plan === "monthly" || subscription?.plan === "yearly";
+
+export const isSubscriptionExpiringSoon = (subscription) => {
+    if (typeof subscription?.isExpiringSoon === "boolean") {
+        return subscription.isExpiringSoon;
+    }
+
+    const daysRemaining = Number(subscription?.daysRemaining);
+    const reminderWindow = Number(subscription?.expiryReminderDays || 3);
+
+    return (
+        Number.isFinite(daysRemaining) &&
+        daysRemaining > 0 &&
+        daysRemaining <= reminderWindow &&
+        !["expired", "cancelled", "pending_payment"].includes(subscription?.status)
+    );
+};
+
+export const getSubscriptionExpiryNotice = (subscription) => {
+    if (!subscription) {
+        return null;
+    }
+
+    if (subscription.status === "expired") {
+        return {
+            tone: "danger",
+            title: "Subscription expired",
+            message:
+                subscription.plan === "trial"
+                    ? "Your trial has ended. Upgrade to Monthly or Yearly to keep adding properties and tenants."
+                    : "Your paid landlord plan has ended. Renew now to restore full landlord access.",
+        };
+    }
+
+    if (!isSubscriptionExpiringSoon(subscription)) {
+        return null;
+    }
+
+    const remainingLabel = formatDaysRemaining(subscription.daysRemaining);
+
+    return {
+        tone: "warning",
+        title:
+            subscription.plan === "trial"
+                ? "Trial ending soon"
+                : "Plan ending soon",
+        message:
+            subscription.plan === "trial"
+                ? `Your trial ends in ${remainingLabel}. Upgrade now to avoid losing access to extra properties and tenant invites.`
+                : `Your paid plan ends in ${remainingLabel}. Renew now to keep full landlord access without interruption.`,
+    };
+};
 
 export const getSubscriptionActionAccess = (subscription, action) => {
     const accessKey = ACTION_ACCESS_KEY[action];
@@ -166,6 +227,11 @@ export const getSubscriptionActionPrompt = ({ subscription, action }) => {
 export const getSubscriptionOverviewMessage = (subscription) => {
     if (!subscription) {
         return "Set up a landlord plan to unlock platform access.";
+    }
+
+    const expiryNotice = getSubscriptionExpiryNotice(subscription);
+    if (expiryNotice) {
+        return expiryNotice.message;
     }
 
     if (subscription.plan === "trial") {

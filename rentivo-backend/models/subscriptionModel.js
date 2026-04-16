@@ -48,6 +48,18 @@ const subscriptionSchema = mongoose.Schema(
         cancelledAt: {
             type: Date,
         },
+        expiryReminderSentAt: {
+            type: Date,
+        },
+        expiryReminderForDate: {
+            type: Date,
+        },
+        expiredNotificationSentAt: {
+            type: Date,
+        },
+        expiredNotificationForDate: {
+            type: Date,
+        },
     },
     {
         timestamps: true,

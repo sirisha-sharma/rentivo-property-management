@@ -10,6 +10,7 @@ export const SUBSCRIPTION_ACTIONS = Object.freeze({
 export const SUBSCRIPTION_GATEWAYS = Object.freeze(["esewa", "khalti"]);
 
 export const TRIAL_DURATION_DAYS = 14;
+export const SUBSCRIPTION_EXPIRY_REMINDER_DAYS = 3;
 
 export const TRIAL_LIMITS = Object.freeze({
     properties: 1,
@@ -111,7 +112,7 @@ export const getPaidSubscriptionPlan = (planKey) => {
     return plan;
 };
 
-const calculateDaysRemaining = (endDate, now = new Date()) => {
+export const calculateDaysRemaining = (endDate, now = new Date()) => {
     if (!endDate) return null;
 
     const remainingMs = new Date(endDate).getTime() - now.getTime();
@@ -119,6 +120,33 @@ const calculateDaysRemaining = (endDate, now = new Date()) => {
 
     return Math.ceil(remainingMs / (1000 * 60 * 60 * 24));
 };
+
+export const shouldExpireSubscription = (subscription, now = new Date()) =>
+    Boolean(
+        subscription?.endDate &&
+            EXPIRABLE_STATUSES.has(subscription.status) &&
+            new Date(subscription.endDate).getTime() <= now.getTime()
+    );
+
+export const isSubscriptionExpiringSoon = (
+    subscription,
+    now = new Date(),
+    reminderWindowDays = SUBSCRIPTION_EXPIRY_REMINDER_DAYS
+) => {
+    if (!subscription?.endDate || !["trialing", "active"].includes(subscription.status)) {
+        return false;
+    }
+
+    const daysRemaining = calculateDaysRemaining(subscription.endDate, now);
+    return (
+        daysRemaining !== null &&
+        daysRemaining > 0 &&
+        daysRemaining <= reminderWindowDays
+    );
+};
+
+const getSnapshotPlanAmount = (plan) =>
+    getSubscriptionPlanCatalog()[plan]?.amount ?? 0;
 
 const getPropertyIdsForLandlord = async (landlordId) => {
     const properties = await Property.find({ landlordId }).select("_id").lean();
@@ -151,11 +179,7 @@ export const ensureTrialSubscription = async (landlordId, now = new Date()) => {
 export const syncSubscriptionStatus = async (subscription, now = new Date()) => {
     if (!subscription) return null;
 
-    if (
-        subscription.endDate &&
-        EXPIRABLE_STATUSES.has(subscription.status) &&
-        new Date(subscription.endDate).getTime() <= now.getTime()
-    ) {
+    if (shouldExpireSubscription(subscription, now)) {
         subscription.status = "expired";
         await subscription.save();
     }
@@ -240,6 +264,10 @@ export const applyPaidSubscriptionPlan = async ({
     subscription.paymentReference = paymentReference || subscription.paymentReference;
     subscription.gateway = gateway || subscription.gateway;
     subscription.cancelledAt = undefined;
+    subscription.expiryReminderSentAt = undefined;
+    subscription.expiryReminderForDate = undefined;
+    subscription.expiredNotificationSentAt = undefined;
+    subscription.expiredNotificationForDate = undefined;
 
     await subscription.save();
 
@@ -265,11 +293,14 @@ export const buildSubscriptionSnapshot = (
         return null;
     }
 
+    const daysRemaining = calculateDaysRemaining(subscription.endDate, now);
     const isExpired =
         subscription.status === "expired" ||
         (subscription.endDate
             ? new Date(subscription.endDate).getTime() <= now.getTime()
             : false);
+    const isExpiringSoon =
+        !isExpired && isSubscriptionExpiringSoon(subscription, now);
 
     const baseAccess =
         subscription.plan === "trial" && usage
@@ -294,11 +325,14 @@ export const buildSubscriptionSnapshot = (
         billingCycle: subscription.billingCycle,
         startDate: subscription.startDate,
         endDate: subscription.endDate,
+        amount: getSnapshotPlanAmount(subscription.plan),
         paymentStatus: subscription.paymentStatus,
         paymentReference: subscription.paymentReference || null,
         gateway: subscription.gateway || null,
         isExpired,
-        daysRemaining: calculateDaysRemaining(subscription.endDate, now),
+        isExpiringSoon,
+        expiryReminderDays: SUBSCRIPTION_EXPIRY_REMINDER_DAYS,
+        daysRemaining,
         limits:
             subscription.plan === "trial"
                 ? {
@@ -432,7 +466,10 @@ export const getTenantSubscriptionSnapshot = () => ({
     paymentStatus: "not_required",
     paymentReference: null,
     gateway: null,
+    amount: 0,
     isExpired: false,
+    isExpiringSoon: false,
+    expiryReminderDays: null,
     daysRemaining: null,
     limits: null,
     usage: null,
