@@ -3,6 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, ActivityIndicator } from "react
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { PropertyContext } from "../../../context/PropertyContext";
+import { TenantContext } from "../../../context/TenantContext";
 import { TopBar } from "../../../components/TopBar";
 import { StatusBadge } from "../../../components/StatusBadge";
 import { SearchBar } from "../../../components/SearchBar";
@@ -18,12 +19,14 @@ const FILTERS = [
 
 export default function PropertyList() {
     const { properties, fetchProperties, loading } = useContext(PropertyContext);
+    const { tenants, fetchTenants } = useContext(TenantContext);
     const [searchQuery, setSearchQuery] = useState("");
     const [filter, setFilter] = useState("all");
     const router = useRouter();
 
     useEffect(() => {
         fetchProperties();
+        fetchTenants();
     }, []);
 
     const filteredProperties = properties.filter((property) => {
@@ -37,6 +40,9 @@ export default function PropertyList() {
 
     const renderItem = ({ item }) => {
         const status = item.status || "vacant";
+        const tenantCount = tenants.filter(
+            (t) => String(t.propertyId?._id || t.propertyId) === String(item._id)
+        ).length;
 
         return (
             <TouchableOpacity
@@ -74,11 +80,11 @@ export default function PropertyList() {
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
                         <Ionicons name="business-outline" size={14} color={COLORS.mutedForeground} />
-                        <Text style={{ fontSize: 13, color: COLORS.mutedForeground }}>{item.units || 1} units</Text>
+                        <Text style={{ fontSize: 13, color: COLORS.mutedForeground }}>{item.units} units</Text>
                     </View>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
                         <Ionicons name="people-outline" size={14} color={COLORS.mutedForeground} />
-                        <Text style={{ fontSize: 13, color: COLORS.mutedForeground }}>{item.tenants || 0} tenants</Text>
+                        <Text style={{ fontSize: 13, color: COLORS.mutedForeground }}>{tenantCount} tenants</Text>
                     </View>
                     {item.type && (
                         <View style={{ marginLeft: "auto", backgroundColor: COLORS.muted, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>

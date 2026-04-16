@@ -72,7 +72,7 @@ export default function TenantList() {
             <View style={styles.cardFooter}>
                 <Text style={styles.dateText}>Lease ends: {item.leaseEnd ? new Date(item.leaseEnd).toLocaleDateString() : "N/A"}</Text>
                 <View style={{ flexDirection: "row", gap: 8 }}>
-                    {item.status === "Active" && item.userId?._id && item.propertyId?._id && (
+                    {item.status?.toLowerCase() === "active" && item.userId?._id && item.propertyId?._id && (
                         <TouchableOpacity
                             style={styles.messageBtn}
                             onPress={() => {

@@ -233,7 +233,7 @@ export default function PropertyDetails() {
                                 <Text className="text-xs text-mutedForeground">{t.leaseEnd ? `Lease ends: ${new Date(t.leaseEnd).toLocaleDateString()}` : "Active"}</Text>
                             </View>
                             <View className="items-end">
-                                <StatusBadge status={t.status?.toLowerCase() || "active"} />
+                                <StatusBadge status={t.status || "Active"} />
                                 <View className="flex-row items-center gap-1 justify-end mt-1">
                                     <Ionicons name="call-outline" size={12} color={COLORS.mutedForeground} />
                                     <Text className="text-xs text-mutedForeground">{t.userId?.phone || "-"}</Text>

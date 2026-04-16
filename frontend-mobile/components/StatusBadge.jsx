@@ -10,7 +10,9 @@ const STATUS_MAP = {
 
   // tenant states
   Active: { bg: "#DCFCE7", text: "#166534" },
+  active: { bg: "#DCFCE7", text: "#166534" },
   Pending: { bg: "#FEF9C3", text: "#854D0E" },
+  pending: { bg: "#FEF9C3", text: "#854D0E" },
 
   // maintenance states
   Open: { bg: "#FEF9C3", text: "#854D0E" },
@@ -21,7 +23,9 @@ const STATUS_MAP = {
 
   // invoice states
   Paid: { bg: "#DCFCE7", text: "#166534" },
+  paid: { bg: "#DCFCE7", text: "#166534" },
   Overdue: { bg: "#FEE2E2", text: "#991B1B" },
+  overdue: { bg: "#FEE2E2", text: "#991B1B" },
 };
 
 /**
