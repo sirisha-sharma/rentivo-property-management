@@ -9,9 +9,18 @@ import {
     deleteTenant
 } from "../controllers/tenantController.js";
 import { protect } from "../middleware/authMiddleware.js";
+import { requireLandlordSubscription } from "../middleware/subscriptionMiddleware.js";
+import { SUBSCRIPTION_ACTIONS } from "../utils/subscriptionService.js";
 
 // Landlord routes
-router.route("/").get(protect, getTenants).post(protect, inviteTenant);
+router
+    .route("/")
+    .get(protect, getTenants)
+    .post(
+        protect,
+        requireLandlordSubscription(SUBSCRIPTION_ACTIONS.INVITE_TENANT),
+        inviteTenant
+    );
 router.route("/:id").delete(protect, deleteTenant);
 
 // Tenant routes
