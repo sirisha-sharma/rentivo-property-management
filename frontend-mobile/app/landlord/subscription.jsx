@@ -580,66 +580,57 @@ export default function LandlordSubscriptionScreen() {
                         </View>
                     </View>
 
-                    <View style={styles.card}>
-                        <View style={styles.sectionHeader}>
-                            <Text style={styles.sectionTitle}>Recent Subscription Payments</Text>
-                            {paymentsLoading ? (
-                                <ActivityIndicator size="small" color={COLORS.primary} />
-                            ) : null}
-                        </View>
+                    {(() => {
+                        const successfulPayments = payments.filter(
+                            (p) => p.status === "completed"
+                        );
+                        if (successfulPayments.length === 0) return null;
+                        return (
+                            <View style={styles.card}>
+                                <View style={styles.sectionHeader}>
+                                    <Text style={styles.sectionTitle}>Subscription Payments</Text>
+                                    {paymentsLoading ? (
+                                        <ActivityIndicator size="small" color={COLORS.primary} />
+                                    ) : null}
+                                </View>
 
-                        {payments.length === 0 ? (
-                            <View style={styles.emptyPayments}>
-                                <Ionicons
-                                    name="receipt-outline"
-                                    size={22}
-                                    color={COLORS.mutedForeground}
-                                />
-                                <Text style={styles.emptyPaymentsText}>
-                                    No subscription payments yet.
-                                </Text>
-                            </View>
-                        ) : (
-                            <View style={{ gap: 12, marginTop: 12 }}>
-                                {payments.slice(0, 5).map((payment) => {
-                                    const colors =
-                                        PAYMENT_STATUS_TONES[payment.status] ||
-                                        PAYMENT_STATUS_TONES.initiated;
-
-                                    return (
-                                        <View key={payment._id} style={styles.paymentRow}>
-                                            <View style={{ flex: 1, gap: 4 }}>
-                                                <Text style={styles.paymentPlan}>
-                                                    {getSubscriptionPlanLabel(payment.plan)} via{" "}
-                                                    {payment.gateway === "esewa" ? "eSewa" : "Khalti"}
-                                                </Text>
-                                                <Text style={styles.paymentMeta}>
-                                                    {formatCurrencyNpr(payment.amount)} •{" "}
-                                                    {formatSubscriptionDate(payment.createdAt)}
-                                                </Text>
-                                            </View>
-
-                                            <View
-                                                style={[
-                                                    styles.paymentStatusPill,
-                                                    { backgroundColor: colors.bg },
-                                                ]}
-                                            >
-                                                <Text
+                                <View style={{ gap: 12, marginTop: 12 }}>
+                                    {successfulPayments.slice(0, 5).map((payment) => {
+                                        const colors = PAYMENT_STATUS_TONES[payment.status] || PAYMENT_STATUS_TONES.initiated;
+                                        return (
+                                            <View key={payment._id} style={styles.paymentRow}>
+                                                <View style={{ flex: 1, gap: 4 }}>
+                                                    <Text style={styles.paymentPlan}>
+                                                        {getSubscriptionPlanLabel(payment.plan)} via{" "}
+                                                        {payment.gateway === "esewa" ? "eSewa" : "Khalti"}
+                                                    </Text>
+                                                    <Text style={styles.paymentMeta}>
+                                                        {formatCurrencyNpr(payment.amount)} •{" "}
+                                                        {formatSubscriptionDate(payment.createdAt)}
+                                                    </Text>
+                                                </View>
+                                                <View
                                                     style={[
-                                                        styles.paymentStatusText,
-                                                        { color: colors.text },
+                                                        styles.paymentStatusPill,
+                                                        { backgroundColor: colors.bg },
                                                     ]}
                                                 >
-                                                    {paymentStatusLabel(payment.status)}
-                                                </Text>
+                                                    <Text
+                                                        style={[
+                                                            styles.paymentStatusText,
+                                                            { color: colors.text },
+                                                        ]}
+                                                    >
+                                                        {paymentStatusLabel(payment.status)}
+                                                    </Text>
+                                                </View>
                                             </View>
-                                        </View>
-                                    );
-                                })}
+                                        );
+                                    })}
+                                </View>
                             </View>
-                        )}
-                    </View>
+                        );
+                    })()}
 
                     <View style={styles.infoCard}>
                         <Ionicons

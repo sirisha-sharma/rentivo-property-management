@@ -99,7 +99,7 @@ export function SubscriptionSummaryCard({
                             justifyContent: "center",
                         }}
                     >
-                        <Ionicons name="sparkles-outline" size={20} color="#0F766E" />
+                        <Ionicons name="ribbon-outline" size={20} color="#0F766E" />
                     </View>
 
                     <View style={{ gap: 4 }}>
@@ -220,15 +220,13 @@ export function SubscriptionSummaryCard({
             <View
                 style={{
                     flexDirection: "row",
-                    flexWrap: "wrap",
-                    justifyContent: "space-between",
-                    gap: 12,
+                    gap: 10,
                     marginTop: 16,
                 }}
             >
                 <View
                     style={{
-                        width: "48%",
+                        flex: 1,
                         backgroundColor: COLORS.muted,
                         borderRadius: 14,
                         padding: 14,
@@ -244,7 +242,7 @@ export function SubscriptionSummaryCard({
 
                 <View
                     style={{
-                        width: "48%",
+                        flex: 1,
                         backgroundColor: COLORS.muted,
                         borderRadius: 14,
                         padding: 14,

@@ -21,7 +21,6 @@ import { API_BASE_URL } from "../constants/config";
 import { NotificationContext } from "../context/NotificationContext";
 import { MessageContext } from "../context/MessageContext";
 import { SubscriptionContext } from "../context/SubscriptionContext";
-import { SubscriptionSummaryCard } from "../components/SubscriptionSummaryCard";
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
@@ -440,7 +439,7 @@ export default function DashboardScreen() {
     },
     {
       label: "Subscription",
-      icon: "sparkles",
+      icon: "ribbon",
       bg: "#F0FDFA",
       color: "#0F766E",
       route: "/landlord/subscription",
@@ -508,13 +507,6 @@ export default function DashboardScreen() {
   ];
 
   const actions = isLandlord ? landlordActions : tenantActions;
-  const subscriptionButtonLabel =
-    subscription?.plan === "trial"
-      ? "Upgrade Plan"
-      : subscription?.status !== "active" || subscription?.isExpiringSoon
-        ? "Renew Plan"
-      : "Manage Plan";
-
   // ─── Render ──────────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={["top"]}>
@@ -618,49 +610,62 @@ export default function DashboardScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Role badge */}
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              alignSelf: "flex-start",
-              marginTop: 14,
-              backgroundColor: isLandlord ? "#DBEAFE" : "#D1FAE5",
-              borderRadius: 20,
-              paddingHorizontal: 10,
-              paddingVertical: 5,
-              gap: 5,
-            }}
-          >
-            <Ionicons
-              name={isLandlord ? "home-outline" : "person-outline"}
-              size={13}
-              color={isLandlord ? COLORS.primary : COLORS.success}
-            />
-            <Text
+          {/* Role badge + Upgrade button row */}
+          <View style={{ flexDirection: "row", alignItems: "center", marginTop: 14, gap: 8 }}>
+            <View
               style={{
-                fontSize: 12,
-                fontWeight: "700",
-                color: isLandlord ? "#1D4ED8" : "#065F46",
-                letterSpacing: 0.5,
-                textTransform: "uppercase",
+                flexDirection: "row",
+                alignItems: "center",
+                backgroundColor: isLandlord ? "#DBEAFE" : "#D1FAE5",
+                borderRadius: 20,
+                paddingHorizontal: 10,
+                paddingVertical: 5,
+                gap: 5,
               }}
             >
-              {user?.role}
-            </Text>
+              <Ionicons
+                name={isLandlord ? "home-outline" : "person-outline"}
+                size={13}
+                color={isLandlord ? COLORS.primary : COLORS.success}
+              />
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: "700",
+                  color: isLandlord ? "#1D4ED8" : "#065F46",
+                  letterSpacing: 0.5,
+                  textTransform: "uppercase",
+                }}
+              >
+                {user?.role}
+              </Text>
+            </View>
+            {isLandlord && subscription &&
+              (subscription.plan === "trial" || subscription.status !== "active") && (
+              <TouchableOpacity
+                onPress={() => router.push("/landlord/subscription")}
+                activeOpacity={0.8}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 4,
+                  backgroundColor: COLORS.primary,
+                  borderRadius: 20,
+                  paddingHorizontal: 10,
+                  paddingVertical: 5,
+                }}
+              >
+                <Ionicons name="trending-up-outline" size={11} color="#fff" />
+                <Text style={{ fontSize: 12, fontWeight: "700", color: "#fff" }}>
+                  Upgrade
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </LinearGradient>
 
         {/* ── Content ── */}
         <View style={{ paddingHorizontal: 20, paddingTop: 24, gap: 16 }}>
-          {isLandlord ? (
-            <SubscriptionSummaryCard
-              subscription={subscription}
-              loading={subscriptionLoading}
-              buttonLabel={subscriptionButtonLabel}
-              onPress={() => router.push("/landlord/subscription")}
-            />
-          ) : null}
 
           {/* ── Stats Grid ── */}
           {isLandlord ? (

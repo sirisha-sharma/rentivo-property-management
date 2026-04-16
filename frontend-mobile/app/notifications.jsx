@@ -30,7 +30,7 @@ export default function NotificationsScreen() {
             case "payment":
                 return { name: "card-outline", color: COLORS.primary };
             case "subscription":
-                return { name: "sparkles-outline", color: "#0F766E" };
+                return { name: "ribbon-outline", color: "#0F766E" };
             default:
                 return { name: "notifications-outline", color: COLORS.primary };
         }
