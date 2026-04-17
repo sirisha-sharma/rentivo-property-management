@@ -173,7 +173,7 @@ export default function AddProperty() {
 
         setLoading(true);
         try {
-            await addProperty({
+            const newProperty = await addProperty({
                 ...formData,
                 district: normalizeLocationValue(formData.district),
                 units: parseInt(formData.units),
@@ -182,9 +182,25 @@ export default function AddProperty() {
                 images,
                 amenities,
             });
-            Alert.alert("Success", "Property added successfully", [
-                { text: "OK", onPress: () => router.back() }
-            ]);
+            const newPropertyId = newProperty?._id;
+            Alert.alert(
+                "Property Created",
+                "Would you like to add units to this property now?",
+                [
+                    {
+                        text: "Skip",
+                        style: "cancel",
+                        onPress: () => router.replace("/landlord/properties"),
+                    },
+                    {
+                        text: "Add Units",
+                        onPress: () =>
+                            router.replace(
+                                `/landlord/units?propertyId=${encodeURIComponent(String(newPropertyId))}`
+                            ),
+                    },
+                ]
+            );
         } catch (error) {
             const payload = getSubscriptionErrorPayload(error);
             if (isSubscriptionErrorPayload(payload)) {

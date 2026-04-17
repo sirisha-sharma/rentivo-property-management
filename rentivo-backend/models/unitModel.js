@@ -22,6 +22,10 @@ const unitSchema = mongoose.Schema(
             enum: ["vacant", "occupied"],
             default: "vacant",
         },
+        description: {
+            type: String,
+            default: "",
+        },
     },
     {
         timestamps: true,
