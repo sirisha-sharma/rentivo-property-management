@@ -12,6 +12,8 @@ import { COLORS } from "../../constants/theme";
 import { AuthContext } from "../../context/AuthContext";
 import { getAdminMaintenance } from "../../api/admin";
 
+// Screen module for maintenance.
+
 const STATUS_FILTERS = [
   { key: "all", label: "All status" },
   { key: "Open", label: "Open" },

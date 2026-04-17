@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+// Schema definition for tenantmodel data.
+
 const tenantSchema = mongoose.Schema(
     {
         userId: {

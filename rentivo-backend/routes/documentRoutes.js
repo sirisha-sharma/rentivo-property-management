@@ -3,6 +3,8 @@ import { uploadDocument, getDocuments, deleteDocument } from "../controllers/doc
 import { protect } from "../middleware/authMiddleware.js";
 import { upload } from "../middleware/uploadMiddleware.js";
 
+// Defines API routes for documentroutes features.
+
 const router = express.Router();
 
 const handleDocumentUpload = (req, res, next) => {

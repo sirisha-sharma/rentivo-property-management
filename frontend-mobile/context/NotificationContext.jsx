@@ -5,6 +5,7 @@ import { API_BASE_URL } from "../constants/config";
 
 export const NotificationContext = createContext();
 
+// Manages notification fetch/read actions and unread counters.
 export const NotificationProvider = ({ children }) => {
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -17,7 +18,6 @@ export const NotificationProvider = ({ children }) => {
         headers: { Authorization: `Bearer ${user?.token}` },
     }), [user?.token]);
 
-    // Fetch all notifications
     const fetchNotifications = useCallback(async () => {
         setLoading(true);
         try {
@@ -31,7 +31,6 @@ export const NotificationProvider = ({ children }) => {
         }
     }, [API_URL, getAuthHeader]);
 
-    // Mark one as read
     const markAsRead = useCallback(async (id) => {
         try {
             await axios.put(`${API_URL}/${id}/read`, {}, getAuthHeader());
@@ -43,7 +42,6 @@ export const NotificationProvider = ({ children }) => {
         }
     }, [API_URL, getAuthHeader]);
 
-    // Mark all as read
     const markAllAsRead = useCallback(async () => {
         try {
             await axios.put(`${API_URL}/read-all`, {}, getAuthHeader());
@@ -53,7 +51,6 @@ export const NotificationProvider = ({ children }) => {
         }
     }, [API_URL, getAuthHeader]);
 
-    // Delete a notification
     const deleteNotification = useCallback(async (id) => {
         try {
             await axios.delete(`${API_URL}/${id}`, getAuthHeader());
@@ -63,7 +60,7 @@ export const NotificationProvider = ({ children }) => {
         }
     }, [API_URL, getAuthHeader]);
 
-    // Unread count
+    // Derived from local state so it stays in sync without an extra API call
     const unreadCount = notifications.filter((n) => !n.read).length;
 
     return (

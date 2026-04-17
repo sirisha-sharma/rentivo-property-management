@@ -3,6 +3,8 @@ import { StyleSheet, Text, type TextProps } from 'react-native';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { COLORS } from '../constants/theme';
 
+// Reusable UI component for themed text.
+
 export type ThemedTextProps = TextProps & {
   lightColor?: string;
   darkColor?: string;

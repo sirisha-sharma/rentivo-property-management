@@ -7,6 +7,8 @@ import { EmptyState } from "../components/EmptyState";
 import { COLORS } from "../constants/theme";
 import { useFocusEffect } from "@react-navigation/native";
 
+// Screen module for notifications.
+
 export default function NotificationsScreen() {
     const { notifications, loading, fetchNotifications, markAsRead, markAllAsRead, deleteNotification } =
         useContext(NotificationContext);

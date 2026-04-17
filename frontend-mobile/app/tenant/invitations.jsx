@@ -6,6 +6,8 @@ import { TopBar } from "../../components/TopBar";
 import { StatusBadge } from "../../components/StatusBadge";
 import { COLORS } from "../../constants/theme";
 
+// Screen module for invitations.
+
 export default function TenantInvitations() {
     const { invitations, fetchMyInvitations, acceptInvitation, rejectInvitation, loading } = useContext(TenantContext);
 

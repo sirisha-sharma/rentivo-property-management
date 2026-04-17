@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+// Schema definition for notificationmodel data.
+
 const notificationSchema = mongoose.Schema(
     {
         userId: {

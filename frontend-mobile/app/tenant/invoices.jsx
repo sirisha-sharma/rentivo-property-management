@@ -11,6 +11,8 @@ import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { shareInvoicePdfAsync } from "../../utils/invoicePdf";
 
+// Screen module for invoices.
+
 const FILTERS = [
     { key: "all", label: "All" },
     { key: "pending", label: "Pending" },

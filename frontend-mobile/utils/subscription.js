@@ -1,3 +1,5 @@
+// Utility helpers for subscription logic.
+
 export const SUBSCRIPTION_ACTIONS = Object.freeze({
     ADD_PROPERTY: "add_property",
     INVITE_TENANT: "invite_tenant",

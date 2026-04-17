@@ -1,5 +1,7 @@
 import Animated from 'react-native-reanimated';
 
+// Reusable UI component for hello wave.
+
 export function HelloWave() {
   return (
     <Animated.Text

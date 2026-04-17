@@ -1,5 +1,7 @@
 import { v2 as cloudinary } from "cloudinary";
 
+// Core module for cloudinary features.
+
 let cloudinaryConfigured = false;
 
 const getCloudinaryConfig = () => ({

@@ -12,6 +12,8 @@ import { COLORS } from "../../constants/theme";
 import { AuthContext } from "../../context/AuthContext";
 import { getAdminProperties, deleteAdminProperty } from "../../api/admin";
 
+// Screen module for properties.
+
 const STATUS_FILTERS = [
   { key: "all", label: "All status" },
   { key: "vacant", label: "Vacant" },

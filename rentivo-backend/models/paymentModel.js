@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+// Schema definition for paymentmodel data.
+
 const paymentSchema = mongoose.Schema(
     {
         invoiceId: {

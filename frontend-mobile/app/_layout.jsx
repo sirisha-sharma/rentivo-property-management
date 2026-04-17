@@ -10,6 +10,8 @@ import { NotificationProvider } from "../context/NotificationContext";
 import { MessageProvider } from "../context/MessageContext";
 import { SubscriptionProvider } from "../context/SubscriptionContext";
 
+// Screen module for layout.
+
 export default function RootLayout() {
   return (
     <AuthProvider>

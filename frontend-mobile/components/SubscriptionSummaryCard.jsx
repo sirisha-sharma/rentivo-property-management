@@ -5,6 +5,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import { COLORS } from "../constants/theme";
 import { SubscriptionStatusPill } from "./SubscriptionStatusPill";
 import {
+
+// Reusable UI component for subscriptionsummarycard.
+
     formatDaysRemaining,
     formatCurrencyNpr,
     formatSubscriptionDate,

@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+// Schema definition for propertyassociationmodel data.
+
 const propertyAssociationSchema = mongoose.Schema(
     {
         propertyId: {

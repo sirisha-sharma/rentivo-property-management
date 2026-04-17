@@ -3,15 +3,7 @@ import { View, Text, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../constants/theme";
 
-/**
- * Consistent empty state for list screens (dark mode).
- *
- * Props:
- *  icon      — Ionicons name (default "file-tray-outline")
- *  title     — heading text
- *  subtitle  — supporting description
- *  action    — optional CTA button: { label: string, onPress: () => void }
- */
+// Reusable empty state for list screens - pass an action prop for a CTA button
 export function EmptyState({ icon = "file-tray-outline", title, subtitle, action }) {
   return (
     <View

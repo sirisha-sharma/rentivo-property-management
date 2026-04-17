@@ -4,6 +4,8 @@ import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
 import { getInvoiceById } from "../api/invoice";
 
+// Utility helpers for invoicepdf logic.
+
 const INVOICE_DIRECTORY = `${FileSystem.documentDirectory}invoices/`;
 
 const escapeHtml = (value = "") =>

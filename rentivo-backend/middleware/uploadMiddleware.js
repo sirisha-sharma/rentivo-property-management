@@ -3,6 +3,8 @@ import path from "path";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
 import cloudinary, { ensureCloudinaryConfig } from "../config/cloudinary.js";
 
+// Core module for uploadmiddleware features.
+
 const DOCUMENT_EXTENSIONS = ["pdf", "jpg", "jpeg", "png", "doc", "docx"];
 const IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "webp"];
 

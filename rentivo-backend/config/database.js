@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+// Core module for database features.
+
 const connectDatabase = async () => {
   try {
     console.log("Attempting to connect to:", process.env.MONGO_URI);

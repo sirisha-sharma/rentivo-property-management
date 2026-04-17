@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+// Schema definition for subscriptionmodel data.
+
 const subscriptionSchema = mongoose.Schema(
     {
         landlordId: {

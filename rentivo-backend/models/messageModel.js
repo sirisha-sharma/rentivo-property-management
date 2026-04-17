@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+// Schema definition for messagemodel data.
+
 const messageSchema = mongoose.Schema(
     {
         senderId: {

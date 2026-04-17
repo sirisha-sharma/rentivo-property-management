@@ -2,17 +2,7 @@ import React from "react";
 import { View, ScrollView, TouchableOpacity, Text } from "react-native";
 import { COLORS } from "../constants/theme";
 
-/**
- * Horizontal scrollable filter chip row for list screens (dark mode).
- *
- * Props:
- *  options   — array of { key: string, label: string }
- *  selected  — currently selected key string
- *  onSelect  — (key: string) => void
- *  containerStyle — optional style for the outer wrapper View (use for margins)
- *  style     — optional outer ScrollView style
- *  contentContainerStyle — optional inner row style
- */
+// Horizontal scrollable filter chips for list screens
 export function FilterChips({
   options,
   selected,

@@ -106,13 +106,7 @@ const getEsewaIntentConfig = () => {
     return config;
 };
 
-/**
- * Generate eSewa payment signature using HMAC-SHA256
- * @param {Number} totalAmount - Total payment amount
- * @param {String} transactionUuid - Unique transaction ID
- * @param {String} productCode - Optional product code override
- * @returns {String} Base64 encoded signature
- */
+// Generate an HMAC-SHA256 signature for an eSewa transaction payload.
 export const generateEsewaSignature = (
     totalAmount,
     transactionUuid,
@@ -130,13 +124,7 @@ export const generateEsewaSignature = (
     }
 };
 
-/**
- * Initialize eSewa payment
- * @param {Number} amount - Payment amount
- * @param {String} transactionId - Transaction ID
- * @param {Object} options - Optional callback URL overrides
- * @returns {Object} Payment initialization data
- */
+// Build the payment payload required to start an eSewa checkout.
 export const initializeEsewaPayment = (amount, transactionId, options = {}) => {
     const config = getEsewaConfig();
     const productCode = options.productCode || config.merchantId;
@@ -162,17 +150,11 @@ export const initializeEsewaPayment = (amount, transactionId, options = {}) => {
     };
 };
 
-/**
- * Verify eSewa payment signature.
+/*
+ * Verify an eSewa callback signature.
  *
- * eSewa signs the callback by concatenating each field listed in
- * `signed_field_names` in the exact order given, joined by commas, using the
- * actual values from the response (NOT hardcoded values). This implementation
- * dynamically builds the message from `signed_field_names` so the signature
- * matches no matter what fields eSewa decides to sign.
- *
- * @param {Object} decodedData - Decoded JSON from the `data` query parameter
- * @returns {String} Base64 encoded expected signature
+ * eSewa signs the callback by concatenating each field in `signed_field_names`
+ * in the same order, with live values from the response (not hardcoded ones).
  */
 export const verifyEsewaSignature = (decodedData) => {
     const config = getEsewaConfig();

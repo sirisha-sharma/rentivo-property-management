@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 import { OFFICIAL_DISTRICTS } from "../utils/nepalDistricts.js";
 
+// Schema definition for propertymodel data.
+
 const propertySchema = mongoose.Schema(
     {
         title: {

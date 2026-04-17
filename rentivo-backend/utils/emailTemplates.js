@@ -46,7 +46,7 @@ export const buildEmailTemplate = ({ name, type, message }) => {
     const meta = TYPE_META[type] || TYPE_META.general;
     const greeting = name ? `Hi ${name},` : "Hello,";
 
-    const text = `${greeting}\n\n${message}\n\n— Rentivo Property Management`;
+    const text = `${greeting}\n\n${message}\n\n- Rentivo Property Management`;
 
     const html = `<!DOCTYPE html>
 <html>

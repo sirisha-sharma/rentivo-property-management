@@ -2,6 +2,8 @@ import axios from "axios";
 import { API_BASE_URL } from "../constants/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+// API client helpers for units endpoints.
+
 const getAuthHeaders = async () => {
     const userData = await AsyncStorage.getItem("user");
     if (!userData) throw new Error("No authentication data found. Please login again.");

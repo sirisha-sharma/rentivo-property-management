@@ -1,6 +1,8 @@
 import { SymbolView, SymbolViewProps, SymbolWeight } from 'expo-symbols';
 import { StyleProp, ViewStyle } from 'react-native';
 
+// Reusable UI component for icon symbol.ios.
+
 export function IconSymbol({
   name,
   size = 24,

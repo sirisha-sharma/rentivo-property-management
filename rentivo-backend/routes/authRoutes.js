@@ -1,4 +1,7 @@
 import express from "express";
+
+// Defines API routes for authroutes features.
+
 const router = express.Router();
 import {
   registerUser,

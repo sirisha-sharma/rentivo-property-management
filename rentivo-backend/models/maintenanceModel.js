@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+// Schema definition for maintenancemodel data.
+
 const maintenanceSchema = mongoose.Schema(
     {
         propertyId: {

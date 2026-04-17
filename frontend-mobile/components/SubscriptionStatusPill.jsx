@@ -3,6 +3,8 @@ import { View, Text } from "react-native";
 import { COLORS } from "../constants/theme";
 import { getSubscriptionStatusLabel, getSubscriptionStatusTone } from "../utils/subscription";
 
+// Reusable UI component for subscriptionstatuspill.
+
 const TONE_STYLES = {
     success: { bg: COLORS.successSoft, text: COLORS.success },
     info: { bg: COLORS.infoSoft, text: COLORS.info },

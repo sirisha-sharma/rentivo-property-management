@@ -1,4 +1,7 @@
 import {
+
+// Core module for subscriptionmiddleware features.
+
     buildSubscriptionSnapshot,
     evaluateLandlordSubscriptionAction,
     getLandlordUsage,

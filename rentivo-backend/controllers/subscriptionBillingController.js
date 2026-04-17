@@ -24,6 +24,7 @@ import {
     getSubscriptionPlansForClient,
 } from "../utils/subscriptionService.js";
 
+// Billing controller handles checkout initiation, callback verification, and reconciliation.
 const ALLOWED_CLIENT_REDIRECT_PROTOCOLS = new Set([
     "frontendmobile:",
     "exp:",
@@ -301,6 +302,7 @@ const reconcileEsewaStatus = async ({
     return latestStatus;
 };
 
+// Returns available gateways and plan details so the client can build the checkout UI
 export const getSubscriptionConfig = async (_req, res) => {
     try {
         return res.status(200).json({
@@ -317,6 +319,7 @@ export const getSubscriptionConfig = async (_req, res) => {
     }
 };
 
+// Creates the payment record and returns gateway-specific data the client needs to redirect the user
 export const initiateSubscriptionCheckout = async (req, res) => {
     try {
         if (!ensureLandlord(req, res)) {
@@ -473,6 +476,7 @@ export const getSubscriptionPaymentById = async (req, res) => {
     }
 };
 
+// Serves an intermediary HTML page that auto-submits the eSewa form or opens the intent deeplink on mobile
 export const serveSubscriptionEsewaLaunchPage = async (req, res) => {
     try {
         const decoded = jwt.verify(req.params.token, process.env.JWT_SECRET);
@@ -622,6 +626,7 @@ export const serveSubscriptionEsewaLaunchPage = async (req, res) => {
     }
 };
 
+// eSewa calls this server-side when an intent payment status changes, so we don't rely on the user returning
 export const handleSubscriptionEsewaIntentCallback = async (req, res) => {
     try {
         const callbackData =
@@ -727,6 +732,7 @@ export const handleSubscriptionEsewaIntentCallback = async (req, res) => {
     }
 };
 
+// eSewa sometimes redirects here even on success, so we reconcile the real status before marking as failed
 export const handleSubscriptionPaymentFailure = async (req, res) => {
     try {
         const {
@@ -827,6 +833,7 @@ export const handleSubscriptionPaymentFailure = async (req, res) => {
     }
 };
 
+// Validates eSewa's base64-encoded callback, checks signature and amount, then activates the plan
 export const verifySubscriptionEsewaPayment = async (req, res) => {
     try {
         const { data } = req.query;
@@ -992,6 +999,7 @@ export const verifySubscriptionEsewaPayment = async (req, res) => {
     }
 };
 
+// Khalti calls back with a pidx, we look it up server-side to confirm the actual status
 export const verifySubscriptionKhaltiPayment = async (req, res) => {
     try {
         const callbackPayload =
@@ -1163,6 +1171,7 @@ export const verifySubscriptionKhaltiPayment = async (req, res) => {
     }
 };
 
+// Used to poll an ongoing eSewa intent session and settle the payment if it completed out-of-band
 export const reconcileSubscriptionEsewaIntentStatus = async (payment) => {
     const intentState = getEsewaIntentState(payment);
 

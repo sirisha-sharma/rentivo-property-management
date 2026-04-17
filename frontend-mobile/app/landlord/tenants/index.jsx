@@ -11,6 +11,9 @@ import { EmptyState } from "../../../components/EmptyState";
 import { COLORS } from "../../../constants/theme";
 import { SubscriptionContext } from "../../../context/SubscriptionContext";
 import {
+
+// Screen module for module.
+
     SUBSCRIPTION_ACTIONS,
     getSubscriptionActionAccess,
     getSubscriptionActionPrompt,

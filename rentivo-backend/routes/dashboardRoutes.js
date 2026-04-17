@@ -1,4 +1,7 @@
 import express from "express";
+
+// Defines API routes for dashboardroutes features.
+
 const router = express.Router();
 import {
     getLandlordChartData,

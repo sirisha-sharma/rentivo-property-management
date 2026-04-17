@@ -11,6 +11,7 @@ const VALIDATION_MESSAGES = new Set([
     "Custom split amounts must add up to the total utility amount",
 ]);
 
+// use epsilon to avoid floating point drift when rounding to 2 decimal places
 export const roundCurrency = (value) =>
     Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 
@@ -19,6 +20,7 @@ export const calculateTotalUtilities = (utilities = {}) =>
         UTILITY_KEYS.reduce((sum, key) => sum + (parseFloat(utilities[key]) || 0), 0)
     );
 
+// last tenant absorbs rounding remainder so totals always add up exactly
 const distributeAmountByWeights = (amount, weights) => {
     const normalizedAmount = roundCurrency(amount);
     const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
@@ -75,6 +77,7 @@ const buildProportionalSplits = ({ tenants, utilities, weights, metadataBuilder 
     });
 };
 
+// equal split: every tenant gets weight 1, so proportional logic handles the rest
 const calculateEqualSplit = (tenants, utilities) =>
     buildProportionalSplits({
         tenants,
@@ -133,6 +136,7 @@ const calculateOccupancySplit = (tenants, utilities, occupancyData) => {
     });
 };
 
+// custom split input can be a flat number (assigned to "other") or a full utility breakdown object
 const normalizeCustomTenantSplit = (tenantSplit) => {
     if (tenantSplit == null) {
         return null;
@@ -181,6 +185,7 @@ const calculateCustomSplit = (tenants, utilities, customSplits) => {
         splits.reduce((sum, split) => sum + split.totalAmount, 0)
     );
 
+    // allow 1 paisa tolerance for floating point differences
     if (Math.abs(declaredTotal - splitTotal) > 0.01) {
         throw new Error("Custom split amounts must add up to the total utility amount");
     }
@@ -235,6 +240,7 @@ export const buildUtilitySplitDetails = ({
     };
 };
 
+// used by controllers to distinguish user input errors from unexpected bugs
 export const isUtilitySplitValidationError = (error) => {
     const message = error?.message || "";
 

@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+// Schema definition for unitmodel data.
+
 const unitSchema = mongoose.Schema(
     {
         propertyId: {

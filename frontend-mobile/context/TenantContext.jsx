@@ -5,6 +5,7 @@ import { API_BASE_URL } from "../constants/config";
 
 export const TenantContext = createContext();
 
+// Provides tenant invitation and tenant list operations to landlord flows.
 export const TenantProvider = ({ children }) => {
     const [tenants, setTenants] = useState([]);
     const [invitations, setInvitations] = useState([]);
@@ -65,7 +66,7 @@ export const TenantProvider = ({ children }) => {
         }
     }, [API_URL, getAuthHeader]);
 
-    // Tenant-specific methods
+    // These methods are only used by tenants, not landlords
     const fetchMyInvitations = useCallback(async () => {
         setLoading(true);
         try {

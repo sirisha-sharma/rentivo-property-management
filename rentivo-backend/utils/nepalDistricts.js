@@ -1,3 +1,5 @@
+// Utility helpers for nepaldistricts logic.
+
 const OFFICIAL_DISTRICTS = [
     "Achham",
     "Arghakhanchi",

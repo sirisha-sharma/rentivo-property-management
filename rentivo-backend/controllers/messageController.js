@@ -11,6 +11,7 @@ import {
     resolveStoredFileUrl,
 } from "../utils/storage.js";
 
+// Guard against malformed thread/message IDs before hitting database queries.
 const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
 
 const toIdString = (value) => value?.toString?.() || "";
@@ -219,8 +220,7 @@ export const getAllowedContacts = async (req, res) => {
     }
 };
 
-// Get all conversations for the current user.
-// Returns one entry per unique (otherUser + property) pair with the latest message.
+// Groups messages by (otherUser + property) to build one conversation entry per thread
 export const getConversations = async (req, res) => {
     try {
         const userId = req.user._id;
@@ -275,7 +275,6 @@ export const getConversations = async (req, res) => {
     }
 };
 
-// Get all messages in a specific thread (otherUser + property)
 export const getMessages = async (req, res) => {
     try {
         const userId = req.user._id;
@@ -307,7 +306,7 @@ export const getMessages = async (req, res) => {
     }
 };
 
-// Send a new message
+// Cleans up the uploaded file if access check or DB write fails
 export const sendMessage = async (req, res) => {
     const attachmentFile = req.file;
 
@@ -366,7 +365,6 @@ export const sendMessage = async (req, res) => {
     }
 };
 
-// Mark all messages in a thread as read (from the other user's perspective)
 export const markThreadAsRead = async (req, res) => {
     try {
         const userId = req.user._id;
@@ -393,7 +391,6 @@ export const markThreadAsRead = async (req, res) => {
     }
 };
 
-// Get total unread message count for the current user
 export const getUnreadCount = async (req, res) => {
     try {
         const count = await Message.countDocuments({

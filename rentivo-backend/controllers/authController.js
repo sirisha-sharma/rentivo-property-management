@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { sendVerificationEmail, sendPasswordResetEmail, send2FAEmail } from "../utils/emailService.js";
 
+// Shared auth constraints used by register/login validation paths.
 const REGISTRATION_ROLES = new Set(["landlord", "tenant"]);
 const LOGIN_SELECTOR_ROLES = new Set(["landlord", "tenant"]);
 
@@ -16,14 +17,13 @@ const formatRoleLabel = (value) => {
   return normalizedRole.charAt(0).toUpperCase() + normalizedRole.slice(1);
 };
 
-// Generate JWT Token
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: "30d",
   });
 };
 
-// Register a new user
+// Raw token goes in the email link, hashed version is stored so we never keep plaintext tokens in the DB
 const registerUser = async (req, res) => {
   try {
     const { name, email, password, phone, role } = req.body;
@@ -49,7 +49,6 @@ const registerUser = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Generate email verification token (raw sent in email, hashed stored in DB)
     const rawToken = crypto.randomBytes(32).toString("hex");
     const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
 
@@ -80,7 +79,7 @@ const registerUser = async (req, res) => {
   }
 };
 
-// Login a user
+// If 2FA is enabled, we pause login here and send an OTP instead of issuing a token immediately
 const loginUser = async (req, res) => {
   try {
     const { email, password, selectedRole } = req.body;
@@ -175,7 +174,7 @@ const loginUser = async (req, res) => {
   }
 };
 
-// Verify email via token link (opened in browser from email)
+// Returns HTML directly since users open this in a browser, not through the app
 const verifyEmail = async (req, res) => {
   try {
     const hashedToken = crypto
@@ -247,7 +246,7 @@ const verifyEmail = async (req, res) => {
   }
 };
 
-// Resend verification email
+// Returns the same message whether the email exists or not, to avoid leaking account info
 const resendVerificationEmail = async (req, res) => {
   try {
     const { email } = req.body;
@@ -257,7 +256,6 @@ const resendVerificationEmail = async (req, res) => {
 
     const user = await User.findOne({ email: email.trim().toLowerCase() });
 
-    // Always return the same message to avoid revealing whether an email is registered
     if (!user) {
       return res.json({
         message:
@@ -292,7 +290,7 @@ const resendVerificationEmail = async (req, res) => {
   }
 };
 
-// Send a password reset code to the user's email
+// Responds identically whether the email is registered or not, to avoid account enumeration
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -302,7 +300,6 @@ const forgotPassword = async (req, res) => {
 
     const user = await User.findOne({ email: email.trim().toLowerCase() });
 
-    // Always respond the same way — don't reveal if the email is registered
     if (!user) {
       return res.json({
         message: "If that email is registered, a password reset code has been sent.",
@@ -313,7 +310,7 @@ const forgotPassword = async (req, res) => {
     const hashedToken = crypto.createHash("sha256").update(rawToken).digest("hex");
 
     user.passwordResetToken = hashedToken;
-    user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000); // expires in 1 hour
     await user.save();
 
     await sendPasswordResetEmail({ to: user.email, name: user.name, resetToken: rawToken });
@@ -326,7 +323,6 @@ const forgotPassword = async (req, res) => {
   }
 };
 
-// Reset password using the code from email
 const resetPassword = async (req, res) => {
   try {
     const { token } = req.params;
@@ -365,7 +361,7 @@ const resetPassword = async (req, res) => {
   }
 };
 
-// Verify 2FA OTP code and complete login
+// Clears the OTP after use so it can't be replayed
 const verify2FA = async (req, res) => {
   try {
     const { userId, code } = req.body;
@@ -411,7 +407,6 @@ const verify2FA = async (req, res) => {
   }
 };
 
-// Toggle 2FA on/off for the authenticated user
 const toggle2FA = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);

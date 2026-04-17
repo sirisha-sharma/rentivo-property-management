@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+// Schema definition for usermodel data.
+
 const userSchema = mongoose.Schema(
   {
     name: {

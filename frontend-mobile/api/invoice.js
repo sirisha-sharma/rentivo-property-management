@@ -2,9 +2,7 @@ import axios from "axios";
 import { API_BASE_URL } from "../constants/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-/**
- * Get authentication headers
- */
+// Build auth headers from the stored session before invoice API calls.
 const getAuthHeaders = async () => {
     const userData = await AsyncStorage.getItem("user");
 
@@ -25,10 +23,6 @@ const getAuthHeaders = async () => {
     };
 };
 
-/**
- * Get invoice by ID
- * @param {string} invoiceId - Invoice ID
- */
 export const getInvoiceById = async (invoiceId) => {
     try {
         const headers = await getAuthHeaders();

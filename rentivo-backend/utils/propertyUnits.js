@@ -2,6 +2,7 @@ import Property from "../models/propertyModel.js";
 import Tenant from "../models/tenantModel.js";
 import Unit from "../models/unitModel.js";
 
+// sort by creation order so unit numbering stays stable across syncs
 const UNIT_SORT = { createdAt: 1, _id: 1 };
 
 const toPositiveInteger = (value, fallback = 0) => {
@@ -14,12 +15,14 @@ const toPositiveInteger = (value, fallback = 0) => {
     return fallback;
 };
 
+// "room" type properties use "Room N" naming instead of "Unit N"
 const getUnitPrefix = (propertyType = "") =>
     String(propertyType || "").trim().toLowerCase() === "room" ? "Room" : "Unit";
 
 export const buildDefaultUnitName = ({ propertyType, index }) =>
     `${getUnitPrefix(propertyType)} ${index + 1}`;
 
+// accepts either a populated property object or a plain ID
 const resolvePropertyShape = async (propertyInput) => {
     if (!propertyInput) {
         return null;
@@ -46,6 +49,7 @@ const getAssignedUnitIds = async (propertyId, statuses = ["Active"]) => {
     );
 };
 
+// guards against reducing unit count when occupied units would be deleted
 export const assertUnitCountCanBeApplied = async (propertyId, requestedCount) => {
     const targetCount = toPositiveInteger(requestedCount, 0);
     const existingUnits = await Unit.find({ propertyId }).sort(UNIT_SORT);
@@ -80,6 +84,8 @@ export const assertUnitCountCanBeApplied = async (propertyId, requestedCount) =>
     throw error;
 };
 
+// keeps the Unit collection in sync with property.units count and tenant assignments.
+// creates missing units, removes unoccupied extras, and patches status/name drift.
 export const syncPropertyUnits = async (propertyInput) => {
     const property = await resolvePropertyShape(propertyInput);
 
@@ -89,6 +95,7 @@ export const syncPropertyUnits = async (propertyInput) => {
 
     const targetCount = toPositiveInteger(property.units, 0);
     const activeUnitIds = await getAssignedUnitIds(property._id, ["Active"]);
+    // Pending tenants reserve units so they aren't deleted mid-invite flow
     const reservedUnitIds = await getAssignedUnitIds(property._id, ["Active", "Pending"]);
     let existingUnits = await Unit.find({ propertyId: property._id }).sort(UNIT_SORT);
 
@@ -120,6 +127,7 @@ export const syncPropertyUnits = async (propertyInput) => {
         }
     }
 
+    // only update fields that actually changed to avoid unnecessary writes
     const updateOperations = existingUnits.map((unit, index) => {
         const nextStatus = activeUnitIds.has(String(unit._id)) ? "occupied" : "vacant";
         const nextValues = {};

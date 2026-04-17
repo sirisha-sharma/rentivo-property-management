@@ -6,11 +6,8 @@ dotenv.config();
 
 let transporter = null;
 
-/**
- * Lazily create (and cache) the nodemailer transporter.
- * Supports standard SMTP via env vars. Works with Gmail (App Password),
- * Brevo/Sendinblue, Mailtrap, SendGrid SMTP, etc.
- */
+// lazily create (and cache) the nodemailer transporter.
+// supports standard SMTP via env vars - works with Gmail App Password, Brevo, Mailtrap, SendGrid SMTP, etc.
 const getTransporter = () => {
     if (transporter) return transporter;
 
@@ -18,8 +15,8 @@ const getTransporter = () => {
     const port = parseInt(process.env.SMTP_PORT || "587", 10);
     const user = process.env.SMTP_USER;
     // Gmail App Passwords are displayed with spaces (e.g. "mhnw aais gpct viyj")
-    // but the spaces are purely cosmetic — the actual password has no spaces.
-    // Strip any whitespace so users can paste the password verbatim from Gmail.
+    // but the spaces are purely cosmetic, the actual password has no spaces.
+    // strip any whitespace so users can paste the password verbatim from Gmail.
     const pass = (process.env.SMTP_PASS || "").replace(/\s+/g, "");
 
     if (!host || !user || !pass) {
@@ -44,17 +41,8 @@ const getTransporter = () => {
     return transporter;
 };
 
-/**
- * Send an email notification.
- * Silent-fail by design: notification creation should never break because
- * email sending failed. Errors are logged instead of thrown.
- *
- * @param {Object} params
- * @param {string} params.to       - recipient email address
- * @param {string} params.name     - recipient name (for greeting)
- * @param {string} params.type     - notification type (maintenance|invoice|document|tenant|general)
- * @param {string} params.message  - notification message body
- */
+// silent-fail by design: notification creation should never break because
+// email sending failed. errors are logged instead of thrown.
 export const sendNotificationEmail = async ({ to, name, type, message }) => {
     try {
         if (!to) {
@@ -84,14 +72,6 @@ export const sendNotificationEmail = async ({ to, name, type, message }) => {
     }
 };
 
-/**
- * Send an email verification link to a newly registered user.
- *
- * @param {Object} params
- * @param {string} params.to               - recipient email address
- * @param {string} params.name             - recipient name
- * @param {string} params.verificationUrl  - full URL the user must click
- */
 export const sendVerificationEmail = async ({ to, name, verificationUrl }) => {
     try {
         if (!to) return;
@@ -148,7 +128,7 @@ export const sendVerificationEmail = async ({ to, name, verificationUrl }) => {
 </body>
 </html>`;
 
-        const text = `${greeting}\n\nPlease verify your email address by visiting:\n${verificationUrl}\n\nThis link expires in 24 hours.\n\n— Rentivo`;
+        const text = `${greeting}\n\nPlease verify your email address by visiting:\n${verificationUrl}\n\nThis link expires in 24 hours.\n\n- Rentivo`;
 
         await tx.sendMail({
             from: `"${fromName}" <${fromEmail}>`,
@@ -164,15 +144,7 @@ export const sendVerificationEmail = async ({ to, name, verificationUrl }) => {
     }
 };
 
-/**
- * Send a password reset code to the user.
- * The raw token is displayed prominently so the user can copy it into the app.
- *
- * @param {Object} params
- * @param {string} params.to        - recipient email address
- * @param {string} params.name      - recipient name
- * @param {string} params.resetToken - raw reset token to display in the email
- */
+// the raw token is displayed so the user can copy it into the app
 export const sendPasswordResetEmail = async ({ to, name, resetToken }) => {
     try {
         if (!to) return;
@@ -210,7 +182,7 @@ export const sendPasswordResetEmail = async ({ to, name, resetToken }) => {
               <p style="margin:0 0 6px 0;font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;">Your reset code</p>
               <p style="margin:0;font-size:13px;font-family:monospace;color:#0f172a;word-break:break-all;">${resetToken}</p>
             </div>
-            <p style="margin:0;font-size:13px;color:#6b7280;">This code expires in <strong>1 hour</strong>. If you did not request a password reset, please ignore this email — your password will not change.</p>
+            <p style="margin:0;font-size:13px;color:#6b7280;">This code expires in <strong>1 hour</strong>. If you did not request a password reset, please ignore this email, your password will not change.</p>
           </td>
         </tr>
         <tr>
@@ -226,7 +198,7 @@ export const sendPasswordResetEmail = async ({ to, name, resetToken }) => {
 </body>
 </html>`;
 
-        const text = `${greeting}\n\nYour Rentivo password reset code is:\n\n${resetToken}\n\nThis code expires in 1 hour.\n\nIf you did not request a password reset, please ignore this email.\n\n— Rentivo`;
+        const text = `${greeting}\n\nYour Rentivo password reset code is:\n\n${resetToken}\n\nThis code expires in 1 hour.\n\nIf you did not request a password reset, please ignore this email.\n\n- Rentivo`;
 
         await tx.sendMail({
             from: `"${fromName}" <${fromEmail}>`,
@@ -242,14 +214,6 @@ export const sendPasswordResetEmail = async ({ to, name, resetToken }) => {
     }
 };
 
-/**
- * Send a 2FA OTP code to the user.
- *
- * @param {Object} params
- * @param {string} params.to   - recipient email address
- * @param {string} params.name - recipient name
- * @param {string} params.code - 6-digit OTP code
- */
 export const send2FAEmail = async ({ to, name, code }) => {
     try {
         if (!to) return;
@@ -303,7 +267,7 @@ export const send2FAEmail = async ({ to, name, code }) => {
 </body>
 </html>`;
 
-        const text = `${greeting}\n\nYour Rentivo verification code is: ${code}\n\nThis code expires in 10 minutes.\n\nIf you did not attempt to sign in, please ignore this email.\n\n— Rentivo`;
+        const text = `${greeting}\n\nYour Rentivo verification code is: ${code}\n\nThis code expires in 10 minutes.\n\nIf you did not attempt to sign in, please ignore this email.\n\n- Rentivo`;
 
         await tx.sendMail({
             from: `"${fromName}" <${fromEmail}>`,
@@ -319,9 +283,7 @@ export const send2FAEmail = async ({ to, name, code }) => {
     }
 };
 
-/**
- * Verify SMTP connection (useful at startup for debugging).
- */
+// useful at startup to catch misconfigured SMTP before the first real email fails
 export const verifyEmailConnection = async () => {
     const tx = getTransporter();
     if (!tx) {

@@ -1,3 +1,5 @@
+// Core module for nepallocations features.
+
 const OFFICIAL_NEPAL_DISTRICTS = [
   "Achham",
   "Arghakhanchi",

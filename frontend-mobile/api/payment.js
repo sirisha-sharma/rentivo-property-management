@@ -2,9 +2,7 @@ import axios from "axios";
 import { API_BASE_URL } from "../constants/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-/**
- * Get authentication headers
- */
+// Build auth headers from the stored session before payment API calls.
 const getAuthHeaders = async () => {
     const userData = await AsyncStorage.getItem("user");
 
@@ -25,9 +23,6 @@ const getAuthHeaders = async () => {
     };
 };
 
-/**
- * Get available payment gateways
- */
 export const getPaymentConfig = async () => {
     try {
         const headers = await getAuthHeaders();
@@ -41,11 +36,7 @@ export const getPaymentConfig = async () => {
     }
 };
 
-/**
- * Initiate payment for an invoice
- * @param {string} invoiceId - Invoice ID
- * @param {string} gateway - Payment gateway (esewa or khalti)
- */
+// clientRedirectUri is used for gateway redirect flows (esewa, khalti)
 export const initiatePayment = async (invoiceId, gateway, clientRedirectUri = null) => {
     try {
         const headers = await getAuthHeaders();
@@ -61,9 +52,6 @@ export const initiatePayment = async (invoiceId, gateway, clientRedirectUri = nu
     }
 };
 
-/**
- * Get payment history for current user
- */
 export const getPaymentHistory = async () => {
     try {
         const headers = await getAuthHeaders();
@@ -77,10 +65,6 @@ export const getPaymentHistory = async () => {
     }
 };
 
-/**
- * Get payment by ID
- * @param {string} paymentId - Payment ID
- */
 export const getPaymentById = async (paymentId) => {
     try {
         const headers = await getAuthHeaders();

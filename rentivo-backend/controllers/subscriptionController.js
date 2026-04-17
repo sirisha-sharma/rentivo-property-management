@@ -7,6 +7,7 @@ import {
     SUBSCRIPTION_GATEWAYS,
 } from "../utils/subscriptionService.js";
 
+// Tenants don't need a subscription, so we return a simplified snapshot for them
 export const getCurrentSubscription = async (req, res) => {
     try {
         if (req.user.role !== "landlord") {

@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+// Schema definition for propertyratingmodel data.
+
 const propertyRatingSchema = mongoose.Schema(
     {
         propertyId: {

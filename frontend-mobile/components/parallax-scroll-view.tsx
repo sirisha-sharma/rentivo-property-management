@@ -1,6 +1,9 @@
 import type { PropsWithChildren, ReactElement } from 'react';
 import { StyleSheet } from 'react-native';
 import Animated, {
+
+// Reusable UI component for parallax scroll view.
+
   interpolate,
   useAnimatedRef,
   useAnimatedStyle,

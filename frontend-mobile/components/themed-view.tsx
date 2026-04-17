@@ -2,6 +2,8 @@ import { View, type ViewProps } from 'react-native';
 
 import { useThemeColor } from '@/hooks/use-theme-color';
 
+// Reusable UI component for themed view.
+
 export type ThemedViewProps = ViewProps & {
   lightColor?: string;
   darkColor?: string;

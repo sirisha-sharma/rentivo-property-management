@@ -2,6 +2,7 @@ import Property from "../models/propertyModel.js";
 import Subscription from "../models/subscriptionModel.js";
 import Tenant from "../models/tenantModel.js";
 
+// Shared subscription rules and helpers used across controllers and middleware.
 export const SUBSCRIPTION_ACTIONS = Object.freeze({
     ADD_PROPERTY: "add_property",
     INVITE_TENANT: "invite_tenant",
@@ -15,6 +16,7 @@ export const SUBSCRIPTION_EXPIRY_REMINDER_DAYS = 3;
 export const TRIAL_LIMITS = Object.freeze({
     properties: 1,
     tenantSeats: 1,
+    // only Active and Pending count toward the seat limit
     tenantStatuses: ["Active", "Pending"],
 });
 
@@ -37,6 +39,7 @@ const PAID_PLAN_DEFAULTS = Object.freeze({
     },
 });
 
+// these statuses should block all gated actions
 const SUBSCRIPTION_BLOCKED_STATUSES = new Set([
     "expired",
     "cancelled",
@@ -51,11 +54,13 @@ const addDays = (date, days) => {
     return result;
 };
 
+// falls back to hardcoded default if env value is missing or invalid
 const parsePlanAmount = (value, fallback) => {
     const parsed = Number(value);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 };
 
+// prices can be overridden via env vars, defaults are used otherwise
 export const getSubscriptionPlanCatalog = () => {
     const monthlyAmount = parsePlanAmount(
         process.env.SUBSCRIPTION_MONTHLY_PRICE,
@@ -90,6 +95,7 @@ export const getSubscriptionPlanCatalog = () => {
     };
 };
 
+// strips internal fields before sending plan info to the client
 export const getSubscriptionPlansForClient = () =>
     Object.values(getSubscriptionPlanCatalog()).map((plan) => ({
         plan: plan.plan,
@@ -145,6 +151,7 @@ export const isSubscriptionExpiringSoon = (
     );
 };
 
+// reads current plan amount at snapshot time, not at payment time
 const getSnapshotPlanAmount = (plan) =>
     getSubscriptionPlanCatalog()[plan]?.amount ?? 0;
 
@@ -153,6 +160,7 @@ const getPropertyIdsForLandlord = async (landlordId) => {
     return properties.map((property) => property._id);
 };
 
+// creates the trial subscription on first login, handles duplicate key race gracefully
 export const ensureTrialSubscription = async (landlordId, now = new Date()) => {
     const startDate = new Date(now);
     const endDate = addDays(startDate, TRIAL_DURATION_DAYS);
@@ -176,6 +184,7 @@ export const ensureTrialSubscription = async (landlordId, now = new Date()) => {
     }
 };
 
+// marks expired subscriptions in-place so the DB stays in sync
 export const syncSubscriptionStatus = async (subscription, now = new Date()) => {
     if (!subscription) return null;
 
@@ -212,6 +221,7 @@ export const getLandlordUsage = async (landlordId) => {
         };
     }
 
+    // managedTenantCount includes Pending so trial landlords can't bypass the seat cap via invites
     const [activeTenantCount, managedTenantCount] = await Promise.all([
         Tenant.countDocuments({
             propertyId: { $in: propertyIds },
@@ -230,6 +240,7 @@ export const getLandlordUsage = async (landlordId) => {
     };
 };
 
+// if the landlord already has an active paid period, new period starts from its end date
 export const applyPaidSubscriptionPlan = async ({
     subscription,
     planKey,
@@ -284,6 +295,7 @@ const buildTrialAccess = (usage) => ({
     canInviteTenant: usage.managedTenantCount < TRIAL_LIMITS.tenantSeats,
 });
 
+// builds the subscription object sent to clients - includes access flags so the UI doesn't need to recompute them
 export const buildSubscriptionSnapshot = (
     subscription,
     usage = null,
@@ -361,6 +373,7 @@ const buildDeniedResult = ({
     subscription: buildSubscriptionSnapshot(subscription, usage, now),
 });
 
+// central place to check if a landlord can perform a gated action
 export const evaluateLandlordSubscriptionAction = ({
     subscription,
     usage,
@@ -377,6 +390,7 @@ export const evaluateLandlordSubscriptionAction = ({
         });
     }
 
+    // sync expired status in-memory so we don't need an extra DB round-trip
     if (
         subscription.endDate &&
         new Date(subscription.endDate).getTime() <= now.getTime() &&
@@ -457,6 +471,7 @@ export const evaluateLandlordSubscriptionAction = ({
     };
 };
 
+// tenants don't pay for Rentivo, so we return a static free snapshot
 export const getTenantSubscriptionSnapshot = () => ({
     plan: "free",
     status: "active",

@@ -1,4 +1,7 @@
 import express from "express";
+
+// Defines API routes for propertyroutes features.
+
 const router = express.Router();
 import {
     getProperties,

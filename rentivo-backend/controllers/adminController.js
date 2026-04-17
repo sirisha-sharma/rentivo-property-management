@@ -7,6 +7,7 @@ import User from "../models/userModel.js";
 import PropertyRating from "../models/propertyRatingModel.js";
 import PropertyAssociation from "../models/propertyAssociationModel.js";
 
+// Admin controller utilities for dashboard aggregation and search filters.
 const escapeRegex = (value = "") =>
     value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -139,6 +140,7 @@ const buildTenantCountsMap = async (propertyIds) => {
     return countsMap;
 };
 
+// Pulls everything the dashboard needs in one shot to avoid waterfall requests
 export const getAdminOverview = async (_req, res) => {
     try {
         const [
@@ -300,6 +302,7 @@ export const getAdminOverview = async (_req, res) => {
     }
 };
 
+// Supports filtering by role, status, and verification state so the admin table is useful
 export const getAdminUsers = async (req, res) => {
     try {
         const { search = "", role = "all", status = "all", verification = "all" } = req.query;
@@ -344,6 +347,7 @@ export const getAdminUsers = async (req, res) => {
     }
 };
 
+// Prevents admins from accidentally locking themselves out
 export const updateAdminUserStatus = async (req, res) => {
     try {
         const { isActive } = req.body;
@@ -652,6 +656,7 @@ export const getAdminSubscriptions = async (req, res) => {
     }
 };
 
+// Cleans up related ratings and associations, but blocks deletion if tenants are still active
 export const deleteAdminProperty = async (req, res) => {
     try {
         const property = await Property.findById(req.params.id);

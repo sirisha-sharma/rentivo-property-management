@@ -9,6 +9,7 @@ import {
     resolveStoredFileUrl,
 } from "../utils/storage.js";
 
+// Normalize maintenance responses and hide storage-internal metadata.
 const serializeMaintenanceRequest = (req, request) => {
     const requestObject = request.toObject ? request.toObject() : request;
     const { photoPublicIds, ...requestWithoutStorageIds } = requestObject;
@@ -24,7 +25,6 @@ const serializeMaintenanceRequest = (req, request) => {
 const serializeMaintenanceRequests = (req, requests = []) =>
     requests.map((request) => serializeMaintenanceRequest(req, request));
 
-// Create a new maintenance request
 export const createRequest = async (req, res) => {
     const uploadedPhotos = req.files || [];
 
@@ -56,7 +56,6 @@ export const createRequest = async (req, res) => {
                 populate: { path: "userId", select: "name email" },
             });
 
-        // Notify the landlord about the new request
         const property = await Property.findById(propertyId);
         if (property) {
             await createNotification(
@@ -73,7 +72,6 @@ export const createRequest = async (req, res) => {
     }
 };
 
-// Get all maintenance requests (filtered by role)
 export const getRequests = async (req, res) => {
     try {
         let requests;
@@ -109,7 +107,6 @@ export const getRequests = async (req, res) => {
     }
 };
 
-// Get single maintenance request by ID
 export const getRequestById = async (req, res) => {
     try {
         const request = await Maintenance.findById(req.params.id)
@@ -142,7 +139,7 @@ export const getRequestById = async (req, res) => {
     }
 };
 
-// Update maintenance request status (landlord only)
+// Appends to statusHistory so there's a full audit trail of status changes
 export const updateRequestStatus = async (req, res) => {
     try {
         const { status, note } = req.body;
@@ -167,7 +164,6 @@ export const updateRequestStatus = async (req, res) => {
                 populate: { path: "userId", select: "name email" },
             });
 
-        // Notify the tenant about the status update
         const tenant = await Tenant.findById(request.tenantId);
         if (tenant) {
             await createNotification(
@@ -183,7 +179,7 @@ export const updateRequestStatus = async (req, res) => {
     }
 };
 
-// Delete maintenance request (landlord only)
+// Removes associated photos from storage before deleting the record
 export const deleteRequest = async (req, res) => {
     try {
         const request = await Maintenance.findById(req.params.id);

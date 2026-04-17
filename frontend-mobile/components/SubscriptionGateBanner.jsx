@@ -3,6 +3,8 @@ import { View, Text, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../constants/theme";
 
+// Reusable UI component for subscriptiongatebanner.
+
 export function SubscriptionGateBanner({
     title,
     message,

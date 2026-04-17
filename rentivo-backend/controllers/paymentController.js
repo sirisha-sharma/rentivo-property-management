@@ -15,6 +15,7 @@ import {
 import { initializeKhaltiPayment, verifyKhaltiPayment as khaltiLookup } from "../payment/gateways/khaltiGateway.js";
 import { createNotification } from "./notificationController.js";
 
+// Payment controller handles invoice checkout creation and gateway callback processing.
 const ALLOWED_CLIENT_REDIRECT_PROTOCOLS = new Set([
     "frontendmobile:",
     "exp:",
@@ -293,9 +294,7 @@ const finalizeOnlinePayment = async ({
 };
 
 /**
- * @desc    Initiate payment for an invoice
- * @route   POST /api/payments/initiate
- * @access  Private (Tenant only)
+ * Initiate a payment session for a tenant invoice.
  */
 export const initiatePayment = async (req, res) => {
     try {
@@ -433,9 +432,7 @@ export const initiatePayment = async (req, res) => {
 };
 
 /**
- * @desc    Serve auto-submit eSewa payment page for browser launch
- * @route   GET /api/payments/esewa/launch/:token
- * @access  Public (token-protected)
+ * Serve an auto-submit eSewa launch page for browser/WebView flow.
  */
 export const serveEsewaPaymentLaunchPage = async (req, res) => {
     try {
@@ -669,9 +666,7 @@ export const serveEsewaPaymentLaunchPage = async (req, res) => {
 };
 
 /**
- * @desc    Receive eSewa intent callback notifications
- * @route   POST /api/payments/esewa/intent/callback
- * @access  Public (Payment gateway callback)
+ * Receive and process eSewa intent callback notifications.
  */
 export const handleEsewaIntentCallback = async (req, res) => {
     try {
@@ -775,9 +770,7 @@ export const handleEsewaIntentCallback = async (req, res) => {
 };
 
 /**
- * @desc    Get payment gateway configurations
- * @route   GET /api/payments/config
- * @access  Private
+ * Return supported payment gateways for the client app.
  */
 export const getPaymentConfig = async (req, res) => {
     try {
@@ -795,9 +788,7 @@ export const getPaymentConfig = async (req, res) => {
 };
 
 /**
- * @desc    Get payment history for user
- * @route   GET /api/payments/history
- * @access  Private
+ * Return payment history for the authenticated user.
  */
 export const getPaymentHistory = async (req, res) => {
     try {
@@ -826,9 +817,7 @@ export const getPaymentHistory = async (req, res) => {
 };
 
 /**
- * @desc    Get payment by ID
- * @route   GET /api/payments/:id
- * @access  Private
+ * Return one payment record with ownership checks.
  */
 export const getPaymentById = async (req, res) => {
     try {
@@ -898,9 +887,7 @@ export const getPaymentById = async (req, res) => {
 };
 
 /**
- * @desc    Handle payment failure
- * @route   GET /api/payments/failure
- * @access  Public (Payment gateway callback)
+ * Handle payment failure callbacks and redirect clients to failure route.
  */
 export const handlePaymentFailure = async (req, res) => {
     try {
@@ -984,9 +971,7 @@ export const handlePaymentFailure = async (req, res) => {
 };
 
 /**
- * @desc    Verify eSewa payment
- * @route   GET /api/payments/esewa/verify
- * @access  Public (Payment gateway callback)
+ * Verify eSewa payment callback and redirect with final status.
  *
  * IMPORTANT: Every code path MUST redirect (not return JSON) so the
  * mobile WebView can detect the result via URL inspection.
@@ -1172,9 +1157,7 @@ export const verifyEsewaPayment = async (req, res) => {
 };
 
 /**
- * @desc    Verify Khalti payment
- * @route   POST /api/payments/khalti/verify (or GET with query params)
- * @access  Public (Payment gateway callback)
+ * Verify Khalti callback/lookup and redirect with final status.
  *
  * IMPORTANT: Every code path MUST redirect (not return JSON) so the
  * mobile WebView can detect the result via URL inspection.
@@ -1258,7 +1241,7 @@ export const verifyKhaltiPayment = async (req, res) => {
             });
         }
 
-        // Already processed — ensure invoice is marked Paid and redirect
+        // Already processed: ensure invoice is marked Paid and redirect
         if (payment.status === "completed") {
             console.log(`Payment already processed: ${transactionId}`);
             await finalizeOnlinePayment({

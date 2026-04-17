@@ -3,6 +3,8 @@ import { View, Text, ActivityIndicator, StyleSheet } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { COLORS } from "../constants/theme";
 
+// Screen module for khalti subscription return.
+
 export default function KhaltiSubscriptionReturnScreen() {
     const router = useRouter();
     const { paymentId, result, reason, status } = useLocalSearchParams();

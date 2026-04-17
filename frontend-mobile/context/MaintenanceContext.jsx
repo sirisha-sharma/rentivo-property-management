@@ -3,26 +3,18 @@ import axios from "axios";
 import { AuthContext } from "./AuthContext";
 import { API_BASE_URL } from "../constants/config";
 
-// Create the MaintenanceContext for state management
 export const MaintenanceContext = createContext();
 
-// MaintenanceProvider component that wraps the app and provides maintenance request state
-// This provider handles all maintenance-related API calls and state management
+// Shares maintenance request state and actions across maintenance screens.
 export const MaintenanceProvider = ({ children }) => {
-    // State for storing list of maintenance requests
     const [requests, setRequests] = useState([]);
-    // Loading state for API operations
     const [loading, setLoading] = useState(false);
-    // Error state for handling API errors
     const [error, setError] = useState(null);
 
-    // Get user from AuthContext for authentication
     const { user } = useContext(AuthContext);
 
-    // Base URL for maintenance API endpoints
     const API_URL = `${API_BASE_URL}/maintenance`;
 
-    // Helper function to get authorization header with JWT token
     const getAuthHeader = useCallback(() => {
         return {
             headers: {
@@ -31,9 +23,8 @@ export const MaintenanceProvider = ({ children }) => {
         };
     }, [user?.token]);
 
-    // Fetch all maintenance requests from API
-    // For landlords: returns requests for their properties
-    // For tenants: returns requests they submitted
+    // Backend scopes results by role - landlords see all requests for their properties,
+    // tenants only see their own
     const fetchRequests = useCallback(async () => {
         setLoading(true);
         try {
@@ -48,7 +39,6 @@ export const MaintenanceProvider = ({ children }) => {
         }
     }, [API_URL, getAuthHeader]);
 
-    // Get a single maintenance request by ID
     const getRequestById = useCallback(async (id) => {
         try {
             const response = await axios.get(`${API_URL}/${id}`, getAuthHeader());
@@ -59,8 +49,7 @@ export const MaintenanceProvider = ({ children }) => {
         }
     }, [API_URL, getAuthHeader]);
 
-    // Create a new maintenance request (tenant only)
-    // Adds the new request to the local state after creation
+    // Builds a FormData payload to support optional photo attachments
     const createRequest = useCallback(async (requestData) => {
         setLoading(true);
         try {
@@ -117,7 +106,6 @@ export const MaintenanceProvider = ({ children }) => {
         }
     }, [API_URL, getAuthHeader]);
 
-    // Update maintenance request status (landlord only)
     // Allowed statuses: Open, In Progress, Resolved
     const updateRequestStatus = useCallback(async (id, status) => {
         try {
@@ -132,8 +120,6 @@ export const MaintenanceProvider = ({ children }) => {
         }
     }, [API_URL, getAuthHeader]);
 
-    // Delete a maintenance request (landlord only)
-    // Removes the request from local state after deletion
     const deleteRequest = useCallback(async (id) => {
         try {
             await axios.delete(`${API_URL}/${id}`, getAuthHeader());
@@ -146,7 +132,6 @@ export const MaintenanceProvider = ({ children }) => {
         }
     }, [API_URL, getAuthHeader]);
 
-    // Provide maintenance state and methods to child components
     return (
         <MaintenanceContext.Provider
             value={{

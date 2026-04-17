@@ -5,6 +5,8 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { COLORS } from '../constants/theme';
 
+// Screen module for modal.
+
 export default function ModalScreen() {
   return (
     <ThemedView style={styles.container}>

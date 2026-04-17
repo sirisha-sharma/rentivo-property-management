@@ -12,6 +12,7 @@ import {
     syncPropertyUnits,
 } from "../utils/propertyUnits.js";
 
+// Parse JSON-form fields safely from multipart requests, with fallback values.
 const parseJsonArrayField = (value, fallback = []) => {
     if (value == null) {
         return fallback;
@@ -224,7 +225,6 @@ export const getProperties = async (req, res) => {
     }
 };
 
-// Get a single property by its ID
 export const getPropertyById = async (req, res) => {
     try {
         const property = await Property.findById(req.params.id);
@@ -233,7 +233,6 @@ export const getPropertyById = async (req, res) => {
             return res.status(404).json({ message: "Property not found" });
         }
 
-        // Make sure the logged in user matches the property landlord
         if (property.landlordId.toString() !== req.user._id.toString()) {
             return res.status(401).json({ message: "User not authorized" });
         }
@@ -254,7 +253,7 @@ export const getPropertyById = async (req, res) => {
 };
 
 
-// Create a new property
+// Cleans up uploaded files if validation fails to avoid orphaned storage objects
 export const createProperty = async (req, res) => {
     const uploadedFiles = req.files || [];
     const {
@@ -287,13 +286,12 @@ export const createProperty = async (req, res) => {
             return res.status(400).json({ message: "Please select a valid district in Nepal" });
         }
 
-        // Handle uploaded images
         let imagePaths = [];
         if (req.files && req.files.length > 0) {
             imagePaths = req.files.map((file) => getUploadedFileUrl(file)).filter(Boolean);
         }
 
-        // Parse and merge URL images
+        // Merge any existing image URLs passed alongside new uploads
         if (req.body.imageUrls) {
             try {
                 const urlImages = JSON.parse(req.body.imageUrls);
@@ -303,7 +301,7 @@ export const createProperty = async (req, res) => {
             }
         }
 
-        // Parse roomSizes if it comes as a JSON string
+        // Multipart forms send arrays as JSON strings, so we need to parse them
         let parsedRoomSizes = roomSizes;
         if (typeof roomSizes === 'string') {
             try {
@@ -313,7 +311,6 @@ export const createProperty = async (req, res) => {
             }
         }
 
-        // Parse amenities if it comes as a JSON string
         let parsedAmenities = amenities;
         if (typeof amenities === 'string') {
             try {
@@ -346,7 +343,7 @@ export const createProperty = async (req, res) => {
     }
 };
 
-// Update an existing property
+// Merges new uploads with retained image URLs and syncs unit records after saving
 export const updateProperty = async (req, res) => {
     const uploadedFiles = req.files || [];
 
@@ -358,13 +355,11 @@ export const updateProperty = async (req, res) => {
             return res.status(404).json({ message: "Property not found" });
         }
 
-        // Check for user
         if (!req.user) {
             await removeStoredFiles(uploadedFiles, { resourceType: "image" });
             return res.status(401).json({ message: "User not found" });
         }
 
-        // Make sure the logged in user matches the property landlord
         if (property.landlordId.toString() !== req.user._id.toString()) {
             await removeStoredFiles(uploadedFiles, { resourceType: "image" });
             return res.status(401).json({ message: "User not authorized" });
@@ -439,7 +434,7 @@ export const updateProperty = async (req, res) => {
     }
 };
 
-// Delete a property
+// Blocks deletion if active tenants exist and cleans up ratings/associations on success
 export const deleteProperty = async (req, res) => {
     try {
         const property = await Property.findById(req.params.id);
@@ -448,12 +443,10 @@ export const deleteProperty = async (req, res) => {
             return res.status(404).json({ message: "Property not found" });
         }
 
-        // Check for user
         if (!req.user) {
             return res.status(401).json({ message: "User not found" });
         }
 
-        // Make sure the logged in user matches the property landlord
         if (property.landlordId.toString() !== req.user._id.toString()) {
             return res.status(401).json({ message: "User not authorized" });
         }
@@ -481,6 +474,7 @@ export const deleteProperty = async (req, res) => {
     }
 };
 
+// Upserts so tenants can update their review without creating duplicates
 export const createOrUpdatePropertyRating = async (req, res) => {
     try {
         if (req.user?.role !== "tenant") {

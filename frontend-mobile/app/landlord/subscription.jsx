@@ -1,5 +1,8 @@
 import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
+
+// Screen module for subscription.
+
     View,
     Text,
     ScrollView,

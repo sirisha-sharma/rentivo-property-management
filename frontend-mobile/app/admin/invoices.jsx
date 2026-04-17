@@ -12,6 +12,8 @@ import { COLORS } from "../../constants/theme";
 import { AuthContext } from "../../context/AuthContext";
 import { getAdminInvoices } from "../../api/admin";
 
+// Screen module for invoices.
+
 const STATUS_FILTERS = [
   { key: "all", label: "All status" },
   { key: "Pending", label: "Pending" },

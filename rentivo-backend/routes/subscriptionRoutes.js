@@ -1,6 +1,9 @@
 import express from "express";
 import { getCurrentSubscription } from "../controllers/subscriptionController.js";
 import {
+
+// Defines API routes for subscriptionroutes features.
+
     getSubscriptionConfig,
     getSubscriptionPaymentById,
     getSubscriptionPaymentHistory,

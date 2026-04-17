@@ -9,6 +9,7 @@ import {
     resolveStoredFileUrl,
 } from "../utils/storage.js";
 
+// Normalize document responses so clients always receive a usable download URL.
 const serializeDocument = (req, document) => {
     const documentObject = document.toObject ? document.toObject() : document;
 
@@ -18,7 +19,7 @@ const serializeDocument = (req, document) => {
     };
 };
 
-// Upload a new document (landlord only)
+// Notifies all active tenants when a new document is added to their property
 export const uploadDocument = async (req, res) => {
     const uploadedFile = req.file;
 

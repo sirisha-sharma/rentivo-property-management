@@ -3,6 +3,8 @@ import axios from "axios";
 import { AuthContext } from "./AuthContext";
 import { API_BASE_URL } from "../constants/config";
 
+// React context provider for messagecontext state.
+
 export const MessageContext = createContext();
 
 export const MessageProvider = ({ children }) => {

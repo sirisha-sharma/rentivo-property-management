@@ -6,6 +6,7 @@ import PropertyAssociation from "../models/propertyAssociationModel.js";
 import { createNotification } from "./notificationController.js";
 import { syncPropertyUnits } from "../utils/propertyUnits.js";
 
+// flips property to "occupied" once all units are filled, "vacant" otherwise
 const updatePropertyOccupancyStatus = async (propertyId) => {
     if (!propertyId) {
         return null;
@@ -27,6 +28,7 @@ const updatePropertyOccupancyStatus = async (propertyId) => {
     return property.status;
 };
 
+// keeps association history - firstAssociatedAt is set once, lastAssociatedAt updates each time
 const upsertPropertyAssociation = async (tenant) => {
     if (!tenant?.userId || !tenant?.propertyId) {
         return null;
@@ -50,7 +52,6 @@ const upsertPropertyAssociation = async (tenant) => {
     );
 };
 
-// Invite or add a tenant to a property
 export const inviteTenant = async (req, res) => {
     const { email, propertyId, unitId, leaseStart, leaseEnd, securityDeposit, monthlyRent } = req.body;
 
@@ -64,7 +65,6 @@ export const inviteTenant = async (req, res) => {
     }
 
     try {
-        // Check if property belongs to landlord
         const property = await Property.findById(propertyId);
         if (!property) {
             return res.status(404).json({ message: "Property not found" });
@@ -74,19 +74,16 @@ export const inviteTenant = async (req, res) => {
             return res.status(401).json({ message: "Not authorized to add tenant to this property" });
         }
 
-        // Check if user exists
         let user = await User.findOne({ email });
         if (!user) {
             return res.status(404).json({ message: "User with this email not found. Please ask tenant to register first." });
         }
 
-        // Check if tenant already exists for this property
         const existingTenant = await Tenant.findOne({ userId: user._id, propertyId });
         if (existingTenant) {
             return res.status(400).json({ message: "Tenant already invited or active for this property." });
         }
 
-        // Validate unit vacancy
         const unit = await Unit.findOne({ _id: unitId, propertyId });
         if (!unit) {
             return res.status(404).json({ message: "Unit not found for this property" });
@@ -95,7 +92,12 @@ export const inviteTenant = async (req, res) => {
             return res.status(400).json({ message: "This unit is already occupied" });
         }
 
-        // Create Tenant record with Pending status
+        // unit stays "vacant" until the invite is accepted, so we also need to check for pending invites
+        const pendingOnUnit = await Tenant.findOne({ unitId, status: "Pending" });
+        if (pendingOnUnit) {
+            return res.status(400).json({ message: "This unit already has a pending invitation." });
+        }
+
         const tenant = await Tenant.create({
             userId: user._id,
             propertyId,
@@ -119,14 +121,11 @@ export const inviteTenant = async (req, res) => {
     }
 };
 
-// Get all tenants for the landlord's properties
 export const getTenants = async (req, res) => {
     try {
-        // Find all properties owned by landlord
         const properties = await Property.find({ landlordId: req.user._id });
         const propertyIds = properties.map(p => p._id);
 
-        // Find tenants linked to these properties
         const tenants = await Tenant.find({ propertyId: { $in: propertyIds } })
             .populate("userId", "name email phone")
             .populate("propertyId", "title address");
@@ -137,7 +136,6 @@ export const getTenants = async (req, res) => {
     }
 };
 
-// Get invitations for the logged-in tenant
 export const getMyInvitations = async (req, res) => {
     try {
         const invitations = await Tenant.find({ userId: req.user._id })
@@ -152,7 +150,6 @@ export const getMyInvitations = async (req, res) => {
     }
 };
 
-// Accept a tenant invitation
 export const acceptInvitation = async (req, res) => {
     try {
         const tenant = await Tenant.findById(req.params.id);
@@ -161,7 +158,6 @@ export const acceptInvitation = async (req, res) => {
             return res.status(404).json({ message: "Invitation not found" });
         }
 
-        // Check if logged in user is the tenant
         if (tenant.userId.toString() !== req.user._id.toString()) {
             return res.status(401).json({ message: "Not authorized to accept this invitation" });
         }
@@ -175,7 +171,7 @@ export const acceptInvitation = async (req, res) => {
         await upsertPropertyAssociation(tenant);
         await updatePropertyOccupancyStatus(tenant.propertyId);
 
-        // Mark the unit as occupied and link the current tenant
+        // lock the unit so no one else can be invited to it
         if (tenant.unitId) {
             await Unit.findByIdAndUpdate(tenant.unitId, { status: "occupied", currentTenant: tenant._id });
         }
@@ -195,7 +191,6 @@ export const acceptInvitation = async (req, res) => {
     }
 };
 
-// Reject a tenant invitation
 export const rejectInvitation = async (req, res) => {
     try {
         const tenant = await Tenant.findById(req.params.id);
@@ -204,7 +199,6 @@ export const rejectInvitation = async (req, res) => {
             return res.status(404).json({ message: "Invitation not found" });
         }
 
-        // Check if logged in user is the tenant
         if (tenant.userId.toString() !== req.user._id.toString()) {
             return res.status(401).json({ message: "Not authorized to reject this invitation" });
         }
@@ -228,7 +222,6 @@ export const rejectInvitation = async (req, res) => {
     }
 };
 
-// Remove a tenant from a property
 export const deleteTenant = async (req, res) => {
     try {
         const tenant = await Tenant.findById(req.params.id).populate("propertyId");
@@ -237,11 +230,11 @@ export const deleteTenant = async (req, res) => {
             return res.status(404).json({ message: "Tenant not found" });
         }
 
-        // Check if logged in user is the landlord of the property
         if (tenant.propertyId.landlordId.toString() !== req.user._id.toString()) {
             return res.status(401).json({ message: "Not authorized to remove this tenant" });
         }
 
+        // notify before deleting so we still have tenant data for the message
         await createNotification(
             tenant.userId,
             "tenant",
@@ -263,7 +256,6 @@ export const deleteTenant = async (req, res) => {
                 { upsert: true, new: true }
             );
 
-            // Mark the unit as vacant and clear the tenant link when an active tenancy is removed
             if (tenant.unitId) {
                 await Unit.findByIdAndUpdate(tenant.unitId, { status: "vacant", currentTenant: null });
             }

@@ -86,9 +86,7 @@ const buildUtilityBillDescription = ({ propertyTitle, splitMethod, description }
     return `Utility bill split for ${propertyTitle} (${splitMethod})`;
 };
 
-// @desc    Create a new invoice
-// @route   POST /api/invoices
-// @access  Private (Landlord only)
+// Create a new invoice for a tenant in a landlord-owned property.
 export const createInvoice = async (req, res) => {
     try {
         const { tenantId, propertyId, amount, type, dueDate, description, breakdown } = req.body;
@@ -180,9 +178,7 @@ export const createInvoice = async (req, res) => {
     }
 };
 
-// @desc    Get all invoices (Landlord sees issued, Tenant sees received)
-// @route   GET /api/invoices
-// @access  Private
+// List invoices relevant to the current user role.
 export const getInvoices = async (req, res) => {
     try {
         let invoices;
@@ -212,9 +208,7 @@ export const getInvoices = async (req, res) => {
     }
 };
 
-// @desc    Get single invoice
-// @route   GET /api/invoices/:id
-// @access  Private
+// Fetch one invoice with role-based access checks.
 export const getInvoiceById = async (req, res) => {
     try {
         const invoice = await populateInvoiceRelations(Invoice.findById(req.params.id));
@@ -249,9 +243,7 @@ export const getInvoiceById = async (req, res) => {
     }
 };
 
-// @desc    Update invoice status
-// @route   PUT /api/invoices/:id/status
-// @access  Private (Landlord only)
+// Update invoice status, including paid timestamp handling.
 export const updateInvoiceStatus = async (req, res) => {
     try {
         const { status } = req.body;
@@ -298,9 +290,7 @@ export const updateInvoiceStatus = async (req, res) => {
     }
 };
 
-// @desc    Split a utility bill into tenant invoices
-// @route   POST /api/invoices/split-utility-bill
-// @access  Private (Landlord only)
+// Split one utility bill into per-tenant utility invoices.
 export const splitUtilityBill = async (req, res) => {
     const billDocument = req.file;
 
@@ -464,9 +454,7 @@ export const splitUtilityBill = async (req, res) => {
     }
 };
 
-// @desc    Delete invoice
-// @route   DELETE /api/invoices/:id
-// @access  Private (Landlord only)
+// Delete an invoice owned by the requesting landlord.
 export const deleteInvoice = async (req, res) => {
     try {
         const invoice = await Invoice.findById(req.params.id);

@@ -9,6 +9,7 @@ import { AuthContext } from "./AuthContext";
 
 export const SubscriptionContext = createContext();
 
+// Holds subscription state and checkout actions for gated landlord features.
 export const SubscriptionProvider = ({ children }) => {
     const { user } = useContext(AuthContext);
 
@@ -21,6 +22,7 @@ export const SubscriptionProvider = ({ children }) => {
     const [checkoutLoading, setCheckoutLoading] = useState(false);
     const [error, setError] = useState(null);
 
+    // Wipe everything when the user logs out or switches to a non-landlord role
     const resetState = useCallback(() => {
         setSubscription(null);
         setPlans([]);
@@ -53,6 +55,7 @@ export const SubscriptionProvider = ({ children }) => {
         }
     }, [user?.role, user?.token]);
 
+    // Fetches plan/gateway config separately - keeps plan list fresh without re-fetching the active subscription
     const fetchSubscriptionConfig = useCallback(async () => {
         if (!user?.token || user?.role !== "landlord") {
             return null;
@@ -95,6 +98,7 @@ export const SubscriptionProvider = ({ children }) => {
         await Promise.allSettled([fetchSubscription(), fetchPaymentHistory()]);
     }, [fetchPaymentHistory, fetchSubscription, user?.role, user?.token]);
 
+    // Refresh payment history right after checkout so the UI reflects the new payment immediately
     const startCheckout = useCallback(async (plan, gateway, clientRedirectUri = null) => {
         setCheckoutLoading(true);
         try {
@@ -114,6 +118,7 @@ export const SubscriptionProvider = ({ children }) => {
         }
     }, [fetchPaymentHistory]);
 
+    // Tenant accounts don't have subscriptions, so clear state rather than fetching
     useEffect(() => {
         if (!user?.token) {
             resetState();

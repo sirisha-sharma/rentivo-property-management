@@ -21,11 +21,11 @@ router
         requireLandlordSubscription(SUBSCRIPTION_ACTIONS.INVITE_TENANT),
         inviteTenant
     );
-router.route("/:id").delete(protect, deleteTenant);
-
-// Tenant routes
+// Tenant routes (specific paths before /:id)
 router.route("/my-invitations").get(protect, getMyInvitations);
 router.route("/:id/accept").put(protect, acceptInvitation);
 router.route("/:id/reject").put(protect, rejectInvitation);
+
+router.route("/:id").delete(protect, deleteTenant);
 
 export default router;

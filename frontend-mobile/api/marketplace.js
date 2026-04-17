@@ -2,6 +2,8 @@ import axios from "axios";
 import { API_BASE_URL } from "../constants/config";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+// API client helpers for marketplace endpoints.
+
 const getAuthHeaders = async () => {
   const userData = await AsyncStorage.getItem("user");
   if (!userData) {

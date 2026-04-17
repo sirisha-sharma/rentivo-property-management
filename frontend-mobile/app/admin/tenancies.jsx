@@ -12,6 +12,8 @@ import { COLORS } from "../../constants/theme";
 import { AuthContext } from "../../context/AuthContext";
 import { getAdminTenancies } from "../../api/admin";
 
+// Screen module for tenancies.
+
 const STATUS_FILTERS = [
   { key: "all", label: "All status" },
   { key: "Active", label: "Active" },

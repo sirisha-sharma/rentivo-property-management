@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+// Schema definition for documentmodel data.
+
 const documentSchema = mongoose.Schema(
     {
         propertyId: {

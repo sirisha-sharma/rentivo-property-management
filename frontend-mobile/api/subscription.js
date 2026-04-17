@@ -2,6 +2,8 @@ import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL } from "../constants/config";
 
+// API client helpers for subscription endpoints.
+
 const getAuthHeaders = async () => {
     const userData = await AsyncStorage.getItem("user");
 

@@ -10,9 +10,7 @@ import {
  * Utility Bill Splitting Algorithm
  * Supports 4 methods: equal, room-size, occupancy, custom
  *
- * @desc Calculate utility split for a property based on configured split method
- * @route POST /api/utilities/calculate-split
- * @access Private (Landlord only)
+ * Calculates utility split for a property using the configured split method.
  */
 export const calculateUtilitySplit = async (req, res) => {
     try {
@@ -105,9 +103,7 @@ export const calculateUtilitySplit = async (req, res) => {
 
 /**
  * Get property utility configuration
- * @desc Get property's split method and room size configuration
- * @route GET /api/utilities/property-config/:propertyId
- * @access Private
+ * Returns split method and room-size setup for a property.
  */
 export const getPropertyUtilityConfig = async (req, res) => {
     try {

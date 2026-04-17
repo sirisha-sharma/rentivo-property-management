@@ -8,6 +8,8 @@ import { EmptyState } from "../../../components/EmptyState";
 import { COLORS } from "../../../constants/theme";
 import { downloadDocumentAsync } from "../../../utils/documentDownload";
 
+// Screen module for module.
+
 const FILTERS = [
     { key: "all", label: "All" },
     { key: "Lease Agreement", label: "Lease" },

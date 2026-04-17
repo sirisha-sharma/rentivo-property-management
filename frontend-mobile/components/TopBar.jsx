@@ -5,17 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { COLORS } from "../constants/theme";
 
-/**
- * Shared top navigation bar used by all inner screens.
- * Dark-mode premium styling. Safe area top/left/right only.
- *
- * Props:
- *  title       — screen title string
- *  showBack    — show back chevron (defaults false)
- *  onBack      — custom back handler (defaults to router.back)
- *  rightIcon   — Ionicons name for right action
- *  onRightPress — handler for right action
- */
+// Shared top nav bar for inner screens - handles safe area and optional back/action buttons
 export const TopBar = ({ title, showBack, onBack, rightIcon, onRightPress }) => {
   const router = useRouter();
 

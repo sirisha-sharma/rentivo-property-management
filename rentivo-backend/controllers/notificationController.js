@@ -68,7 +68,7 @@ export const createNotification = async (userId, type, message) => {
         await Notification.create({ userId, type, message });
 
         // Fire-and-forget email. We don't await this against the request
-        // lifecycle — but we do await here so errors are caught and logged.
+        // lifecycle, but we do await here so errors are caught and logged.
         const user = await User.findById(userId).select("name email phone");
         if (user?.email) {
             await sendNotificationEmail({

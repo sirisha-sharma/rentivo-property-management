@@ -25,15 +25,7 @@ const getKhaltiConfig = () => {
     return config;
 };
 
-/**
- * Initialize Khalti payment
- * @param {Number} amount - Payment amount in NPR
- * @param {String} transactionId - Transaction ID
- * @param {String} referenceId - Reference ID
- * @param {Object} customerInfo - Customer information
- * @param {Object} options - Optional configuration overrides
- * @returns {Promise<Object>} Payment initialization response
- */
+// Initialize a Khalti payment session and return redirect metadata.
 export const initializeKhaltiPayment = async (
     amount,
     transactionId,
@@ -112,11 +104,7 @@ export const initializeKhaltiPayment = async (
     }
 };
 
-/**
- * Verify Khalti payment using lookup API
- * @param {String} pidx - Payment index from Khalti
- * @returns {Promise<Object>} Payment verification response
- */
+// Verify a Khalti payment using its payment index.
 export const verifyKhaltiPayment = async (pidx) => {
     const config = getKhaltiConfig();
 

@@ -1,5 +1,8 @@
 import React, { useState } from "react";
 import {
+
+// Screen module for payments.
+
     View,
     Text,
     FlatList,

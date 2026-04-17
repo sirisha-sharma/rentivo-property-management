@@ -3,7 +3,7 @@ import Unit from "../models/unitModel.js";
 import Tenant from "../models/tenantModel.js";
 import { syncPropertyUnits } from "../utils/propertyUnits.js";
 
-// Re-evaluate and persist property.status based on active tenant count vs unit count.
+// recalculate whether the property is full or not
 const refreshPropertyStatus = async (propertyId) => {
     const [activeTenants, property] = await Promise.all([
         Tenant.countDocuments({ propertyId, status: "Active" }),
@@ -14,8 +14,7 @@ const refreshPropertyStatus = async (propertyId) => {
     await property.save();
 };
 
-// Shared: verify the property exists and the requesting landlord owns it.
-// Returns the property doc on success, or sends a 4xx response and returns null.
+// checks ownership and returns the property, or sends the error response and returns null
 const resolveAuthorizedProperty = async (req, res, propertyId) => {
     const property = await Property.findById(propertyId).select("landlordId units type rent");
 
@@ -24,10 +23,10 @@ const resolveAuthorizedProperty = async (req, res, propertyId) => {
         return null;
     }
 
-    if (
-        req.user?.role === "landlord" &&
-        String(property.landlordId) !== String(req.user._id)
-    ) {
+    const isAdmin = req.user?.role === "admin";
+    const isOwner = String(property.landlordId) === String(req.user?._id);
+
+    if (!isAdmin && !isOwner) {
         res.status(401).json({ message: "Not authorized to manage units for this property" });
         return null;
     }
@@ -35,7 +34,6 @@ const resolveAuthorizedProperty = async (req, res, propertyId) => {
     return property;
 };
 
-// GET /api/units?propertyId=xxx
 export const getUnits = async (req, res) => {
     try {
         const { propertyId } = req.query;
@@ -54,7 +52,7 @@ export const getUnits = async (req, res) => {
     }
 };
 
-// GET /api/units/property/:propertyId  (legacy — kept for backwards compatibility)
+// legacy route, use /api/units?propertyId instead
 export const getUnitsByProperty = async (req, res) => {
     try {
         const property = await resolveAuthorizedProperty(req, res, req.params.propertyId);
@@ -67,7 +65,6 @@ export const getUnitsByProperty = async (req, res) => {
     }
 };
 
-// POST /api/units
 export const createUnit = async (req, res) => {
     try {
         const { propertyId, unitName, floorNumber, baseRent, description } = req.body;
@@ -91,7 +88,7 @@ export const createUnit = async (req, res) => {
             status: "vacant",
         });
 
-        // Keep property.units count in sync so syncPropertyUnits doesn't remove the new unit.
+        // keep property.units in sync so syncPropertyUnits doesn't prune this new unit
         await Property.findByIdAndUpdate(propertyId, { $inc: { units: 1 } });
         await refreshPropertyStatus(propertyId);
 
@@ -101,7 +98,6 @@ export const createUnit = async (req, res) => {
     }
 };
 
-// PUT /api/units/:id
 export const updateUnit = async (req, res) => {
     try {
         const unit = await Unit.findById(req.params.id);
@@ -127,7 +123,6 @@ export const updateUnit = async (req, res) => {
     }
 };
 
-// DELETE /api/units/:id
 export const deleteUnit = async (req, res) => {
     try {
         const unit = await Unit.findById(req.params.id);
@@ -145,7 +140,6 @@ export const deleteUnit = async (req, res) => {
 
         await Unit.findByIdAndDelete(req.params.id);
 
-        // Keep property.units count in sync.
         await Property.findByIdAndUpdate(unit.propertyId, { $inc: { units: -1 } });
         await refreshPropertyStatus(unit.propertyId);
 

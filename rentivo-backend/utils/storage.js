@@ -3,6 +3,7 @@ import cloudinary from "../config/cloudinary.js";
 
 export const isRemoteUrl = (value = "") => /^https?:\/\//i.test(String(value).trim());
 
+// builds an absolute URL for local files, passes through remote URLs unchanged
 export const resolveStoredFileUrl = (req, filePath = "") => {
     const normalizedPath = String(filePath || "").trim();
 
@@ -28,6 +29,8 @@ export const getUploadedFileUrl = (file) => file?.secure_url || file?.path || nu
 export const getUploadedStorageId = (file) =>
     file?.storageId || file?.public_id || file?.filename || null;
 
+// tries multiple resource types when resourceType="auto" because Cloudinary
+// requires the correct type to delete an asset
 export const destroyCloudinaryAsset = async ({ storageId, resourceType = "image" } = {}) => {
     if (!storageId) {
         return false;
@@ -58,6 +61,7 @@ export const destroyCloudinaryAsset = async ({ storageId, resourceType = "image"
     }
 };
 
+// prefers Cloudinary deletion, falls back to local fs unlink for dev environments
 export const removeStoredFile = async ({
     filePath,
     storageId,

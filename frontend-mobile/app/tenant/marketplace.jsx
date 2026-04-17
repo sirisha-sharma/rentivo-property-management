@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
+
+// Screen module for marketplace.
+
   View,
   Text,
   FlatList,
