@@ -105,6 +105,9 @@ const invoiceSchema = mongoose.Schema(
                 filePath: {
                     type: String,
                 },
+                storageId: {
+                    type: String,
+                },
                 mimeType: {
                     type: String,
                 },

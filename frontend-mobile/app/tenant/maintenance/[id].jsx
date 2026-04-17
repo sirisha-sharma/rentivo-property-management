@@ -6,6 +6,7 @@ import {
     ScrollView,
     ActivityIndicator,
     Alert,
+    Image,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -13,6 +14,7 @@ import { MaintenanceContext } from "../../../context/MaintenanceContext";
 import { TopBar } from "../../../components/TopBar";
 import { StatusBadge } from "../../../components/StatusBadge";
 import { COLORS } from "../../../constants/theme";
+import { resolveMediaUrl } from "../../../utils/media";
 
 // Tenant Maintenance Request Detail Screen
 // Shows full details of a maintenance request submitted by the tenant
@@ -99,6 +101,25 @@ export default function TenantMaintenanceDetail() {
                     <Text style={styles.sectionLabel}>Description</Text>
                     <Text style={styles.description}>{request.description || "No description provided"}</Text>
                 </View>
+
+                {request.photos?.length ? (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionLabel}>Photos</Text>
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.photoRow}
+                        >
+                            {request.photos.map((photo, index) => (
+                                <Image
+                                    key={`${photo}-${index}`}
+                                    source={{ uri: resolveMediaUrl(photo) }}
+                                    style={styles.photoPreview}
+                                />
+                            ))}
+                        </ScrollView>
+                    </View>
+                ) : null}
 
                 {/* Details Card */}
                 <View style={styles.detailCard}>
@@ -202,6 +223,15 @@ const styles = StyleSheet.create({
         fontSize: 15,
         color: COLORS.foreground,
         lineHeight: 22,
+    },
+    photoRow: {
+        gap: 10,
+    },
+    photoPreview: {
+        width: 152,
+        height: 112,
+        borderRadius: 14,
+        backgroundColor: COLORS.muted,
     },
     detailCard: {
         backgroundColor: COLORS.card,

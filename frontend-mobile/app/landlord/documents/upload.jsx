@@ -77,8 +77,11 @@ export default function UploadDocument() {
             Alert.alert("Success", "Document uploaded successfully", [
                 { text: "OK", onPress: () => router.back() },
             ]);
-        } catch (_error) {
-            Alert.alert("Error", "Failed to upload document");
+        } catch (error) {
+            Alert.alert(
+                "Error",
+                error?.response?.data?.message || "Failed to upload document"
+            );
         }
     };
 

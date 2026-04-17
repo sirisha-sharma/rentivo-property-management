@@ -1,4 +1,3 @@
-import fs from "fs";
 import mongoose from "mongoose";
 import Invoice from "../models/invoiceModel.js";
 import Property from "../models/propertyModel.js";
@@ -9,6 +8,12 @@ import {
     roundCurrency,
 } from "../utils/utilitySplit.js";
 import { createNotification } from "./notificationController.js";
+import {
+    getUploadedFileUrl,
+    getUploadedStorageId,
+    removeStoredFile,
+    resolveStoredFileUrl,
+} from "../utils/storage.js";
 
 const populateInvoiceRelations = (query) =>
     query
@@ -22,13 +27,6 @@ const populateInvoiceRelations = (query) =>
         .populate("propertyId")
         .populate("landlordId", "name email");
 
-const getPublicUploadPath = (filePath = "") => {
-    const normalizedPath = String(filePath).replace(/\\/g, "/").replace(/^\.?\//, "");
-    const uploadsIndex = normalizedPath.indexOf("uploads/");
-
-    return uploadsIndex >= 0 ? normalizedPath.slice(uploadsIndex) : normalizedPath;
-};
-
 const serializeInvoice = (req, invoice) => {
     const invoiceObject = invoice.toObject ? invoice.toObject() : invoice;
     const attachment = invoiceObject.utilityBill?.attachment;
@@ -37,8 +35,6 @@ const serializeInvoice = (req, invoice) => {
         return invoiceObject;
     }
 
-    const publicPath = getPublicUploadPath(attachment.filePath);
-    const baseUrl = `${req.protocol}://${req.get("host")}`;
     const { filePath, ...attachmentWithoutPath } = attachment;
 
     return {
@@ -47,7 +43,7 @@ const serializeInvoice = (req, invoice) => {
             ...invoiceObject.utilityBill,
             attachment: {
                 ...attachmentWithoutPath,
-                downloadUrl: publicPath ? `${baseUrl}/${publicPath}` : null,
+                downloadUrl: resolveStoredFileUrl(req, attachment.filePath),
             },
         },
     };
@@ -56,10 +52,12 @@ const serializeInvoice = (req, invoice) => {
 const serializeInvoices = (req, invoices = []) =>
     invoices.map((invoice) => serializeInvoice(req, invoice));
 
-const cleanupUploadedFile = (file) => {
-    if (file?.path && fs.existsSync(file.path)) {
-        fs.unlinkSync(file.path);
-    }
+const cleanupUploadedFile = async (file) => {
+    await removeStoredFile({
+        filePath: file?.path,
+        storageId: getUploadedStorageId(file),
+        resourceType: "auto",
+    });
 };
 
 const parseJsonField = (value, fallback = {}) => {
@@ -308,7 +306,7 @@ export const splitUtilityBill = async (req, res) => {
 
     try {
         if (req.user?.role !== "landlord") {
-            cleanupUploadedFile(billDocument);
+            await cleanupUploadedFile(billDocument);
             return res.status(403).json({ message: "Only landlords can split utility bills" });
         }
 
@@ -316,7 +314,7 @@ export const splitUtilityBill = async (req, res) => {
         const selectedSplitMethod = req.body.splitMethod || "";
 
         if (!propertyId || !totalAmount || !dueDate) {
-            cleanupUploadedFile(billDocument);
+            await cleanupUploadedFile(billDocument);
             return res.status(400).json({
                 message: "Property, total amount, and due date are required",
             });
@@ -330,13 +328,13 @@ export const splitUtilityBill = async (req, res) => {
 
         const parsedTotalAmount = roundCurrency(parseFloat(totalAmount));
         if (!Number.isFinite(parsedTotalAmount) || parsedTotalAmount <= 0) {
-            cleanupUploadedFile(billDocument);
+            await cleanupUploadedFile(billDocument);
             return res.status(400).json({ message: "Please provide a valid total utility amount" });
         }
 
         const parsedDueDate = new Date(dueDate);
         if (Number.isNaN(parsedDueDate.getTime())) {
-            cleanupUploadedFile(billDocument);
+            await cleanupUploadedFile(billDocument);
             return res.status(400).json({ message: "Please provide a valid due date" });
         }
 
@@ -346,7 +344,7 @@ export const splitUtilityBill = async (req, res) => {
         });
 
         if (!property) {
-            cleanupUploadedFile(billDocument);
+            await cleanupUploadedFile(billDocument);
             return res.status(404).json({ message: "Property not found or unauthorized" });
         }
 
@@ -356,7 +354,7 @@ export const splitUtilityBill = async (req, res) => {
         }).populate("userId", "name email");
 
         if (tenants.length === 0) {
-            cleanupUploadedFile(billDocument);
+            await cleanupUploadedFile(billDocument);
             return res.status(400).json({ message: "No active tenants found for this property" });
         }
 
@@ -378,7 +376,7 @@ export const splitUtilityBill = async (req, res) => {
         );
 
         if (Math.abs(createdShareTotal - parsedTotalAmount) > 0.01) {
-            cleanupUploadedFile(billDocument);
+            await cleanupUploadedFile(billDocument);
             return res.status(400).json({
                 message: "Split amounts must add up to the total utility amount",
             });
@@ -419,7 +417,8 @@ export const splitUtilityBill = async (req, res) => {
                     attachment: {
                         fileName: billDocument.filename,
                         originalName: billDocument.originalname,
-                        filePath: billDocument.path,
+                        filePath: getUploadedFileUrl(billDocument),
+                        storageId: getUploadedStorageId(billDocument),
                         mimeType: billDocument.mimetype,
                         size: billDocument.size,
                     },
@@ -458,7 +457,7 @@ export const splitUtilityBill = async (req, res) => {
             invoices: serializeInvoices(req, populatedInvoices),
         });
     } catch (error) {
-        cleanupUploadedFile(billDocument);
+        await cleanupUploadedFile(billDocument);
         const statusCode =
             error.statusCode || (isUtilitySplitValidationError(error) ? 400 : 500);
         res.status(statusCode).json({ message: error.message });

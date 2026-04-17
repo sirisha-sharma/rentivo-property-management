@@ -6,6 +6,7 @@ import {
     inferNepalDistrictFromText,
     resolveNepalDistrict,
 } from "../utils/nepalDistricts.js";
+import { getUploadedFileUrl, removeStoredFiles } from "../utils/storage.js";
 
 const buildRatingSummaryMap = async (propertyIds) => {
     if (!propertyIds.length) {
@@ -227,6 +228,7 @@ export const getPropertyById = async (req, res) => {
 
 // Create a new property
 export const createProperty = async (req, res) => {
+    const uploadedFiles = req.files || [];
     const {
         title,
         address,
@@ -241,23 +243,26 @@ export const createProperty = async (req, res) => {
     } = req.body;
 
     if (!title || !address || !type || !units) {
+        await removeStoredFiles(uploadedFiles, { resourceType: "image" });
         return res.status(400).json({ message: "Please fill in all required fields" });
     }
 
     try {
         if (req.user?.role !== "landlord") {
+            await removeStoredFiles(uploadedFiles, { resourceType: "image" });
             return res.status(403).json({ message: "Only landlords can create properties" });
         }
 
         const normalizedDistrict = resolveNepalDistrict({ district, address });
         if (!normalizedDistrict) {
+            await removeStoredFiles(uploadedFiles, { resourceType: "image" });
             return res.status(400).json({ message: "Please select a valid district in Nepal" });
         }
 
         // Handle uploaded images
         let imagePaths = [];
         if (req.files && req.files.length > 0) {
-            imagePaths = req.files.map(file => `/uploads/properties/${file.filename}`);
+            imagePaths = req.files.map((file) => getUploadedFileUrl(file)).filter(Boolean);
         }
 
         // Parse and merge URL images
@@ -306,26 +311,32 @@ export const createProperty = async (req, res) => {
         });
         res.status(201).json(property);
     } catch (error) {
+        await removeStoredFiles(uploadedFiles, { resourceType: "image" });
         res.status(500).json({ message: error.message });
     }
 };
 
 // Update an existing property
 export const updateProperty = async (req, res) => {
+    const uploadedFiles = req.files || [];
+
     try {
         const property = await Property.findById(req.params.id);
 
         if (!property) {
+            await removeStoredFiles(uploadedFiles, { resourceType: "image" });
             return res.status(404).json({ message: "Property not found" });
         }
 
         // Check for user
         if (!req.user) {
+            await removeStoredFiles(uploadedFiles, { resourceType: "image" });
             return res.status(401).json({ message: "User not found" });
         }
 
         // Make sure the logged in user matches the property landlord
         if (property.landlordId.toString() !== req.user._id.toString()) {
+            await removeStoredFiles(uploadedFiles, { resourceType: "image" });
             return res.status(401).json({ message: "User not authorized" });
         }
 
@@ -335,13 +346,14 @@ export const updateProperty = async (req, res) => {
         });
 
         if (!nextDistrict) {
+            await removeStoredFiles(uploadedFiles, { resourceType: "image" });
             return res.status(400).json({ message: "Please select a valid district in Nepal" });
         }
 
         // Handle uploaded images
         let updatedImages = [...property.images]; // Keep existing images
         if (req.files && req.files.length > 0) {
-            const newImagePaths = req.files.map(file => `/uploads/properties/${file.filename}`);
+            const newImagePaths = req.files.map((file) => getUploadedFileUrl(file)).filter(Boolean);
             updatedImages = [...updatedImages, ...newImagePaths]; // Add new images
         }
 
@@ -389,6 +401,7 @@ export const updateProperty = async (req, res) => {
 
         res.status(200).json(updatedProperty);
     } catch (error) {
+        await removeStoredFiles(uploadedFiles, { resourceType: "image" });
         res.status(500).json({ message: error.message });
     }
 };

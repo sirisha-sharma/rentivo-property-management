@@ -64,7 +64,47 @@ export const MaintenanceProvider = ({ children }) => {
     const createRequest = useCallback(async (requestData) => {
         setLoading(true);
         try {
-            const response = await axios.post(API_URL, requestData, getAuthHeader());
+            const formData = new FormData();
+            const authHeader = getAuthHeader();
+
+            formData.append("propertyId", requestData.propertyId);
+            formData.append("title", requestData.title);
+
+            if (requestData.description) {
+                formData.append("description", requestData.description);
+            }
+
+            if (requestData.urgency || requestData.priority) {
+                formData.append("urgency", requestData.urgency || requestData.priority);
+            }
+
+            (requestData.photos || []).forEach((photo, index) => {
+                const uri = photo?.uri || photo;
+                if (!uri) {
+                    return;
+                }
+
+                const fallbackName = uri.split("/").pop() || `maintenance-${index + 1}.jpg`;
+                const fileName = photo?.fileName || photo?.name || fallbackName;
+                const extensionMatch = /\.(\w+)$/.exec(fileName);
+                const mimeType =
+                    photo?.mimeType ||
+                    photo?.type ||
+                    (extensionMatch ? `image/${extensionMatch[1].toLowerCase()}` : "image/jpeg");
+
+                formData.append("photos", {
+                    uri,
+                    name: fileName,
+                    type: mimeType,
+                });
+            });
+
+            const response = await axios.post(API_URL, formData, {
+                headers: {
+                    ...authHeader.headers,
+                    "Content-Type": "multipart/form-data",
+                },
+            });
             setRequests((prev) => [...prev, response.data]);
             setError(null);
             return response.data;

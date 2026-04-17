@@ -29,6 +29,14 @@ const maintenanceSchema = mongoose.Schema(
             enum: ["Open", "Pending", "In Progress", "Resolved"],
             default: "Open",
         },
+        photos: {
+            type: [String],
+            default: [],
+        },
+        photoPublicIds: {
+            type: [String],
+            default: [],
+        },
     },
     {
         timestamps: true,

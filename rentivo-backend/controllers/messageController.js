@@ -1,33 +1,29 @@
-import fs from "fs";
 import mongoose from "mongoose";
 import Message from "../models/messageModel.js";
 import Property from "../models/propertyModel.js";
 import Tenant from "../models/tenantModel.js";
 import User from "../models/userModel.js";
 import { createNotification } from "./notificationController.js";
+import {
+    getUploadedFileUrl,
+    getUploadedStorageId,
+    removeStoredFile,
+    resolveStoredFileUrl,
+} from "../utils/storage.js";
 
 const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
 
 const toIdString = (value) => value?.toString?.() || "";
 
-const cleanupUploadedFile = (file) => {
-    if (file?.path && fs.existsSync(file.path)) {
-        fs.unlinkSync(file.path);
-    }
+const cleanupUploadedFile = async (file) => {
+    await removeStoredFile({
+        filePath: file?.path,
+        storageId: getUploadedStorageId(file),
+        resourceType: "auto",
+    });
 };
 
-const getMessageAttachmentUrl = (filePath) => {
-    if (!filePath) return null;
-
-    const baseUrl =
-        (process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3000}`)
-            .trim()
-            .replace(/\/+$/, "");
-
-    return `${baseUrl}/${filePath.replace(/^\/+/, "").replace(/\\/g, "/")}`;
-};
-
-const serializeMessage = (message) => {
+const serializeMessage = (req, message) => {
     if (!message) return message;
 
     const serialized = typeof message.toObject === "function" ? message.toObject() : { ...message };
@@ -35,7 +31,7 @@ const serializeMessage = (message) => {
     if (serialized.attachment?.filePath) {
         serialized.attachment = {
             ...serialized.attachment,
-            fileUrl: getMessageAttachmentUrl(serialized.attachment.filePath),
+            fileUrl: resolveStoredFileUrl(req, serialized.attachment.filePath),
         };
     }
 
@@ -305,7 +301,7 @@ export const getMessages = async (req, res) => {
             .sort({ createdAt: 1 })
             .populate("senderId", "name");
 
-        res.json(messages.map(serializeMessage));
+        res.json(messages.map((message) => serializeMessage(req, message)));
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -321,7 +317,7 @@ export const sendMessage = async (req, res) => {
         const content = req.body.content?.trim() || "";
 
         if (!receiverId || !propertyId || (!content && !attachmentFile)) {
-            cleanupUploadedFile(attachmentFile);
+            await cleanupUploadedFile(attachmentFile);
             return res.status(400).json({
                 message: "receiverId, propertyId, and either content or an attachment are required",
             });
@@ -334,7 +330,7 @@ export const sendMessage = async (req, res) => {
         });
 
         if (access.error) {
-            cleanupUploadedFile(attachmentFile);
+            await cleanupUploadedFile(attachmentFile);
             return res.status(access.error.status).json({ message: access.error.message });
         }
 
@@ -347,7 +343,8 @@ export const sendMessage = async (req, res) => {
                 ? {
                     fileName: attachmentFile.filename,
                     originalName: attachmentFile.originalname,
-                    filePath: attachmentFile.path,
+                    filePath: getUploadedFileUrl(attachmentFile),
+                    storageId: getUploadedStorageId(attachmentFile),
                     mimeType: attachmentFile.mimetype,
                     size: attachmentFile.size,
                 }
@@ -362,9 +359,9 @@ export const sendMessage = async (req, res) => {
         );
 
         const populated = await Message.findById(message._id).populate("senderId", "name");
-        res.status(201).json(serializeMessage(populated));
+        res.status(201).json(serializeMessage(req, populated));
     } catch (error) {
-        cleanupUploadedFile(attachmentFile);
+        await cleanupUploadedFile(attachmentFile);
         res.status(500).json({ message: error.message });
     }
 };

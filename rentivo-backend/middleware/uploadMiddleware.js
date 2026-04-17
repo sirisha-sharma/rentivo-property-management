@@ -1,92 +1,115 @@
 import multer from "multer";
 import path from "path";
-import fs from "fs";
+import { CloudinaryStorage } from "multer-storage-cloudinary";
+import cloudinary, { ensureCloudinaryConfig } from "../config/cloudinary.js";
 
-// Create uploads folder if it doesn't exist
-const uploadDir = "uploads/documents";
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
+const DOCUMENT_EXTENSIONS = ["pdf", "jpg", "jpeg", "png", "doc", "docx"];
+const IMAGE_EXTENSIONS = ["jpg", "jpeg", "png", "webp"];
 
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        const uniqueName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`;
-        cb(null, uniqueName);
-    },
+const getFileExtension = (file) =>
+    path.extname(file?.originalname || "")
+        .replace(".", "")
+        .toLowerCase();
+
+const buildUniquePublicId = (prefix) =>
+    `${prefix}-${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+
+const createExtensionFilter = (allowedExtensions, message) => (req, file, cb) => {
+    const extension = getFileExtension(file);
+
+    if (allowedExtensions.includes(extension)) {
+        cb(null, true);
+        return;
+    }
+
+    cb(new Error(message), false);
+};
+
+const createCloudinaryStorage = ({ folder, resourceType = "image", publicIdPrefix }) =>
+    new CloudinaryStorage({
+        cloudinary,
+        params: async (req, file) => {
+            ensureCloudinaryConfig();
+            const resolvedResourceType =
+                typeof resourceType === "function"
+                    ? resourceType(req, file)
+                    : resourceType;
+
+            return {
+                folder:
+                    typeof folder === "function"
+                        ? folder(req, file)
+                        : folder,
+                resource_type: resolvedResourceType,
+                allowed_formats:
+                    resolvedResourceType === "image" ? IMAGE_EXTENSIONS : DOCUMENT_EXTENSIONS,
+                public_id: buildUniquePublicId(
+                    typeof publicIdPrefix === "function"
+                        ? publicIdPrefix(req, file)
+                        : publicIdPrefix
+                ),
+            };
+        },
+    });
+
+const documentFileFilter = createExtensionFilter(
+    DOCUMENT_EXTENSIONS,
+    "Only PDF, images, and Word documents are allowed"
+);
+
+const imageFileFilter = createExtensionFilter(
+    IMAGE_EXTENSIONS,
+    "Only image files (.jpg, .jpeg, .png, .webp) are allowed"
+);
+
+const documentStorage = createCloudinaryStorage({
+    folder: (req, file) =>
+        file?.fieldname === "billDocument"
+            ? "rentivo/utility-bills"
+            : "rentivo/documents",
+    resourceType: "raw",
+    publicIdPrefix: (req, file) =>
+        file?.fieldname === "billDocument" ? "utility-bill" : "document",
 });
 
-const fileFilter = (req, file, cb) => {
-    const allowed = [".pdf", ".jpg", ".jpeg", ".png", ".doc", ".docx"];
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (allowed.includes(ext)) {
-        cb(null, true);
-    } else {
-        cb(new Error("Only PDF, images, and Word documents are allowed"), false);
-    }
-};
+const propertyImageStorage = createCloudinaryStorage({
+    folder: "rentivo/properties",
+    resourceType: "image",
+    publicIdPrefix: "property",
+});
+
+const maintenancePhotoStorage = createCloudinaryStorage({
+    folder: "rentivo/maintenance",
+    resourceType: "image",
+    publicIdPrefix: "maintenance",
+});
+
+const messageAttachmentStorage = createCloudinaryStorage({
+    folder: "rentivo/messages",
+    resourceType: "raw",
+    publicIdPrefix: "message",
+});
 
 export const upload = multer({
-    storage,
-    fileFilter,
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
+    storage: documentStorage,
+    fileFilter: documentFileFilter,
+    limits: { fileSize: 10 * 1024 * 1024 },
 });
-
-// ==================== Property Image Upload Configuration ====================
-
-// Create uploads/properties folder if it doesn't exist
-const propertyImageDir = "uploads/properties";
-if (!fs.existsSync(propertyImageDir)) {
-    fs.mkdirSync(propertyImageDir, { recursive: true });
-}
-
-const propertyImageStorage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, propertyImageDir);
-    },
-    filename: (req, file, cb) => {
-        const uniqueName = `property-${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`;
-        cb(null, uniqueName);
-    },
-});
-
-const imageFileFilter = (req, file, cb) => {
-    const allowedImages = [".jpg", ".jpeg", ".png", ".webp"];
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (allowedImages.includes(ext)) {
-        cb(null, true);
-    } else {
-        cb(new Error("Only image files (.jpg, .jpeg, .png, .webp) are allowed"), false);
-    }
-};
 
 export const uploadPropertyImages = multer({
     storage: propertyImageStorage,
     fileFilter: imageFileFilter,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max per image
+    limits: { fileSize: 5 * 1024 * 1024 },
 });
 
-// ==================== Message Attachment Upload Configuration ====================
-
-const messageAttachmentDir = "uploads/messages";
-if (!fs.existsSync(messageAttachmentDir)) {
-    fs.mkdirSync(messageAttachmentDir, { recursive: true });
-}
-
-const messageAttachmentStorage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, messageAttachmentDir);
-    },
-    filename: (req, file, cb) => {
-        const uniqueName = `message-${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`;
-        cb(null, uniqueName);
-    },
+export const uploadMaintenancePhotos = multer({
+    storage: maintenancePhotoStorage,
+    fileFilter: imageFileFilter,
+    limits: { fileSize: 5 * 1024 * 1024 },
 });
 
 export const uploadMessageAttachment = multer({
     storage: messageAttachmentStorage,
-    fileFilter,
+    fileFilter: documentFileFilter,
     limits: { fileSize: 10 * 1024 * 1024 },
 });

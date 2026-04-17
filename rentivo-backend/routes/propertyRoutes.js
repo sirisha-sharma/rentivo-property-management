@@ -15,6 +15,16 @@ import { requireLandlordSubscription } from "../middleware/subscriptionMiddlewar
 import { uploadPropertyImages } from "../middleware/uploadMiddleware.js";
 import { SUBSCRIPTION_ACTIONS } from "../utils/subscriptionService.js";
 
+const handlePropertyImageUpload = (req, res, next) => {
+    uploadPropertyImages.array("images", 5)(req, res, (error) => {
+        if (error) {
+            return res.status(400).json({ message: error.message });
+        }
+
+        next();
+    });
+};
+
 router.route("/marketplace").get(protect, getMarketplaceProperties);
 router.route("/marketplace/:id").get(protect, getMarketplacePropertyById);
 router.route("/:id/ratings").post(protect, createOrUpdatePropertyRating);
@@ -24,9 +34,13 @@ router
     .post(
         protect,
         requireLandlordSubscription(SUBSCRIPTION_ACTIONS.ADD_PROPERTY),
-        uploadPropertyImages.array("images", 5),
+        handlePropertyImageUpload,
         createProperty
     );
-router.route("/:id").get(protect, getPropertyById).put(protect, uploadPropertyImages.array('images', 5), updateProperty).delete(protect, deleteProperty);
+router
+    .route("/:id")
+    .get(protect, getPropertyById)
+    .put(protect, handlePropertyImageUpload, updateProperty)
+    .delete(protect, deleteProperty);
 
 export default router;

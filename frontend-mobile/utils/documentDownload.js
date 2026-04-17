@@ -1,7 +1,7 @@
 import { Platform } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
-import { BASE_URL } from "../constants/config";
+import { resolveMediaUrl } from "./media";
 
 const DOWNLOADS_DIRECTORY = `${FileSystem.documentDirectory}downloads/`;
 
@@ -64,10 +64,16 @@ const resolveDocumentUrl = (documentItem) => {
     const relativePath = normalizeRelativeFilePath(documentItem?.filePath);
 
     if (!relativePath) {
+        const fallbackUrl = resolveMediaUrl(documentItem?.filePath);
+
+        if (fallbackUrl) {
+            return fallbackUrl;
+        }
+
         throw new Error("This document does not have a download URL.");
     }
 
-    return `${BASE_URL}/${relativePath}`;
+    return resolveMediaUrl(relativePath);
 };
 
 const ensureDownloadsDirectoryAsync = async () => {

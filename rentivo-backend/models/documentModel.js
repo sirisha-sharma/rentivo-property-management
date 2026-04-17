@@ -29,6 +29,9 @@ const documentSchema = mongoose.Schema(
             type: String,
             required: true,
         },
+        storageId: {
+            type: String,
+        },
     },
     {
         timestamps: true,

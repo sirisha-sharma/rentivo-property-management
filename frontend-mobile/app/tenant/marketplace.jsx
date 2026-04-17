@@ -18,7 +18,7 @@ import { FilterChips } from "../../components/FilterChips";
 import { EmptyState } from "../../components/EmptyState";
 import { COLORS } from "../../constants/theme";
 import { getMarketplaceProperties } from "../../api/marketplace";
-import { BASE_URL } from "../../constants/config";
+import { resolveMediaUrl } from "../../utils/media";
 
 const TYPE_FILTERS = [
   { key: "all", label: "All" },
@@ -89,14 +89,6 @@ export default function MarketplaceBrowse() {
     setRefreshing(false);
   };
 
-  const getImageUri = (img) => {
-    if (!img) return "";
-    if (img.startsWith("http://") || img.startsWith("https://")) {
-      return img;
-    }
-    return `${BASE_URL}${img}`;
-  };
-
   const renderPropertyCard = ({ item }) => (
     <TouchableOpacity
       style={styles.propertyCard}
@@ -104,7 +96,7 @@ export default function MarketplaceBrowse() {
       activeOpacity={0.88}
     >
       {item.images && item.images.length > 0 ? (
-        <Image source={{ uri: getImageUri(item.images[0]) }} style={styles.propertyImage} />
+        <Image source={{ uri: resolveMediaUrl(item.images[0]) }} style={styles.propertyImage} />
       ) : (
         <View style={styles.placeholderImage}>
           <Ionicons name="home-outline" size={48} color={COLORS.mutedForeground} />

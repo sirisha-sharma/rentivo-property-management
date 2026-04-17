@@ -5,8 +5,18 @@ import { upload } from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
 
+const handleDocumentUpload = (req, res, next) => {
+    upload.single("file")(req, res, (error) => {
+        if (error) {
+            return res.status(400).json({ message: error.message });
+        }
+
+        next();
+    });
+};
+
 router.route("/")
-    .post(protect, upload.single("file"), uploadDocument)
+    .post(protect, handleDocumentUpload, uploadDocument)
     .get(protect, getDocuments);
 
 router.route("/:id")

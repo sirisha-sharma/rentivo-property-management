@@ -2,14 +2,38 @@ import Maintenance from "../models/maintenanceModel.js";
 import Property from "../models/propertyModel.js";
 import Tenant from "../models/tenantModel.js";
 import { createNotification } from "./notificationController.js";
+import {
+    getUploadedFileUrl,
+    getUploadedStorageId,
+    removeStoredFiles,
+    resolveStoredFileUrl,
+} from "../utils/storage.js";
+
+const serializeMaintenanceRequest = (req, request) => {
+    const requestObject = request.toObject ? request.toObject() : request;
+    const { photoPublicIds, ...requestWithoutStorageIds } = requestObject;
+
+    return {
+        ...requestWithoutStorageIds,
+        photos: (requestObject.photos || [])
+            .map((photo) => resolveStoredFileUrl(req, photo))
+            .filter(Boolean),
+    };
+};
+
+const serializeMaintenanceRequests = (req, requests = []) =>
+    requests.map((request) => serializeMaintenanceRequest(req, request));
 
 // Create a new maintenance request
 export const createRequest = async (req, res) => {
+    const uploadedPhotos = req.files || [];
+
     try {
         const { propertyId, title, description, priority, urgency } = req.body;
 
         const tenant = await Tenant.findOne({ userId: req.user._id, propertyId, status: "Active" });
         if (!tenant) {
+            await removeStoredFiles(uploadedPhotos, { resourceType: "image" });
             return res.status(404).json({ message: "No active tenancy found for this property" });
         }
 
@@ -19,7 +43,17 @@ export const createRequest = async (req, res) => {
             title,
             description,
             priority: urgency || priority || "Medium",
+            photos: uploadedPhotos.map((photo) => getUploadedFileUrl(photo)).filter(Boolean),
+            photoPublicIds: uploadedPhotos
+                .map((photo) => getUploadedStorageId(photo))
+                .filter(Boolean),
         });
+        const populatedRequest = await Maintenance.findById(request._id)
+            .populate("propertyId")
+            .populate({
+                path: "tenantId",
+                populate: { path: "userId", select: "name email" },
+            });
 
         // Notify the landlord about the new request
         const property = await Property.findById(propertyId);
@@ -31,8 +65,9 @@ export const createRequest = async (req, res) => {
             );
         }
 
-        res.status(201).json(request);
+        res.status(201).json(serializeMaintenanceRequest(req, populatedRequest || request));
     } catch (error) {
+        await removeStoredFiles(uploadedPhotos, { resourceType: "image" });
         res.status(500).json({ message: error.message });
     }
 };
@@ -67,7 +102,7 @@ export const getRequests = async (req, res) => {
             return res.status(403).json({ message: "Invalid role" });
         }
 
-        res.json(requests);
+        res.json(serializeMaintenanceRequests(req, requests));
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -100,7 +135,7 @@ export const getRequestById = async (req, res) => {
             return res.status(403).json({ message: "Not authorized to view this maintenance request" });
         }
 
-        res.json(request);
+        res.json(serializeMaintenanceRequest(req, request));
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -122,7 +157,13 @@ export const updateRequestStatus = async (req, res) => {
         }
 
         request.status = status;
-        const updatedRequest = await request.save();
+        await request.save();
+        const updatedRequest = await Maintenance.findById(request._id)
+            .populate("propertyId")
+            .populate({
+                path: "tenantId",
+                populate: { path: "userId", select: "name email" },
+            });
 
         // Notify the tenant about the status update
         const tenant = await Tenant.findById(request.tenantId);
@@ -134,7 +175,7 @@ export const updateRequestStatus = async (req, res) => {
             );
         }
 
-        res.json(updatedRequest);
+        res.json(serializeMaintenanceRequest(req, updatedRequest || request));
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -153,6 +194,14 @@ export const deleteRequest = async (req, res) => {
         if (!property) {
             return res.status(401).json({ message: "Not authorized" });
         }
+
+        await removeStoredFiles(
+            (request.photos || []).map((photo, index) => ({
+                filePath: photo,
+                publicId: request.photoPublicIds?.[index],
+                resourceType: "image",
+            }))
+        );
 
         await request.deleteOne();
         res.json({ message: "Maintenance request removed" });

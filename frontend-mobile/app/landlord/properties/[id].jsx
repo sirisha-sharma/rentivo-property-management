@@ -9,6 +9,7 @@ import { PropertyContext } from "../../../context/PropertyContext";
 import { TenantContext } from "../../../context/TenantContext";
 import { MaintenanceContext } from "../../../context/MaintenanceContext";
 import { InvoiceContext } from "../../../context/InvoiceContext";
+import { resolveMediaUrl } from "../../../utils/media";
 
 export default function PropertyDetails() {
     const { id } = useLocalSearchParams();
@@ -141,7 +142,11 @@ export default function PropertyDetails() {
                 {property.images && property.images.length > 0 && (
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
                         {property.images.map((img, index) => (
-                            <Image key={index} source={{ uri: img }} className="w-52 h-36 rounded-xl mr-3" />
+                            <Image
+                                key={index}
+                                source={{ uri: resolveMediaUrl(img) }}
+                                className="w-52 h-36 rounded-xl mr-3"
+                            />
                         ))}
                     </ScrollView>
                 )}

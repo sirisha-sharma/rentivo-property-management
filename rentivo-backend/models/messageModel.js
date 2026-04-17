@@ -26,6 +26,7 @@ const messageSchema = mongoose.Schema(
             fileName: String,
             originalName: String,
             filePath: String,
+            storageId: String,
             mimeType: String,
             size: Number,
         },

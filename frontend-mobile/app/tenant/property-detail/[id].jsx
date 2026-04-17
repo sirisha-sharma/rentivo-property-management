@@ -17,11 +17,11 @@ import { LinearGradient } from "expo-linear-gradient";
 import { TopBar } from "../../../components/TopBar";
 import { EmptyState } from "../../../components/EmptyState";
 import { COLORS } from "../../../constants/theme";
-import { BASE_URL } from "../../../constants/config";
 import {
   getMarketplacePropertyDetail,
   submitPropertyRating,
 } from "../../../api/marketplace";
+import { resolveMediaUrl } from "../../../utils/media";
 
 function FactChip({ icon, label }) {
   return (
@@ -93,14 +93,6 @@ export default function PropertyDetail() {
   useEffect(() => {
     void fetchPropertyDetails();
   }, [fetchPropertyDetails]);
-
-  const getImageUri = (img) => {
-    if (!img) return "";
-    if (img.startsWith("http://") || img.startsWith("https://")) {
-      return img;
-    }
-    return `${BASE_URL}${img}`;
-  };
 
   const handleSaveRating = async () => {
     if (!selectedRating) {
@@ -184,7 +176,7 @@ export default function PropertyDetail() {
         <View style={styles.heroShell}>
           {hasImages ? (
             <Image
-              source={{ uri: getImageUri(property.images[currentImageIndex]) }}
+              source={{ uri: resolveMediaUrl(property.images[currentImageIndex]) }}
               style={styles.heroImage}
             />
           ) : (

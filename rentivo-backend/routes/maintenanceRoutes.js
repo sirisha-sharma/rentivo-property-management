@@ -7,11 +7,22 @@ import {
     deleteRequest,
 } from "../controllers/maintenanceController.js";
 import { protect } from "../middleware/authMiddleware.js";
+import { uploadMaintenancePhotos } from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
 
+const handleMaintenancePhotoUpload = (req, res, next) => {
+    uploadMaintenancePhotos.array("photos", 5)(req, res, (error) => {
+        if (error) {
+            return res.status(400).json({ message: error.message });
+        }
+
+        next();
+    });
+};
+
 router.route("/")
-    .post(protect, createRequest)
+    .post(protect, handleMaintenancePhotoUpload, createRequest)
     .get(protect, getRequests);
 
 router.route("/:id")
