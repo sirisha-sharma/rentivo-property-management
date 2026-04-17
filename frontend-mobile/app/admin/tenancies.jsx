@@ -64,6 +64,11 @@ export default function AdminTenanciesScreen() {
     }
   }, [fetchTenancies, user?.role]);
 
+  const formatCurrency = (amount) => {
+    const numericAmount = Number(amount || 0);
+    return `NPR ${numericAmount.toLocaleString()}`;
+  };
+
   const renderItem = ({ item }) => (
     <View style={styles.card}>
       <View style={styles.headerRow}>
@@ -89,6 +94,10 @@ export default function AdminTenanciesScreen() {
         <Text style={styles.infoText}>
           {new Date(item.leaseStart).toLocaleDateString()} - {new Date(item.leaseEnd).toLocaleDateString()}
         </Text>
+      </View>
+      <View style={styles.infoRow}>
+        <Ionicons name="wallet-outline" size={14} color={COLORS.mutedForeground} />
+        <Text style={styles.infoText}>Security Deposit: {formatCurrency(item.securityDeposit)}</Text>
       </View>
     </View>
   );

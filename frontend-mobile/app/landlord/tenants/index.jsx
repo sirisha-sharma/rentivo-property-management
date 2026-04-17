@@ -70,6 +70,11 @@ export default function TenantList() {
         );
     };
 
+    const formatCurrency = (amount) => {
+        const numericAmount = Number(amount || 0);
+        return `NPR ${numericAmount.toLocaleString()}`;
+    };
+
     const renderItem = ({ item }) => (
         <View style={styles.card}>
             <View style={styles.cardHeader}>
@@ -91,6 +96,7 @@ export default function TenantList() {
 
             <View style={styles.cardFooter}>
                 <Text style={styles.dateText}>Lease ends: {item.leaseEnd ? new Date(item.leaseEnd).toLocaleDateString() : "N/A"}</Text>
+                <Text style={styles.dateText}>Security deposit: {formatCurrency(item.securityDeposit)}</Text>
                 <View style={styles.actionRow}>
                     {item.status?.toLowerCase() === "active" && item.userId?._id && item.propertyId?._id && (
                         <TouchableOpacity

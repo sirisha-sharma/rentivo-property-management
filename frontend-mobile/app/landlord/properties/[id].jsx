@@ -61,6 +61,8 @@ export default function PropertyDetails() {
             ? `NPR ${Number(amount).toLocaleString()}`
             : "-";
 
+    const formatDeposit = (amount) => `NPR ${Number(amount || 0).toLocaleString()}`;
+
     const formatDate = (dateValue) =>
         dateValue ? new Date(dateValue).toLocaleDateString() : "N/A";
 
@@ -260,6 +262,7 @@ export default function PropertyDetails() {
                             <View>
                                 <Text className="text-sm font-medium text-foreground">{t.userId?.name || "Pending User"}</Text>
                                 <Text className="text-xs text-mutedForeground">{t.leaseEnd ? `Lease ends: ${new Date(t.leaseEnd).toLocaleDateString()}` : "Active"}</Text>
+                                <Text className="text-xs text-mutedForeground">Deposit: {formatDeposit(t.securityDeposit)}</Text>
                             </View>
                             <View className="items-end">
                                 <StatusBadge status={t.status || "Active"} />

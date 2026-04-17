@@ -4,6 +4,26 @@ import Property from "../models/propertyModel.js";
 import PropertyAssociation from "../models/propertyAssociationModel.js";
 import { createNotification } from "./notificationController.js";
 
+const updatePropertyOccupancyStatus = async (propertyId) => {
+    if (!propertyId) {
+        return null;
+    }
+
+    const [activeTenants, property] = await Promise.all([
+        Tenant.countDocuments({ propertyId, status: "Active" }),
+        Property.findById(propertyId).select("units status"),
+    ]);
+
+    if (!property) {
+        return null;
+    }
+
+    property.status = activeTenants >= property.units ? "occupied" : "vacant";
+    await property.save();
+
+    return property.status;
+};
+
 const upsertPropertyAssociation = async (tenant) => {
     if (!tenant?.userId || !tenant?.propertyId) {
         return null;
@@ -29,10 +49,15 @@ const upsertPropertyAssociation = async (tenant) => {
 
 // Invite or add a tenant to a property
 export const inviteTenant = async (req, res) => {
-    const { email, propertyId, leaseStart, leaseEnd } = req.body;
+    const { email, propertyId, leaseStart, leaseEnd, securityDeposit } = req.body;
 
     if (!email || !propertyId || !leaseStart || !leaseEnd) {
         return res.status(400).json({ message: "Please fill in all fields" });
+    }
+
+    const parsedSecurityDeposit = Number(securityDeposit ?? 0);
+    if (!Number.isFinite(parsedSecurityDeposit) || parsedSecurityDeposit < 0) {
+        return res.status(400).json({ message: "Security deposit must be a valid non-negative number" });
     }
 
     try {
@@ -64,6 +89,7 @@ export const inviteTenant = async (req, res) => {
             propertyId,
             leaseStart,
             leaseEnd,
+            securityDeposit: parsedSecurityDeposit,
             status: "Pending",
         });
 
@@ -133,6 +159,7 @@ export const acceptInvitation = async (req, res) => {
         tenant.status = "Active";
         await tenant.save();
         await upsertPropertyAssociation(tenant);
+        await updatePropertyOccupancyStatus(tenant.propertyId);
 
         const property = await Property.findById(tenant.propertyId).select("title landlordId");
         if (property?.landlordId) {
@@ -166,6 +193,7 @@ export const rejectInvitation = async (req, res) => {
         const property = await Property.findById(tenant.propertyId).select("title landlordId");
 
         await tenant.deleteOne();
+        await updatePropertyOccupancyStatus(tenant.propertyId);
 
         if (property?.landlordId) {
             await createNotification(
@@ -218,6 +246,7 @@ export const deleteTenant = async (req, res) => {
         }
 
         await tenant.deleteOne();
+        await updatePropertyOccupancyStatus(tenant.propertyId._id);
 
         res.status(200).json({ id: req.params.id });
     } catch (error) {

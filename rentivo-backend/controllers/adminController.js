@@ -451,6 +451,7 @@ export const getAdminTenancies = async (req, res) => {
                 status: item.status,
                 leaseStart: item.leaseStart,
                 leaseEnd: item.leaseEnd,
+                securityDeposit: item.securityDeposit,
                 createdAt: item.createdAt,
                 tenant: item.userId
                     ? {

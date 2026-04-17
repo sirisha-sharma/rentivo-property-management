@@ -45,6 +45,11 @@ export default function TenantInvitations() {
         );
     };
 
+    const formatCurrency = (amount) => {
+        const numericAmount = Number(amount || 0);
+        return `NPR ${numericAmount.toLocaleString()}`;
+    };
+
     const renderItem = ({ item }) => (
         <View style={styles.card}>
             <View style={styles.cardHeader}>
@@ -67,6 +72,9 @@ export default function TenantInvitations() {
             <View style={styles.dateRow}>
                 <Text style={styles.dateText}>
                     Lease: {item.leaseStart ? new Date(item.leaseStart).toLocaleDateString() : "N/A"} - {item.leaseEnd ? new Date(item.leaseEnd).toLocaleDateString() : "N/A"}
+                </Text>
+                <Text style={styles.dateText}>
+                    Security Deposit: {formatCurrency(item.securityDeposit)}
                 </Text>
             </View>
 

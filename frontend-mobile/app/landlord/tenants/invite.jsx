@@ -23,6 +23,7 @@ export default function InviteTenant() {
     const [selectedProperty, setSelectedProperty] = useState("");
     const [leaseStart, setLeaseStart] = useState(new Date());
     const [leaseEnd, setLeaseEnd] = useState(new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)); // 1 year from now
+    const [securityDeposit, setSecurityDeposit] = useState("");
     const [showStartPicker, setShowStartPicker] = useState(false);
     const [showEndPicker, setShowEndPicker] = useState(false);
 
@@ -75,6 +76,11 @@ export default function InviteTenant() {
         });
     };
 
+    const formatCurrency = (amount) => {
+        const numericAmount = Number(amount || 0);
+        return `NPR ${numericAmount.toLocaleString()}`;
+    };
+
     const handleInvite = async () => {
         if (!canInviteTenant) {
             Alert.alert(actionPrompt.title, actionPrompt.message, [
@@ -97,12 +103,19 @@ export default function InviteTenant() {
             return;
         }
 
+        const parsedSecurityDeposit = Number(securityDeposit || 0);
+        if (!Number.isFinite(parsedSecurityDeposit) || parsedSecurityDeposit < 0) {
+            Alert.alert("Error", "Security deposit must be a valid non-negative number");
+            return;
+        }
+
         try {
             await inviteTenant({
                 email,
                 propertyId: selectedProperty,
                 leaseStart: leaseStart.toISOString(),
-                leaseEnd: leaseEnd.toISOString()
+                leaseEnd: leaseEnd.toISOString(),
+                securityDeposit: parsedSecurityDeposit,
             });
             Alert.alert("Success", "Tenant invited successfully", [
                 { text: "OK", onPress: () => router.back() }
@@ -233,6 +246,21 @@ export default function InviteTenant() {
                     />
                 )}
 
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Security Deposit</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="0"
+                        value={securityDeposit}
+                        onChangeText={setSecurityDeposit}
+                        keyboardType="numeric"
+                        placeholderTextColor={COLORS.mutedForeground}
+                    />
+                    <Text style={styles.helperText}>
+                        Tenancy Details will show {formatCurrency(securityDeposit)}.
+                    </Text>
+                </View>
+
                 <TouchableOpacity style={styles.submitButton} onPress={handleInvite} disabled={tenantLoading}>
                     {tenantLoading ? (
                         <ActivityIndicator color="white" />
@@ -308,6 +336,10 @@ const styles = StyleSheet.create({
         fontSize: 16,
         backgroundColor: COLORS.input,
         color: COLORS.foreground,
+    },
+    helperText: {
+        fontSize: 12,
+        color: COLORS.mutedForeground,
     },
     dateButton: {
         height: 48,

@@ -20,6 +20,11 @@ const tenantSchema = mongoose.Schema(
             type: Date,
             required: true,
         },
+        securityDeposit: {
+            type: Number,
+            default: 0,
+            min: 0,
+        },
         status: {
             type: String,
             enum: ["Active", "Past", "Pending"],
