@@ -206,6 +206,39 @@ export default function MaintenanceDetail() {
                     </View>
                 </View>
 
+                {/* Status History Timeline */}
+                {request.statusHistory?.length > 0 && (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionLabel}>Status History</Text>
+                        {request.statusHistory.map((entry, index) => (
+                            <View key={index} style={styles.timelineItem}>
+                                <View style={styles.timelineDotWrapper}>
+                                    <View
+                                        style={[
+                                            styles.timelineDot,
+                                            index === 0 && styles.timelineDotFirst,
+                                        ]}
+                                    />
+                                    {index < request.statusHistory.length - 1 && (
+                                        <View style={styles.timelineLine} />
+                                    )}
+                                </View>
+                                <View style={styles.timelineContent}>
+                                    <Text style={styles.timelineStatus}>
+                                        {entry.status}
+                                    </Text>
+                                    <Text style={styles.timelineDate}>
+                                        {formatDate(entry.changedAt)}
+                                    </Text>
+                                    {entry.note ? (
+                                        <Text style={styles.timelineNote}>{entry.note}</Text>
+                                    ) : null}
+                                </View>
+                            </View>
+                        ))}
+                    </View>
+                )}
+
                 {/* Action Buttons */}
                 <View style={styles.actionSection}>
                     {displayStatus === "Open" && (
@@ -359,5 +392,51 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "600",
         color: COLORS.destructive,
+    },
+    timelineItem: {
+        flexDirection: "row",
+        marginBottom: 4,
+    },
+    timelineDotWrapper: {
+        alignItems: "center",
+        width: 20,
+        marginRight: 12,
+    },
+    timelineDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: COLORS.mutedForeground,
+        marginTop: 4,
+    },
+    timelineDotFirst: {
+        backgroundColor: COLORS.primary,
+    },
+    timelineLine: {
+        width: 2,
+        flex: 1,
+        backgroundColor: COLORS.border,
+        marginTop: 4,
+        marginBottom: -4,
+    },
+    timelineContent: {
+        flex: 1,
+        paddingBottom: 16,
+    },
+    timelineStatus: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.foreground,
+    },
+    timelineDate: {
+        fontSize: 12,
+        color: COLORS.mutedForeground,
+        marginTop: 2,
+    },
+    timelineNote: {
+        fontSize: 12,
+        color: COLORS.mutedForeground,
+        fontStyle: "italic",
+        marginTop: 2,
     },
 });

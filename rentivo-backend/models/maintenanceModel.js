@@ -29,6 +29,16 @@ const maintenanceSchema = mongoose.Schema(
             enum: ["Open", "Pending", "In Progress", "Resolved"],
             default: "Open",
         },
+        statusHistory: [
+            {
+                status: {
+                    type: String,
+                    enum: ["Open", "Pending", "In Progress", "Resolved"],
+                },
+                changedAt: { type: Date, default: Date.now },
+                note: { type: String },
+            },
+        ],
         photos: {
             type: [String],
             default: [],

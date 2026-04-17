@@ -47,6 +47,7 @@ export const createRequest = async (req, res) => {
             photoPublicIds: uploadedPhotos
                 .map((photo) => getUploadedStorageId(photo))
                 .filter(Boolean),
+            statusHistory: [{ status: "Open" }],
         });
         const populatedRequest = await Maintenance.findById(request._id)
             .populate("propertyId")
@@ -144,7 +145,7 @@ export const getRequestById = async (req, res) => {
 // Update maintenance request status (landlord only)
 export const updateRequestStatus = async (req, res) => {
     try {
-        const { status } = req.body;
+        const { status, note } = req.body;
         const request = await Maintenance.findById(req.params.id);
 
         if (!request) {
@@ -157,6 +158,7 @@ export const updateRequestStatus = async (req, res) => {
         }
 
         request.status = status;
+        request.statusHistory.push({ status, changedAt: new Date(), ...(note ? { note } : {}) });
         await request.save();
         const updatedRequest = await Maintenance.findById(request._id)
             .populate("propertyId")
