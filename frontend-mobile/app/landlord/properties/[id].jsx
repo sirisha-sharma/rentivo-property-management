@@ -319,6 +319,26 @@ export default function PropertyDetails() {
                     ))}
                 </View>
 
+                {/* Manage Units */}
+                <View className="flex-row justify-between items-center mb-3">
+                    <Text className="text-sm font-semibold text-foreground">Units</Text>
+                </View>
+                <TouchableOpacity
+                    onPress={() => router.push(`/landlord/units?propertyId=${encodeURIComponent(String(id))}`)}
+                    className="bg-card rounded-xl border border-border p-4 mb-4 flex-row items-center justify-between"
+                >
+                    <View className="flex-row items-center gap-3">
+                        <View className="w-10 h-10 rounded-xl items-center justify-center" style={{ backgroundColor: COLORS.primarySoft }}>
+                            <Ionicons name="business-outline" size={20} color={COLORS.primary} />
+                        </View>
+                        <View>
+                            <Text className="text-sm font-semibold text-foreground">Manage Units</Text>
+                            <Text className="text-xs text-mutedForeground">View, add, or edit units for this property</Text>
+                        </View>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color={COLORS.mutedForeground} />
+                </TouchableOpacity>
+
                 {/* Actions */}
                 <View className="flex-row gap-2">
                     <TouchableOpacity
