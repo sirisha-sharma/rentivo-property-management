@@ -12,6 +12,15 @@ const tenantSchema = mongoose.Schema(
             ref: "Property",
             required: true,
         },
+        unitId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Unit",
+            required: true,
+        },
+        monthlyRent: {
+            type: Number,
+            required: [true, "Please specify monthly rent"],
+        },
         leaseStart: {
             type: Date,
             required: true,

@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ScrollView, Platform } from "react-native";
 import { TenantContext } from "../../../context/TenantContext";
 import { PropertyContext } from "../../../context/PropertyContext";
@@ -10,6 +10,9 @@ import { COLORS } from "../../../constants/theme";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import { SubscriptionContext } from "../../../context/SubscriptionContext";
+import { AuthContext } from "../../../context/AuthContext";
+import { API_BASE_URL } from "../../../constants/config";
+import axios from "axios";
 import {
     SUBSCRIPTION_ACTIONS,
     getSubscriptionActionAccess,
@@ -26,10 +29,15 @@ export default function InviteTenant() {
     const [securityDeposit, setSecurityDeposit] = useState("");
     const [showStartPicker, setShowStartPicker] = useState(false);
     const [showEndPicker, setShowEndPicker] = useState(false);
+    const [selectedUnit, setSelectedUnit] = useState("");
+    const [monthlyRent, setMonthlyRent] = useState("");
+    const [units, setUnits] = useState([]);
+    const [unitsLoading, setUnitsLoading] = useState(false);
 
     const { inviteTenant, loading: tenantLoading } = useContext(TenantContext);
     const { properties, fetchProperties, loading: propertyLoading } = useContext(PropertyContext);
     const { subscription, fetchSubscription } = useContext(SubscriptionContext);
+    const { user } = useContext(AuthContext);
     const router = useRouter();
 
     useFocusEffect(
@@ -53,6 +61,33 @@ export default function InviteTenant() {
             !canInviteTenant ||
             ["expired", "cancelled", "pending_payment"].includes(subscription.status))
     );
+
+    // Fetch vacant units when a property is selected
+    useEffect(() => {
+        if (!selectedProperty) {
+            setUnits([]);
+            setSelectedUnit("");
+            return;
+        }
+        const fetchUnits = async () => {
+            setUnitsLoading(true);
+            try {
+                const response = await axios.get(
+                    `${API_BASE_URL}/units/property/${selectedProperty}`,
+                    { headers: { Authorization: `Bearer ${user?.token}` } }
+                );
+                setUnits(response.data.filter(u => u.status === "vacant"));
+            } catch (err) {
+                console.log("Failed to fetch units", err);
+                setUnits([]);
+            } finally {
+                setUnitsLoading(false);
+            }
+        };
+        fetchUnits();
+        setSelectedUnit("");
+        setMonthlyRent("");
+    }, [selectedProperty, user?.token]);
 
     const handleStartChange = (event, selectedDate) => {
         setShowStartPicker(Platform.OS === "ios");
@@ -98,6 +133,17 @@ export default function InviteTenant() {
             return;
         }
 
+        if (!selectedUnit) {
+            Alert.alert("Error", "Please select a unit");
+            return;
+        }
+
+        const parsedMonthlyRent = Number(monthlyRent || 0);
+        if (!Number.isFinite(parsedMonthlyRent) || parsedMonthlyRent <= 0) {
+            Alert.alert("Error", "Monthly rent must be a valid positive number");
+            return;
+        }
+
         if (leaseEnd <= leaseStart) {
             Alert.alert("Error", "Lease end date must be after start date");
             return;
@@ -113,6 +159,8 @@ export default function InviteTenant() {
             await inviteTenant({
                 email,
                 propertyId: selectedProperty,
+                unitId: selectedUnit,
+                monthlyRent: parsedMonthlyRent,
                 leaseStart: leaseStart.toISOString(),
                 leaseEnd: leaseEnd.toISOString(),
                 securityDeposit: parsedSecurityDeposit,
@@ -201,6 +249,63 @@ export default function InviteTenant() {
                             ))}
                         </ScrollView>
                     )}
+                </View>
+
+                {/* Unit Selector */}
+                {selectedProperty ? (
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Select Unit</Text>
+                        {unitsLoading ? (
+                            <ActivityIndicator color={COLORS.primary} />
+                        ) : units.length === 0 ? (
+                            <Text style={styles.helperText}>No vacant units available for this property.</Text>
+                        ) : (
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.propertyList}>
+                                {units.map((unit) => (
+                                    <TouchableOpacity
+                                        key={unit._id}
+                                        style={[
+                                            styles.unitChip,
+                                            selectedUnit === unit._id && styles.unitChipActive
+                                        ]}
+                                        onPress={() => {
+                                            setSelectedUnit(unit._id);
+                                            if (unit.baseRent) {
+                                                setMonthlyRent(String(unit.baseRent));
+                                            }
+                                        }}
+                                    >
+                                        <Text style={[
+                                            styles.unitText,
+                                            selectedUnit === unit._id && styles.unitTextActive
+                                        ]}>{unit.unitName}</Text>
+                                        {unit.baseRent ? (
+                                            <Text style={[
+                                                styles.unitRentText,
+                                                selectedUnit === unit._id && styles.unitTextActive
+                                            ]}>NPR {unit.baseRent.toLocaleString()}</Text>
+                                        ) : null}
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        )}
+                    </View>
+                ) : null}
+
+                {/* Monthly Rent */}
+                <View style={styles.inputGroup}>
+                    <Text style={styles.label}>Monthly Rent</Text>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="0"
+                        value={monthlyRent}
+                        onChangeText={setMonthlyRent}
+                        keyboardType="numeric"
+                        placeholderTextColor={COLORS.mutedForeground}
+                    />
+                    <Text style={styles.helperText}>
+                        Invoice will be generated for {formatCurrency(monthlyRent)} per month.
+                    </Text>
                 </View>
 
                 <View style={styles.row}>
@@ -391,5 +496,31 @@ const styles = StyleSheet.create({
         color: "white",
         fontWeight: "bold",
         fontSize: 16,
+    },
+    unitChip: {
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 8,
+        backgroundColor: COLORS.muted,
+        borderWidth: 1,
+        borderColor: "transparent",
+        alignItems: "center",
+    },
+    unitChipActive: {
+        backgroundColor: COLORS.card,
+        borderColor: COLORS.primary,
+    },
+    unitText: {
+        fontSize: 14,
+        color: COLORS.mutedForeground,
+    },
+    unitTextActive: {
+        color: COLORS.primary,
+        fontWeight: "600",
+    },
+    unitRentText: {
+        fontSize: 11,
+        color: COLORS.mutedForeground,
+        marginTop: 2,
     },
 });

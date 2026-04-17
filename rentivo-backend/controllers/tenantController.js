@@ -1,6 +1,7 @@
 import Tenant from "../models/tenantModel.js";
 import User from "../models/userModel.js";
 import Property from "../models/propertyModel.js";
+import Unit from "../models/unitModel.js";
 import PropertyAssociation from "../models/propertyAssociationModel.js";
 import { createNotification } from "./notificationController.js";
 
@@ -49,7 +50,7 @@ const upsertPropertyAssociation = async (tenant) => {
 
 // Invite or add a tenant to a property
 export const inviteTenant = async (req, res) => {
-    const { email, propertyId, leaseStart, leaseEnd, securityDeposit } = req.body;
+    const { email, propertyId, unitId, leaseStart, leaseEnd, securityDeposit, monthlyRent } = req.body;
 
     if (!email || !propertyId || !leaseStart || !leaseEnd) {
         return res.status(400).json({ message: "Please fill in all fields" });
@@ -83,10 +84,21 @@ export const inviteTenant = async (req, res) => {
             return res.status(400).json({ message: "Tenant already invited or active for this property." });
         }
 
+        // Validate unit vacancy
+        const unit = await Unit.findById(unitId);
+        if (!unit) {
+            return res.status(404).json({ message: "Unit not found" });
+        }
+        if (unit.status === "occupied") {
+            return res.status(400).json({ message: "This unit is already occupied" });
+        }
+
         // Create Tenant record with Pending status
         const tenant = await Tenant.create({
             userId: user._id,
             propertyId,
+            unitId,
+            monthlyRent: Number(monthlyRent),
             leaseStart,
             leaseEnd,
             securityDeposit: parsedSecurityDeposit,
@@ -160,6 +172,11 @@ export const acceptInvitation = async (req, res) => {
         await tenant.save();
         await upsertPropertyAssociation(tenant);
         await updatePropertyOccupancyStatus(tenant.propertyId);
+
+        // Mark the unit as occupied
+        if (tenant.unitId) {
+            await Unit.findByIdAndUpdate(tenant.unitId, { status: "occupied" });
+        }
 
         const property = await Property.findById(tenant.propertyId).select("title landlordId");
         if (property?.landlordId) {
@@ -243,6 +260,11 @@ export const deleteTenant = async (req, res) => {
                 },
                 { upsert: true, new: true }
             );
+
+            // Mark the unit as vacant when an active tenancy is removed
+            if (tenant.unitId) {
+                await Unit.findByIdAndUpdate(tenant.unitId, { status: "vacant" });
+            }
         }
 
         await tenant.deleteOne();

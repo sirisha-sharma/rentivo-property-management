@@ -116,14 +116,14 @@ export const generateMonthlyInvoices = async ({
                 continue;
             }
 
-            const rentAmount = Number(property.rent || 0);
+            const rentAmount = Number(tenant.monthlyRent || 0);
             if (!Number.isFinite(rentAmount) || rentAmount <= 0) {
                 summary.missingRentCount++;
                 summary.skippedInvoices.push({
                     tenantId: tenant._id.toString(),
                     propertyId: property._id.toString(),
                     propertyTitle: property.title,
-                    reason: "Property rent is missing or zero",
+                    reason: "Tenancy monthly rent is missing or zero",
                 });
                 continue;
             }

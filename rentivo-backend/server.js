@@ -18,6 +18,7 @@ import paymentRoutes from "./routes/paymentRoutes.js";
 import messageRoutes from "./routes/messageRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
+import unitRoutes from "./routes/unitRoutes.js";
 
 dotenv.config();
 
@@ -52,6 +53,7 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/units", unitRoutes);
 
 // Serve uploaded files
 app.use("/uploads", express.static("uploads"));
