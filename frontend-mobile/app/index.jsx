@@ -99,6 +99,15 @@ export default function LoginScreen() {
         selectedRole: role,
       });
 
+      if (response.data.needs2FA) {
+        router.push(
+          `/verify-2fa?userId=${response.data.userId}&email=${encodeURIComponent(
+            email.trim().toLowerCase()
+          )}`
+        );
+        return;
+      }
+
       await login(response.data);
       router.replace(response.data.role === "admin" ? "/admin" : "/dashboard");
     } catch (err) {

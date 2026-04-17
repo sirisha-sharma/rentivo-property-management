@@ -2,7 +2,7 @@ import User from "../models/userModel.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import { sendVerificationEmail, sendPasswordResetEmail } from "../utils/emailService.js";
+import { sendVerificationEmail, sendPasswordResetEmail, send2FAEmail } from "../utils/emailService.js";
 
 const REGISTRATION_ROLES = new Set(["landlord", "tenant"]);
 const LOGIN_SELECTOR_ROLES = new Set(["landlord", "tenant"]);
@@ -143,6 +143,22 @@ const loginUser = async (req, res) => {
       });
     }
 
+    if (user.is2faEnabled) {
+      const rawCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const hashedCode = crypto.createHash("sha256").update(rawCode).digest("hex");
+      user.twoFactorCode = hashedCode;
+      user.twoFactorExpires = new Date(Date.now() + 10 * 60 * 1000);
+      await user.save();
+
+      await send2FAEmail({ to: user.email, name: user.name, code: rawCode });
+
+      return res.json({
+        needs2FA: true,
+        userId: user._id,
+        message: "A verification code has been sent to your email.",
+      });
+    }
+
     console.log(`Login successful for user: ${user.email}`);
     res.json({
       _id: user._id,
@@ -150,6 +166,7 @@ const loginUser = async (req, res) => {
       email: user.email,
       phone: user.phone,
       role: user.role,
+      is2faEnabled: user.is2faEnabled,
       token: generateToken(user._id),
     });
   } catch (error) {
@@ -348,4 +365,70 @@ const resetPassword = async (req, res) => {
   }
 };
 
-export { registerUser, loginUser, verifyEmail, resendVerificationEmail, forgotPassword, resetPassword };
+// Verify 2FA OTP code and complete login
+const verify2FA = async (req, res) => {
+  try {
+    const { userId, code } = req.body;
+
+    if (!userId || !code) {
+      return res.status(400).json({ message: "User ID and verification code are required" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(400).json({ message: "Invalid verification attempt" });
+    }
+
+    if (!user.twoFactorCode || !user.twoFactorExpires) {
+      return res.status(400).json({ message: "No verification code was requested" });
+    }
+
+    if (user.twoFactorExpires < Date.now()) {
+      return res.status(400).json({ message: "Verification code has expired. Please sign in again." });
+    }
+
+    const hashedCode = crypto.createHash("sha256").update(code.trim()).digest("hex");
+    if (hashedCode !== user.twoFactorCode) {
+      return res.status(400).json({ message: "Invalid verification code" });
+    }
+
+    user.twoFactorCode = undefined;
+    user.twoFactorExpires = undefined;
+    await user.save();
+
+    console.log(`2FA verified for user: ${user.email}`);
+    res.json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      is2faEnabled: user.is2faEnabled,
+      token: generateToken(user._id),
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Toggle 2FA on/off for the authenticated user
+const toggle2FA = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    user.is2faEnabled = !user.is2faEnabled;
+    await user.save();
+
+    res.json({
+      is2faEnabled: user.is2faEnabled,
+      message: `Two-factor authentication has been ${user.is2faEnabled ? "enabled" : "disabled"}.`,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export { registerUser, loginUser, verifyEmail, resendVerificationEmail, forgotPassword, resetPassword, verify2FA, toggle2FA };

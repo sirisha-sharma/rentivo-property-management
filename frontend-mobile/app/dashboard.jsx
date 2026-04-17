@@ -429,7 +429,9 @@ export default function DashboardScreen() {
             }}
           >
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12, flex: 1 }}>
-              <View
+              <TouchableOpacity
+                onPress={() => router.push("/profile")}
+                activeOpacity={0.8}
                 style={{
                   width: 48,
                   height: 48,
@@ -451,7 +453,7 @@ export default function DashboardScreen() {
                 >
                   {getInitials(user?.name)}
                 </Text>
-              </View>
+              </TouchableOpacity>
 
               <View style={{ flex: 1 }}>
                 <Text

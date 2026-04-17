@@ -25,6 +25,8 @@ export default function RootLayout() {
                         <Stack.Screen name="index" />
                         <Stack.Screen name="register" />
                         <Stack.Screen name="dashboard" />
+                        <Stack.Screen name="verify-2fa" />
+                        <Stack.Screen name="profile" />
                         <Stack.Screen name="notifications" />
                         <Stack.Screen name="modal" />
                       </Stack>

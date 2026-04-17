@@ -36,6 +36,12 @@ const userSchema = mongoose.Schema(
     emailVerificationExpires: Date,
     passwordResetToken: String,
     passwordResetExpires: Date,
+    is2faEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    twoFactorCode: String,
+    twoFactorExpires: Date,
   },
   {
     timestamps: true,

@@ -243,6 +243,83 @@ export const sendPasswordResetEmail = async ({ to, name, resetToken }) => {
 };
 
 /**
+ * Send a 2FA OTP code to the user.
+ *
+ * @param {Object} params
+ * @param {string} params.to   - recipient email address
+ * @param {string} params.name - recipient name
+ * @param {string} params.code - 6-digit OTP code
+ */
+export const send2FAEmail = async ({ to, name, code }) => {
+    try {
+        if (!to) return;
+        const tx = getTransporter();
+        if (!tx) return;
+
+        const greeting = name ? `Hi ${name},` : "Hello,";
+        const fromName = process.env.SMTP_FROM_NAME || "Rentivo";
+        const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER;
+
+        const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your verification code - Rentivo</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f6f8;font-family:Arial,Helvetica,sans-serif;color:#111827;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f8;padding:24px 0;">
+    <tr><td align="center">
+      <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+        <tr>
+          <td style="background-color:#2563eb;padding:20px 24px;color:#ffffff;">
+            <h1 style="margin:0;font-size:20px;font-weight:600;">Rentivo</h1>
+            <p style="margin:4px 0 0 0;font-size:13px;opacity:0.9;">Two-Factor Authentication</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:24px;">
+            <p style="margin:0 0 12px 0;font-size:15px;">${greeting}</p>
+            <p style="margin:0 0 16px 0;font-size:15px;line-height:1.5;color:#374151;">
+              Enter the code below to complete your sign-in. This code expires in <strong>10 minutes</strong>.
+            </p>
+            <div style="background-color:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:20px;text-align:center;margin-bottom:16px;">
+              <p style="margin:0 0 6px 0;font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:0.1em;">Verification code</p>
+              <p style="margin:0;font-size:32px;font-weight:700;font-family:monospace;color:#0f172a;letter-spacing:0.3em;">${code}</p>
+            </div>
+            <p style="margin:0;font-size:13px;color:#6b7280;">If you did not attempt to sign in, please ignore this email. Your account is safe.</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:16px 24px;border-top:1px solid #e5e7eb;background-color:#f9fafb;">
+            <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;">
+              This is an automated message from Rentivo Property Management. Do not reply.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+        const text = `${greeting}\n\nYour Rentivo verification code is: ${code}\n\nThis code expires in 10 minutes.\n\nIf you did not attempt to sign in, please ignore this email.\n\n— Rentivo`;
+
+        await tx.sendMail({
+            from: `"${fromName}" <${fromEmail}>`,
+            to,
+            subject: "Your Rentivo verification code",
+            text,
+            html,
+        });
+
+        console.log(`[emailService] 2FA email sent to ${to}`);
+    } catch (error) {
+        console.error("[emailService] Failed to send 2FA email:", error.message);
+    }
+};
+
+/**
  * Verify SMTP connection (useful at startup for debugging).
  */
 export const verifyEmailConnection = async () => {
