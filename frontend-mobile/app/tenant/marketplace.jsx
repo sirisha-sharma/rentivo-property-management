@@ -224,10 +224,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     overflow: "hidden",
   },
-  propertyImage: { width: "100%", height: 180, backgroundColor: COLORS.muted },
+  propertyImage: { width: "100%", height: 160, backgroundColor: COLORS.muted },
   placeholderImage: {
     width: "100%",
-    height: 180,
+    height: 160,
     backgroundColor: COLORS.muted,
     justifyContent: "center",
     alignItems: "center",
