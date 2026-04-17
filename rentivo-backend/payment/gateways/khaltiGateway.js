@@ -73,7 +73,7 @@ export const initializeKhaltiPayment = async (
 
         const response = await axios.post(config.paymentUrl, payload, {
             headers: {
-                Authorization: `key ${config.secretKey}`,
+                Authorization: `Key ${config.secretKey}`,
                 "Content-Type": "application/json",
             },
         });
@@ -126,7 +126,7 @@ export const verifyKhaltiPayment = async (pidx) => {
             { pidx },
             {
                 headers: {
-                    Authorization: `key ${config.secretKey}`,
+                    Authorization: `Key ${config.secretKey}`,
                     "Content-Type": "application/json",
                 },
             }
