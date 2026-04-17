@@ -4,6 +4,7 @@ import Property from "../models/propertyModel.js";
 import Unit from "../models/unitModel.js";
 import PropertyAssociation from "../models/propertyAssociationModel.js";
 import { createNotification } from "./notificationController.js";
+import { syncPropertyUnits } from "../utils/propertyUnits.js";
 
 const updatePropertyOccupancyStatus = async (propertyId) => {
     if (!propertyId) {
@@ -21,6 +22,7 @@ const updatePropertyOccupancyStatus = async (propertyId) => {
 
     property.status = activeTenants >= property.units ? "occupied" : "vacant";
     await property.save();
+    await syncPropertyUnits(property);
 
     return property.status;
 };
@@ -85,9 +87,9 @@ export const inviteTenant = async (req, res) => {
         }
 
         // Validate unit vacancy
-        const unit = await Unit.findById(unitId);
+        const unit = await Unit.findOne({ _id: unitId, propertyId });
         if (!unit) {
-            return res.status(404).json({ message: "Unit not found" });
+            return res.status(404).json({ message: "Unit not found for this property" });
         }
         if (unit.status === "occupied") {
             return res.status(400).json({ message: "This unit is already occupied" });

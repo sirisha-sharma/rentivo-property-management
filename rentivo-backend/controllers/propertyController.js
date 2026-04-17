@@ -7,6 +7,34 @@ import {
     resolveNepalDistrict,
 } from "../utils/nepalDistricts.js";
 import { getUploadedFileUrl, removeStoredFiles } from "../utils/storage.js";
+import {
+    assertUnitCountCanBeApplied,
+    syncPropertyUnits,
+} from "../utils/propertyUnits.js";
+
+const parseJsonArrayField = (value, fallback = []) => {
+    if (value == null) {
+        return fallback;
+    }
+
+    if (Array.isArray(value)) {
+        return value;
+    }
+
+    if (typeof value !== "string") {
+        return fallback;
+    }
+
+    try {
+        const parsedValue = JSON.parse(value);
+        return Array.isArray(parsedValue) ? parsedValue : fallback;
+    } catch (_error) {
+        return fallback;
+    }
+};
+
+const dedupeStringList = (values = []) =>
+    [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))];
 
 const buildRatingSummaryMap = async (propertyIds) => {
     if (!propertyIds.length) {
@@ -309,6 +337,8 @@ export const createProperty = async (req, res) => {
             description: description || "",
             landlordId: req.user._id,
         });
+
+        await syncPropertyUnits(property);
         res.status(201).json(property);
     } catch (error) {
         await removeStoredFiles(uploadedFiles, { resourceType: "image" });
@@ -350,58 +380,61 @@ export const updateProperty = async (req, res) => {
             return res.status(400).json({ message: "Please select a valid district in Nepal" });
         }
 
-        // Handle uploaded images
-        let updatedImages = [...property.images]; // Keep existing images
-        if (req.files && req.files.length > 0) {
-            const newImagePaths = req.files.map((file) => getUploadedFileUrl(file)).filter(Boolean);
-            updatedImages = [...updatedImages, ...newImagePaths]; // Add new images
+        const nextUnitCount =
+            req.body.units != null ? Number.parseInt(req.body.units, 10) : property.units;
+        const nextRent =
+            req.body.rent != null && req.body.rent !== ""
+                ? Number.parseFloat(req.body.rent)
+                : 0;
+        const nextType = req.body.type || property.type;
+
+        if (Number.isFinite(nextUnitCount) && nextUnitCount > 0) {
+            await assertUnitCountCanBeApplied(property._id, nextUnitCount);
         }
 
-        // Parse and merge URL images
-        if (req.body.imageUrls) {
-            try {
-                const urlImages = JSON.parse(req.body.imageUrls);
-                updatedImages = [...updatedImages, ...urlImages];
-            } catch (e) {
-                // Invalid JSON, ignore
-            }
-        }
+        const uploadedImagePaths = uploadedFiles
+            .map((file) => getUploadedFileUrl(file))
+            .filter(Boolean);
+        const retainedImageUrls = parseJsonArrayField(req.body.imageUrls, property.images);
+        const updatedImages = dedupeStringList([
+            ...retainedImageUrls,
+            ...uploadedImagePaths,
+        ]);
 
-        // Parse roomSizes if it comes as a JSON string
-        let parsedRoomSizes = req.body.roomSizes;
-        if (typeof req.body.roomSizes === 'string') {
-            try {
-                parsedRoomSizes = JSON.parse(req.body.roomSizes);
-            } catch (e) {
-                parsedRoomSizes = property.roomSizes; // Keep existing if parse fails
-            }
-        }
+        const parsedRoomSizes = parseJsonArrayField(req.body.roomSizes, property.roomSizes);
+        const parsedAmenities = parseJsonArrayField(req.body.amenities, property.amenities);
 
-        // Parse amenities if it comes as a JSON string
-        let parsedAmenities = req.body.amenities;
-        if (typeof req.body.amenities === 'string') {
-            try {
-                parsedAmenities = JSON.parse(req.body.amenities);
-            } catch (e) {
-                parsedAmenities = property.amenities; // Keep existing if parse fails
-            }
-        }
+        const updatePayload = {
+            title: req.body.title ?? property.title,
+            address: req.body.address ?? property.address,
+            district: nextDistrict,
+            type: nextType,
+            units: Number.isFinite(nextUnitCount) && nextUnitCount > 0 ? nextUnitCount : property.units,
+            splitMethod: req.body.splitMethod ?? property.splitMethod,
+            status: req.body.status ?? property.status,
+            rent: Number.isFinite(nextRent) ? nextRent : property.rent,
+            description: req.body.description ?? property.description,
+            roomSizes: parsedRoomSizes,
+            amenities: parsedAmenities,
+            images: updatedImages,
+        };
 
         const updatedProperty = await Property.findByIdAndUpdate(
             req.params.id,
-            {
-                ...req.body,
-                district: nextDistrict,
-                images: updatedImages,
-                roomSizes: parsedRoomSizes,
-                amenities: parsedAmenities,
-            },
+            updatePayload,
             { new: true, runValidators: true }
         );
+
+        await syncPropertyUnits(updatedProperty);
 
         res.status(200).json(updatedProperty);
     } catch (error) {
         await removeStoredFiles(uploadedFiles, { resourceType: "image" });
+
+        if (error.statusCode) {
+            return res.status(error.statusCode).json({ message: error.message });
+        }
+
         res.status(500).json({ message: error.message });
     }
 };

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "frontend-mobile",
+    "name": "Rentivo",
     "slug": "frontend-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -19,7 +19,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.sirishasharma.rentivo"
     },
     "web": {
       "output": "static",
@@ -45,6 +46,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "a4377c0e-674b-45f5-ae4d-19286916751f"
+      }
     }
   }
 }

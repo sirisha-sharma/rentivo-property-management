@@ -23,6 +23,33 @@ export const PropertyProvider = ({ children }) => {
         };
     }, [user?.token]);
 
+    const appendImagePayload = useCallback((formData, images = []) => {
+        const retainedImages = [];
+
+        for (const image of images) {
+            if (!image) {
+                continue;
+            }
+
+            if (String(image).startsWith("file://")) {
+                const filename = image.split("/").pop();
+                const match = /\.(\w+)$/.exec(filename);
+                const type = match ? `image/${match[1]}` : "image/jpeg";
+
+                formData.append("images", {
+                    uri: image,
+                    name: filename,
+                    type,
+                });
+                continue;
+            }
+
+            retainedImages.push(image);
+        }
+
+        formData.append("imageUrls", JSON.stringify(retainedImages));
+    }, []);
+
     const fetchProperties = useCallback(async () => {
         setLoading(true);
         try {
@@ -64,38 +91,13 @@ export const PropertyProvider = ({ children }) => {
 
             // Append arrays as JSON strings
             if (propertyData.roomSizes && propertyData.roomSizes.length > 0) {
-                formData.append('roomSizes', JSON.stringify(propertyData.roomSizes));
+                formData.append("roomSizes", JSON.stringify(propertyData.roomSizes));
             }
             if (propertyData.amenities && propertyData.amenities.length > 0) {
-                formData.append('amenities', JSON.stringify(propertyData.amenities));
+                formData.append("amenities", JSON.stringify(propertyData.amenities));
             }
 
-            // Handle images - separate local files from URLs
-            const urlImages = [];
-            if (propertyData.images && propertyData.images.length > 0) {
-                for (const img of propertyData.images) {
-                    if (img.startsWith('file://')) {
-                        // Local file - upload it
-                        const filename = img.split('/').pop();
-                        const match = /\.(\w+)$/.exec(filename);
-                        const type = match ? `image/${match[1]}` : 'image/jpeg';
-
-                        formData.append('images', {
-                            uri: img,
-                            name: filename,
-                            type: type
-                        });
-                    } else {
-                        // URL - collect for sending as JSON
-                        urlImages.push(img);
-                    }
-                }
-            }
-
-            // Add URL images as JSON array
-            if (urlImages.length > 0) {
-                formData.append('imageUrls', JSON.stringify(urlImages));
-            }
+            appendImagePayload(formData, propertyData.images);
 
             const response = await axios.post(API_URL, formData, {
                 headers: {
@@ -113,7 +115,7 @@ export const PropertyProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    }, [API_URL, user?.token]);
+    }, [API_URL, appendImagePayload, user?.token]);
 
     const updateProperty = useCallback(async (id, propertyData) => {
         setLoading(true);
@@ -128,43 +130,14 @@ export const PropertyProvider = ({ children }) => {
             formData.append('units', propertyData.units);
             formData.append('splitMethod', propertyData.splitMethod);
             formData.append('status', propertyData.status);
-            if (propertyData.rent) formData.append('rent', propertyData.rent);
-            if (propertyData.description) formData.append('description', propertyData.description);
+            formData.append('rent', propertyData.rent ?? 0);
+            formData.append('description', propertyData.description ?? "");
 
             // Append arrays as JSON strings
-            if (propertyData.roomSizes && propertyData.roomSizes.length > 0) {
-                formData.append('roomSizes', JSON.stringify(propertyData.roomSizes));
-            }
-            if (propertyData.amenities && propertyData.amenities.length > 0) {
-                formData.append('amenities', JSON.stringify(propertyData.amenities));
-            }
+            formData.append('roomSizes', JSON.stringify(propertyData.roomSizes || []));
+            formData.append('amenities', JSON.stringify(propertyData.amenities || []));
 
-            // Handle images - separate local files from URLs
-            const urlImages = [];
-            if (propertyData.images && propertyData.images.length > 0) {
-                for (const img of propertyData.images) {
-                    if (img.startsWith('file://')) {
-                        // Local file - upload it
-                        const filename = img.split('/').pop();
-                        const match = /\.(\w+)$/.exec(filename);
-                        const type = match ? `image/${match[1]}` : 'image/jpeg';
-
-                        formData.append('images', {
-                            uri: img,
-                            name: filename,
-                            type: type
-                        });
-                    } else {
-                        // URL or server path - collect for sending as JSON
-                        urlImages.push(img);
-                    }
-                }
-            }
-
-            // Add URL images as JSON array
-            if (urlImages.length > 0) {
-                formData.append('imageUrls', JSON.stringify(urlImages));
-            }
+            appendImagePayload(formData, propertyData.images);
 
             const response = await axios.put(`${API_URL}/${id}`, formData, {
                 headers: {
@@ -182,7 +155,7 @@ export const PropertyProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    }, [API_URL, user?.token]);
+    }, [API_URL, appendImagePayload, user?.token]);
 
     const deleteProperty = useCallback(async (id) => {
         setLoading(true);

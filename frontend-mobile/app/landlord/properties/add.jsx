@@ -93,6 +93,9 @@ export default function AddProperty() {
         setRoomSizes((prev) =>
             prev.map((room, i) => (i === index ? { ...room, [field]: value } : room))
         );
+        if (errors[`room-${index}`]) {
+            setErrors((prev) => ({ ...prev, [`room-${index}`]: "" }));
+        }
     };
 
     const pickImageFromGallery = async () => {
@@ -445,16 +448,19 @@ export default function AddProperty() {
                             <View key={index} className="flex-row gap-2 items-center">
                                 <TextInput
                                     className="flex-1 bg-card h-10 px-3 rounded border border-border"
+                                    placeholder={`Room ${index + 1}`}
                                     value={room.name}
                                     onChangeText={(text) => updateRoom(index, "name", text)}
+                                    placeholderTextColor={COLORS.mutedForeground}
                                 />
                                 <TextInput
-                                    className={`w-20 bg-card h-10 px-3 rounded border ${errors[`room-${index}`] ? "border-destructive" : "border-border"
+                                    className={`w-24 bg-card h-10 px-3 rounded border text-center ${errors[`room-${index}`] ? "border-destructive" : "border-border"
                                         }`}
-                                    placeholder="Size"
+                                    placeholder="Sq ft"
                                     value={room.size}
                                     onChangeText={(text) => updateRoom(index, "size", text)}
                                     keyboardType="number-pad"
+                                    placeholderTextColor={COLORS.mutedForeground}
                                 />
                                 <TouchableOpacity
                                     onPress={() => removeRoom(index)}

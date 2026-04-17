@@ -20,6 +20,9 @@ import { COLORS } from "../../../constants/theme";
 import { normalizeLocationValue } from "../../../constants/nepalLocations";
 import { resolveMediaUrl } from "../../../utils/media";
 
+const dedupeItems = (items = []) =>
+    [...new Set(items.map((item) => String(item || "").trim()).filter(Boolean))];
+
 export default function EditProperty() {
     const { getPropertyById, updateProperty } = useContext(PropertyContext);
     const router = useRouter();
@@ -60,9 +63,16 @@ export default function EditProperty() {
                 rent: property.rent?.toString() || "",
                 description: property.description || "",
             });
-            setRoomSizes(property.roomSizes || []);
-            setImages(property.images || []);
-            setAmenities(property.amenities || []);
+            setRoomSizes(
+                property.roomSizes?.length
+                    ? property.roomSizes.map((room) => ({
+                        name: room.name || "",
+                        size: room.size?.toString() || "",
+                    }))
+                    : [{ name: "Room 1", size: "" }]
+            );
+            setImages(dedupeItems(property.images || []));
+            setAmenities(dedupeItems(property.amenities || []));
         } catch (_error) {
             Alert.alert("Error", "Failed to load property");
             router.back();
@@ -74,6 +84,12 @@ export default function EditProperty() {
     useEffect(() => {
         loadProperty();
     }, [loadProperty]);
+
+    useEffect(() => {
+        if (formData.splitMethod === "room-size" && roomSizes.length === 0) {
+            setRoomSizes([{ name: "Room 1", size: "" }]);
+        }
+    }, [formData.splitMethod, roomSizes.length]);
 
     const updateField = (field, value) => {
         setFormData((prev) => ({ ...prev, [field]: value }));
@@ -94,6 +110,9 @@ export default function EditProperty() {
         setRoomSizes((prev) =>
             prev.map((room, i) => (i === index ? { ...room, [field]: value } : room))
         );
+        if (errors[`room-${index}`]) {
+            setErrors((prev) => ({ ...prev, [`room-${index}`]: "" }));
+        }
     };
 
     const pickImageFromGallery = async () => {
@@ -110,13 +129,13 @@ export default function EditProperty() {
         });
 
         if (!result.canceled && result.assets[0]) {
-            setImages((prev) => [...prev, result.assets[0].uri]);
+            setImages((prev) => dedupeItems([...prev, result.assets[0].uri]));
         }
     };
 
     const addImage = () => {
         if (newImageUrl.trim()) {
-            setImages((prev) => [...prev, newImageUrl.trim()]);
+            setImages((prev) => dedupeItems([...prev, newImageUrl.trim()]));
             setNewImageUrl("");
         }
     };
@@ -127,7 +146,7 @@ export default function EditProperty() {
 
     const addAmenityItem = () => {
         if (newAmenity.trim()) {
-            setAmenities((prev) => [...prev, newAmenity.trim()]);
+            setAmenities((prev) => dedupeItems([...prev, newAmenity.trim()]));
             setNewAmenity("");
         }
     };
@@ -144,6 +163,14 @@ export default function EditProperty() {
         if (!formData.type) newErrors.type = "Type is required";
         if (!formData.units) newErrors.units = "Units required";
         if (!formData.splitMethod) newErrors.splitMethod = "Split method required";
+
+        if (formData.splitMethod === "room-size") {
+            roomSizes.forEach((room, index) => {
+                if (!String(room.size || "").trim()) {
+                    newErrors[`room-${index}`] = "Size required";
+                }
+            });
+        }
 
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -166,8 +193,11 @@ export default function EditProperty() {
             Alert.alert("Success", "Property updated successfully", [
                 { text: "OK", onPress: () => router.back() }
             ]);
-        } catch (_error) {
-            Alert.alert("Error", "Failed to update property");
+        } catch (error) {
+            Alert.alert(
+                "Error",
+                error?.response?.data?.message || "Failed to update property"
+            );
         } finally {
             setSaving(false);
         }
@@ -326,11 +356,18 @@ export default function EditProperty() {
                         </ScrollView>
                     )}
                     <TouchableOpacity
-                        style={[styles.addImageRow, { backgroundColor: COLORS.card, borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, height: 48, marginBottom: 8 }]}
+                        style={styles.galleryButton}
                         onPress={pickImageFromGallery}
                     >
-                        <Ionicons name="images-outline" size={20} color={COLORS.foreground} />
-                        <Text style={{ fontSize: 14, fontWeight: "500", color: COLORS.foreground }}>Pick from Gallery</Text>
+                        <View style={styles.galleryButtonIcon}>
+                            <Ionicons name="images-outline" size={20} color={COLORS.primary} />
+                        </View>
+                        <View style={styles.galleryButtonContent}>
+                            <Text style={styles.galleryButtonTitle}>Pick from Gallery</Text>
+                            <Text style={styles.galleryButtonSubtitle}>
+                                Add another property photo from your device.
+                            </Text>
+                        </View>
                     </TouchableOpacity>
                     <View style={styles.addImageRow}>
                         <TextInput
@@ -392,28 +429,45 @@ export default function EditProperty() {
 
                 {formData.splitMethod === "room-size" && (
                     <View style={styles.roomSizesContainer}>
-                        <Text style={styles.helperText}>Enter room sizes in sq. ft.</Text>
+                        <Text style={styles.helperText}>
+                            Enter room sizes in sq. ft. so utility splits stay accurate.
+                        </Text>
                         {roomSizes.map((room, index) => (
-                            <View key={index} style={styles.roomRow}>
-                                <TextInput
-                                    style={[styles.input, styles.roomNameInput]}
-                                    value={room.name}
-                                    onChangeText={(text) => updateRoom(index, "name", text)}
-                                />
-                                <TextInput
-                                    style={[styles.input, styles.roomSizeInput]}
-                                    placeholder="Size"
-                                    value={room.size?.toString()}
-                                    onChangeText={(text) => updateRoom(index, "size", text)}
-                                    keyboardType="number-pad"
-                                />
-                                <TouchableOpacity
-                                    onPress={() => removeRoom(index)}
-                                    disabled={roomSizes.length === 1}
-                                    style={styles.deleteButton}
-                                >
-                                    <Ionicons name="trash-outline" size={20} color={COLORS.destructive} />
-                                </TouchableOpacity>
+                            <View key={index} style={styles.roomFieldGroup}>
+                                <View style={styles.roomRow}>
+                                    <TextInput
+                                        style={[styles.input, styles.roomNameInput]}
+                                        placeholder={`Room ${index + 1}`}
+                                        value={room.name}
+                                        onChangeText={(text) => updateRoom(index, "name", text)}
+                                        placeholderTextColor={COLORS.mutedForeground}
+                                    />
+                                    <TextInput
+                                        style={[
+                                            styles.input,
+                                            styles.roomSizeInput,
+                                            errors[`room-${index}`] && styles.inputError,
+                                        ]}
+                                        placeholder="Sq ft"
+                                        value={room.size?.toString()}
+                                        onChangeText={(text) => updateRoom(index, "size", text)}
+                                        keyboardType="number-pad"
+                                        placeholderTextColor={COLORS.mutedForeground}
+                                    />
+                                    <TouchableOpacity
+                                        onPress={() => removeRoom(index)}
+                                        disabled={roomSizes.length === 1}
+                                        style={[
+                                            styles.deleteButton,
+                                            roomSizes.length === 1 && styles.deleteButtonDisabled,
+                                        ]}
+                                    >
+                                        <Ionicons name="trash-outline" size={18} color={COLORS.destructive} />
+                                    </TouchableOpacity>
+                                </View>
+                                {errors[`room-${index}`] ? (
+                                    <Text style={styles.errorText}>{errors[`room-${index}`]}</Text>
+                                ) : null}
                             </View>
                         ))}
                         <TouchableOpacity style={styles.addRoomButton} onPress={addRoom}>
@@ -540,8 +594,43 @@ const styles = StyleSheet.create({
         position: "absolute",
         top: -8,
         right: -8,
-        backgroundColor: "white",
+        backgroundColor: COLORS.background,
         borderRadius: 12,
+    },
+    galleryButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        backgroundColor: COLORS.card,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        borderRadius: 12,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+    },
+    galleryButtonIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        backgroundColor: COLORS.primarySoft,
+        borderWidth: 1,
+        borderColor: "rgba(79,124,255,0.18)",
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    galleryButtonContent: {
+        flex: 1,
+        gap: 2,
+    },
+    galleryButtonTitle: {
+        fontSize: 14,
+        fontWeight: "600",
+        color: COLORS.foreground,
+    },
+    galleryButtonSubtitle: {
+        fontSize: 12,
+        color: COLORS.mutedForeground,
+        lineHeight: 16,
     },
     addImageRow: {
         flexDirection: "row",
@@ -585,6 +674,10 @@ const styles = StyleSheet.create({
     helperText: {
         fontSize: 12,
         color: COLORS.mutedForeground,
+        lineHeight: 18,
+    },
+    roomFieldGroup: {
+        gap: 6,
     },
     roomRow: {
         flexDirection: "row",
@@ -594,15 +687,26 @@ const styles = StyleSheet.create({
     roomNameInput: {
         flex: 1,
         backgroundColor: COLORS.card,
-        height: 40,
+        height: 44,
     },
     roomSizeInput: {
-        width: 80,
+        width: 92,
         backgroundColor: COLORS.card,
-        height: 40,
+        height: 44,
+        textAlign: "center",
     },
     deleteButton: {
-        padding: 8,
+        width: 40,
+        height: 44,
+        borderRadius: 10,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: COLORS.card,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+    },
+    deleteButtonDisabled: {
+        opacity: 0.45,
     },
     addRoomButton: {
         flexDirection: "row",
