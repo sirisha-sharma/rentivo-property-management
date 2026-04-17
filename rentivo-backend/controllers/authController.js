@@ -4,6 +4,18 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { sendVerificationEmail, sendPasswordResetEmail } from "../utils/emailService.js";
 
+const REGISTRATION_ROLES = new Set(["landlord", "tenant"]);
+const LOGIN_SELECTOR_ROLES = new Set(["landlord", "tenant"]);
+
+const normalizeRole = (value) =>
+  typeof value === "string" ? value.trim().toLowerCase() : "";
+
+const formatRoleLabel = (value) => {
+  const normalizedRole = normalizeRole(value);
+  if (!normalizedRole) return "the correct role";
+  return normalizedRole.charAt(0).toUpperCase() + normalizedRole.slice(1);
+};
+
 // Generate JWT Token
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -21,6 +33,13 @@ const registerUser = async (req, res) => {
     }
 
     const trimmedEmail = email.trim().toLowerCase();
+    const normalizedRole = normalizeRole(role) || "tenant";
+
+    if (!REGISTRATION_ROLES.has(normalizedRole)) {
+      return res.status(400).json({
+        message: "Only landlord and tenant accounts can be registered here.",
+      });
+    }
 
     const userExists = await User.findOne({ email: trimmedEmail });
     if (userExists) {
@@ -39,7 +58,7 @@ const registerUser = async (req, res) => {
       email: trimmedEmail,
       password: hashedPassword,
       phone,
-      role: role || "tenant",
+      role: normalizedRole,
       isEmailVerified: false,
       emailVerificationToken: hashedToken,
       emailVerificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000),
@@ -64,12 +83,22 @@ const registerUser = async (req, res) => {
 // Login a user
 const loginUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, selectedRole } = req.body;
 
     if (!email || !password) {
       return res
         .status(400)
         .json({ message: "Please provide email and password" });
+    }
+
+    const normalizedSelectedRole = normalizeRole(selectedRole);
+    if (
+      normalizedSelectedRole &&
+      !LOGIN_SELECTOR_ROLES.has(normalizedSelectedRole)
+    ) {
+      return res.status(400).json({
+        message: "Please choose either landlord or tenant before logging in.",
+      });
     }
 
     const trimmedEmail = email.trim().toLowerCase();
@@ -84,6 +113,14 @@ const loginUser = async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
+    if (user.isActive === false) {
+      return res.status(403).json({
+        message:
+          "This account has been disabled by an administrator. Please contact support.",
+        code: "ACCOUNT_DEACTIVATED",
+      });
+    }
+
     if (!user.isEmailVerified) {
       return res.status(403).json({
         message: "Please verify your email before logging in.",
@@ -92,11 +129,26 @@ const loginUser = async (req, res) => {
       });
     }
 
+    if (
+      user.role !== "admin" &&
+      normalizedSelectedRole &&
+      user.role !== normalizedSelectedRole
+    ) {
+      return res.status(403).json({
+        message: `This account is registered as a ${user.role}. Please select ${formatRoleLabel(
+          user.role
+        )} to continue.`,
+        code: "ROLE_MISMATCH",
+        actualRole: user.role,
+      });
+    }
+
     console.log(`Login successful for user: ${user.email}`);
     res.json({
       _id: user._id,
       name: user.name,
       email: user.email,
+      phone: user.phone,
       role: user.role,
       token: generateToken(user._id),
     });

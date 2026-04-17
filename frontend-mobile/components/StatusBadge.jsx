@@ -12,8 +12,11 @@ const STATUS_MAP = {
   // tenant states
   Active: { bg: COLORS.successSoft, text: COLORS.success },
   active: { bg: COLORS.successSoft, text: COLORS.success },
+  inactive: { bg: COLORS.destructiveSoft, text: COLORS.destructive },
   Pending: { bg: COLORS.warningSoft, text: COLORS.warning },
   pending: { bg: COLORS.warningSoft, text: COLORS.warning },
+  verified: { bg: COLORS.successSoft, text: COLORS.success },
+  unverified: { bg: COLORS.warningSoft, text: COLORS.warning },
 
   // maintenance states
   Open: { bg: COLORS.warningSoft, text: COLORS.warning },
@@ -27,6 +30,12 @@ const STATUS_MAP = {
   paid: { bg: COLORS.successSoft, text: COLORS.success },
   Overdue: { bg: COLORS.destructiveSoft, text: COLORS.destructive },
   overdue: { bg: COLORS.destructiveSoft, text: COLORS.destructive },
+
+  // subscription states
+  trialing: { bg: COLORS.infoSoft, text: COLORS.info },
+  expired: { bg: COLORS.destructiveSoft, text: COLORS.destructive },
+  cancelled: { bg: COLORS.destructiveSoft, text: COLORS.destructive },
+  pending_payment: { bg: COLORS.warningSoft, text: COLORS.warning },
 };
 
 /**

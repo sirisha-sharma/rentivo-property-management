@@ -352,6 +352,11 @@ export default function DashboardScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      if (user?.role === "admin") {
+        router.replace("/admin");
+        return undefined;
+      }
+
       void fetchStats();
       void fetchNotifications();
       void fetchUnreadCount();
@@ -359,13 +364,17 @@ export default function DashboardScreen() {
         void fetchSubscription();
       }
       return undefined;
-    }, [fetchNotifications, fetchStats, fetchSubscription, fetchUnreadCount, user?.role])
+    }, [fetchNotifications, fetchStats, fetchSubscription, fetchUnreadCount, router, user?.role])
   );
 
   const handleLogout = async () => {
     await logout();
     router.replace("/");
   };
+
+  if (user?.role === "admin") {
+    return null;
+  }
 
   const isLandlord = user?.role === "landlord";
 

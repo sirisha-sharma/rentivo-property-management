@@ -4,6 +4,7 @@ import {
   Text,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -95,20 +96,31 @@ export default function LoginScreen() {
       const response = await axios.post(`${API_BASE_URL}/auth/login`, {
         email: email.trim().toLowerCase(),
         password,
+        selectedRole: role,
       });
 
       await login(response.data);
-      router.replace("/dashboard");
+      router.replace(response.data.role === "admin" ? "/admin" : "/dashboard");
     } catch (err) {
+      const responseData = err.response?.data || {};
+
       if (
         err.response?.status === 403 &&
-        err.response?.data?.needsVerification
+        responseData?.needsVerification
       ) {
-        setUnverifiedEmail(err.response.data.email || email);
+        setUnverifiedEmail(responseData.email || email);
         setError("Please verify your email before logging in.");
+      } else if (responseData?.code === "ROLE_MISMATCH") {
+        setUnverifiedEmail("");
+        setError("");
+        Alert.alert("Role mismatch", responseData.message || "Please choose the correct role for this account.");
+      } else if (responseData?.code === "ACCOUNT_DEACTIVATED") {
+        setUnverifiedEmail("");
+        setError("");
+        Alert.alert("Account disabled", responseData.message || "This account has been disabled.");
       } else {
         setUnverifiedEmail("");
-        setError(err.response?.data?.message || "Invalid email or password");
+        setError(responseData.message || "Invalid email or password");
       }
     } finally {
       setLoading(false);

@@ -21,8 +21,12 @@ const userSchema = mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["landlord", "tenant"],
+      enum: ["landlord", "tenant", "admin"],
       default: "tenant",
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
     },
     isEmailVerified: {
       type: Boolean,
