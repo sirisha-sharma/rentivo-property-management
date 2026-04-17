@@ -89,6 +89,18 @@ export default function UploadDocument() {
             <TopBar title="Upload Document" showBack />
 
             <ScrollView contentContainerStyle={styles.form}>
+                <View style={styles.introCard}>
+                    <View style={styles.introIcon}>
+                        <Ionicons name="cloud-upload-outline" size={20} color={COLORS.primary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.introTitle}>Organize key paperwork</Text>
+                        <Text style={styles.introText}>
+                            Upload agreements, proofs, and property documents so teams can access them securely later.
+                        </Text>
+                    </View>
+                </View>
+
                 {/* Property Selection */}
                 <Text style={styles.label}>Property *</Text>
                 <View style={styles.pickerContainer}>
@@ -179,6 +191,38 @@ const styles = StyleSheet.create({
     },
     form: {
         padding: 20,
+    },
+    introCard: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        gap: 14,
+        backgroundColor: COLORS.surface,
+        borderRadius: 18,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        padding: 16,
+        marginBottom: 4,
+    },
+    introIcon: {
+        width: 42,
+        height: 42,
+        borderRadius: 14,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: COLORS.primarySoft,
+        borderWidth: 1,
+        borderColor: "rgba(47,123,255,0.22)",
+    },
+    introTitle: {
+        fontSize: 16,
+        fontWeight: "700",
+        color: COLORS.foreground,
+    },
+    introText: {
+        marginTop: 4,
+        fontSize: 13,
+        lineHeight: 20,
+        color: COLORS.mutedForeground,
     },
     label: {
         fontSize: 14,

@@ -131,7 +131,7 @@ export default function InvoiceList() {
                         </TouchableOpacity>
                     )}
                     <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item)}>
-                        <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                        <Ionicons name="trash-outline" size={16} color={COLORS.destructive} />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
         gap: 4,
         paddingHorizontal: 12,
         paddingVertical: 8,
-        backgroundColor: "#D1FAE5",
+        backgroundColor: COLORS.successSoft,
         borderRadius: 8,
     },
     paidBtnText: {
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
     deleteBtn: {
         paddingHorizontal: 12,
         paddingVertical: 8,
-        backgroundColor: "#FEE2E2",
+        backgroundColor: COLORS.destructiveSoft,
         borderRadius: 8,
     },
     fab: {

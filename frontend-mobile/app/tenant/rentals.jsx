@@ -6,6 +6,8 @@ import {
     TouchableOpacity,
     ActivityIndicator,
     RefreshControl,
+    StyleSheet,
+    useWindowDimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,11 +19,13 @@ import { TenantContext } from "../../context/TenantContext";
 
 export default function MyRentals() {
     const router = useRouter();
+    const { width } = useWindowDimensions();
     const { invitations, fetchMyInvitations } = useContext(TenantContext);
 
     const [activeRentals, setActiveRentals] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const isCompactActions = width <= 380;
 
     const loadRentals = useCallback(async () => {
         try {
@@ -193,56 +197,51 @@ export default function MyRentals() {
                                 )}
 
                                 {/* Action Buttons */}
-                                <View style={{
-                                    flexDirection: "row",
-                                    gap: 8,
-                                    paddingTop: 8,
-                                    flexWrap: "wrap",
-                                }}>
+                                <View
+                                    style={[
+                                        styles.actionsRow,
+                                        isCompactActions && styles.actionsColumn,
+                                    ]}
+                                >
                                     <TouchableOpacity
-                                        style={{
-                                            flex: 1,
-                                            paddingVertical: 10,
-                                            paddingHorizontal: 16,
-                                            borderRadius: 8,
-                                            backgroundColor: COLORS.primary,
-                                            alignItems: "center",
-                                        }}
+                                        style={[
+                                            styles.actionButton,
+                                            styles.primaryButton,
+                                            isCompactActions && styles.actionButtonFull,
+                                        ]}
                                         onPress={() => router.push("/tenant/invoices")}
                                     >
-                                        <Text style={{ fontSize: 14, fontWeight: "600", color: "#fff" }}>
+                                        <View style={styles.actionContent}>
+                                            <Ionicons name="receipt-outline" size={16} color="#fff" />
+                                            <Text style={[styles.actionText, styles.primaryButtonText]}>
                                             View Invoices
-                                        </Text>
+                                            </Text>
+                                        </View>
                                     </TouchableOpacity>
                                     <TouchableOpacity
-                                        style={{
-                                            flex: 1,
-                                            paddingVertical: 10,
-                                            paddingHorizontal: 16,
-                                            borderRadius: 8,
-                                            borderWidth: 1,
-                                            borderColor: COLORS.border,
-                                            backgroundColor: COLORS.card,
-                                            alignItems: "center",
-                                        }}
+                                        style={[
+                                            styles.actionButton,
+                                            styles.secondaryButton,
+                                            isCompactActions && styles.actionButtonFull,
+                                        ]}
                                         onPress={() => router.push("/tenant/documents")}
                                     >
-                                        <Text style={{ fontSize: 14, fontWeight: "600", color: COLORS.foreground }}>
-                                            Documents
-                                        </Text>
+                                        <View style={styles.actionContent}>
+                                            <Ionicons
+                                                name="folder-open-outline"
+                                                size={16}
+                                                color={COLORS.foreground}
+                                            />
+                                            <Text style={styles.actionText}>Documents</Text>
+                                        </View>
                                     </TouchableOpacity>
                                     {rental.propertyId?.landlordId?._id && (
                                         <TouchableOpacity
-                                            style={{
-                                                flex: 1,
-                                                paddingVertical: 10,
-                                                paddingHorizontal: 16,
-                                                borderRadius: 8,
-                                                backgroundColor: "#EFF6FF",
-                                                borderWidth: 1,
-                                                borderColor: COLORS.primary,
-                                                alignItems: "center",
-                                            }}
+                                            style={[
+                                                styles.actionButton,
+                                                styles.outlineButton,
+                                                isCompactActions && styles.actionButtonFull,
+                                            ]}
                                             onPress={() => {
                                                 const landlordId = rental.propertyId.landlordId._id;
                                                 const landlordName = rental.propertyId.landlordId.name;
@@ -250,9 +249,16 @@ export default function MyRentals() {
                                                 router.push(`/messages/${threadId}?name=${encodeURIComponent(landlordName || "Landlord")}&property=${encodeURIComponent(rental.propertyId?.title || "")}`);
                                             }}
                                         >
-                                            <Text style={{ fontSize: 14, fontWeight: "600", color: COLORS.primary }}>
-                                                Message Landlord
-                                            </Text>
+                                            <View style={styles.actionContent}>
+                                                <Ionicons
+                                                    name="chatbubble-ellipses-outline"
+                                                    size={16}
+                                                    color={COLORS.primary}
+                                                />
+                                                <Text style={[styles.actionText, styles.outlineButtonText]}>
+                                                    Message Landlord
+                                                </Text>
+                                            </View>
                                         </TouchableOpacity>
                                     )}
                                 </View>
@@ -264,3 +270,61 @@ export default function MyRentals() {
         </View>
     );
 }
+
+const styles = StyleSheet.create({
+    actionsRow: {
+        flexDirection: "row",
+        gap: 8,
+        paddingTop: 8,
+        flexWrap: "wrap",
+    },
+    actionsColumn: {
+        flexDirection: "column",
+    },
+    actionButton: {
+        flex: 1,
+        minWidth: 0,
+        paddingVertical: 12,
+        paddingHorizontal: 14,
+        borderRadius: 12,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    actionButtonFull: {
+        width: "100%",
+        flexBasis: "100%",
+        flexGrow: 0,
+        flexShrink: 0,
+    },
+    actionContent: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+    },
+    actionText: {
+        fontSize: 14,
+        fontWeight: "700",
+        color: COLORS.foreground,
+        textAlign: "center",
+    },
+    primaryButton: {
+        backgroundColor: COLORS.primary,
+    },
+    primaryButtonText: {
+        color: "#fff",
+    },
+    secondaryButton: {
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        backgroundColor: COLORS.card,
+    },
+    outlineButton: {
+        backgroundColor: COLORS.primarySoft,
+        borderWidth: 1,
+        borderColor: COLORS.primary,
+    },
+    outlineButtonText: {
+        color: COLORS.primary,
+    },
+});

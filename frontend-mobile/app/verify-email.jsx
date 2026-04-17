@@ -38,7 +38,7 @@ export default function VerifyEmailScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
 
       <View
         style={{
@@ -54,7 +54,9 @@ export default function VerifyEmailScreen() {
             width: 96,
             height: 96,
             borderRadius: 48,
-            backgroundColor: "#EFF6FF",
+            backgroundColor: COLORS.primarySoft,
+            borderWidth: 1,
+            borderColor: "rgba(47,123,255,0.35)",
             alignItems: "center",
             justifyContent: "center",
             marginBottom: 28,
@@ -123,9 +125,9 @@ export default function VerifyEmailScreen() {
             style={{
               flexDirection: "row",
               alignItems: "center",
-              backgroundColor: "#ECFDF5",
+              backgroundColor: COLORS.successSoft,
               borderWidth: 1,
-              borderColor: "#A7F3D0",
+              borderColor: "rgba(16,185,129,0.35)",
               borderRadius: 12,
               padding: 14,
               marginBottom: 16,
@@ -140,7 +142,7 @@ export default function VerifyEmailScreen() {
             />
             <Text
               style={{
-                color: "#065F46",
+                color: COLORS.success,
                 fontSize: 14,
                 flex: 1,
                 lineHeight: 20,
@@ -156,9 +158,9 @@ export default function VerifyEmailScreen() {
             style={{
               flexDirection: "row",
               alignItems: "center",
-              backgroundColor: "#FEF2F2",
+              backgroundColor: COLORS.destructiveSoft,
               borderWidth: 1,
-              borderColor: "#FECACA",
+              borderColor: "rgba(239,68,68,0.35)",
               borderRadius: 12,
               padding: 14,
               marginBottom: 16,
@@ -191,7 +193,7 @@ export default function VerifyEmailScreen() {
           activeOpacity={0.85}
           style={{
             width: "100%",
-            backgroundColor: loading ? "#93C5FD" : COLORS.primary,
+            backgroundColor: loading ? "rgba(47,123,255,0.45)" : COLORS.primary,
             borderRadius: 14,
             paddingVertical: 16,
             alignItems: "center",

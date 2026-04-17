@@ -46,12 +46,12 @@ export const getPaymentConfig = async () => {
  * @param {string} invoiceId - Invoice ID
  * @param {string} gateway - Payment gateway (esewa or khalti)
  */
-export const initiatePayment = async (invoiceId, gateway) => {
+export const initiatePayment = async (invoiceId, gateway, clientRedirectUri = null) => {
     try {
         const headers = await getAuthHeaders();
         const response = await axios.post(
             `${API_BASE_URL}/payments/initiate`,
-            { invoiceId, gateway },
+            { invoiceId, gateway, clientRedirectUri },
             { headers }
         );
         return response.data;

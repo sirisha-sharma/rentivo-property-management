@@ -117,7 +117,7 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
 
       <KeyboardContainer style={{ flex: 1 }} {...keyboardContainerProps}>
         <ScrollView
@@ -143,7 +143,7 @@ export default function LoginScreen() {
             {/* ── Brand / Hero ── */}
             <View style={{ alignItems: "center", marginBottom: heroMarginBottom }}>
               <LinearGradient
-                colors={["#3B82F6", "#1D4ED8"]}
+                colors={[COLORS.primary, COLORS.primaryDeep]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={{
@@ -153,10 +153,10 @@ export default function LoginScreen() {
                   alignItems: "center",
                   justifyContent: "center",
                   marginBottom: isCompactAndroid ? 14 : 16,
-                  shadowColor: "#2563EB",
-                  shadowOffset: { width: 0, height: 8 },
-                  shadowOpacity: 0.35,
-                  shadowRadius: 16,
+                  shadowColor: COLORS.primary,
+                  shadowOffset: { width: 0, height: 10 },
+                  shadowOpacity: 0.5,
+                  shadowRadius: 18,
                   elevation: 10,
                 }}
               >
@@ -203,26 +203,26 @@ export default function LoginScreen() {
 
             <View
               style={{
-                backgroundColor: COLORS.card,
-                borderRadius: 24,
+                backgroundColor: COLORS.surface,
+                borderRadius: 28,
                 borderWidth: 1,
                 borderColor: COLORS.border,
                 padding: surfacePadding,
-                shadowColor: "#0F172A",
-                shadowOffset: { width: 0, height: 10 },
-                shadowOpacity: 0.06,
-                shadowRadius: 24,
-                elevation: 4,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 18 },
+                shadowOpacity: 0.35,
+                shadowRadius: 28,
+                elevation: 10,
               }}
             >
               {/* ── Error Banner ── */}
               {error ? (
                 <View
                   style={{
-                    backgroundColor: "#FEF2F2",
+                    backgroundColor: COLORS.destructiveSoft,
                     borderWidth: 1,
-                    borderColor: "#FECACA",
-                    borderRadius: 12,
+                    borderColor: "rgba(239,68,68,0.35)",
+                    borderRadius: 14,
                     padding: 14,
                     marginBottom: 20,
                     flexDirection: "row",
@@ -289,10 +289,12 @@ export default function LoginScreen() {
                 <View
                   style={{
                     flexDirection: "row",
-                    backgroundColor: COLORS.muted,
+                    backgroundColor: COLORS.surfaceElevated,
                     borderRadius: 14,
                     padding: 4,
                     gap: 4,
+                    borderWidth: 1,
+                    borderColor: COLORS.border,
                   }}
                 >
                   {[
@@ -315,12 +317,12 @@ export default function LoginScreen() {
                         },
                         role === key
                           ? {
-                              backgroundColor: COLORS.card,
-                              shadowColor: "#000",
-                              shadowOffset: { width: 0, height: 1 },
-                              shadowOpacity: 0.08,
-                              shadowRadius: 4,
-                              elevation: 2,
+                              backgroundColor: COLORS.primary,
+                              shadowColor: COLORS.primary,
+                              shadowOffset: { width: 0, height: 4 },
+                              shadowOpacity: 0.4,
+                              shadowRadius: 8,
+                              elevation: 3,
                             }
                           : {},
                       ]}
@@ -328,18 +330,14 @@ export default function LoginScreen() {
                       <Ionicons
                         name={icon}
                         size={16}
-                        color={
-                          role === key ? COLORS.primary : COLORS.mutedForeground
-                        }
+                        color={role === key ? "#fff" : COLORS.mutedForeground}
                       />
                       <Text
                         style={{
                           fontSize: 14,
-                          fontWeight: role === key ? "600" : "500",
-                          color:
-                            role === key
-                              ? COLORS.foreground
-                              : COLORS.mutedForeground,
+                          fontWeight: role === key ? "700" : "500",
+                          color: role === key ? "#fff" : COLORS.mutedForeground,
+                          letterSpacing: 0.2,
                         }}
                       >
                         {label}
@@ -407,17 +405,17 @@ export default function LoginScreen() {
                   disabled={loading}
                   activeOpacity={0.85}
                   style={{
-                    backgroundColor: loading ? "#93C5FD" : COLORS.primary,
+                    backgroundColor: loading ? "rgba(47,123,255,0.45)" : COLORS.primary,
                     borderRadius: 14,
                     paddingVertical: 16,
                     alignItems: "center",
                     justifyContent: "center",
                     marginTop: 4,
                     shadowColor: COLORS.primary,
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: loading ? 0 : 0.25,
-                    shadowRadius: 10,
-                    elevation: loading ? 0 : 4,
+                    shadowOffset: { width: 0, height: 8 },
+                    shadowOpacity: loading ? 0 : 0.45,
+                    shadowRadius: 14,
+                    elevation: loading ? 0 : 6,
                     flexDirection: "row",
                     gap: 8,
                   }}
@@ -470,8 +468,9 @@ export default function LoginScreen() {
                   onPress={() => router.push("/register")}
                   activeOpacity={0.8}
                   style={{
-                    borderWidth: 1.5,
+                    borderWidth: 1,
                     borderColor: COLORS.border,
+                    backgroundColor: COLORS.surfaceElevated,
                     borderRadius: 14,
                     paddingVertical: 15,
                     alignItems: "center",
@@ -482,6 +481,7 @@ export default function LoginScreen() {
                       color: COLORS.foreground,
                       fontSize: 15,
                       fontWeight: "600",
+                      letterSpacing: 0.2,
                     }}
                   >
                     Create an account

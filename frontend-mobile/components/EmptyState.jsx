@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../constants/theme";
 
 /**
- * Consistent empty state for list screens.
+ * Consistent empty state for list screens (dark mode).
  *
  * Props:
  *  icon      — Ionicons name (default "file-tray-outline")
@@ -23,67 +23,79 @@ export function EmptyState({ icon = "file-tray-outline", title, subtitle, action
         paddingBottom: 32,
       }}
     >
-      {/* Icon circle */}
       <View
         style={{
-          width: 72,
-          height: 72,
-          borderRadius: 36,
-          backgroundColor: COLORS.muted,
+          width: 84,
+          height: 84,
+          borderRadius: 28,
+          backgroundColor: COLORS.surface,
+          borderWidth: 1,
+          borderColor: COLORS.border,
           alignItems: "center",
           justifyContent: "center",
-          marginBottom: 20,
+          marginBottom: 22,
         }}
       >
-        <Ionicons name={icon} size={34} color={COLORS.border} />
+        <View
+          style={{
+            width: 60,
+            height: 60,
+            borderRadius: 20,
+            backgroundColor: COLORS.primarySoft,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Ionicons name={icon} size={28} color={COLORS.primary} />
+        </View>
       </View>
 
-      {/* Title */}
       {title ? (
         <Text
           style={{
-            fontSize: 17,
+            fontSize: 18,
             fontWeight: "700",
             color: COLORS.foreground,
             textAlign: "center",
             marginBottom: 8,
-            letterSpacing: -0.2,
+            letterSpacing: -0.3,
           }}
         >
           {title}
         </Text>
       ) : null}
 
-      {/* Subtitle */}
       {subtitle ? (
         <Text
           style={{
             fontSize: 14,
             color: COLORS.mutedForeground,
             textAlign: "center",
-            lineHeight: 20,
+            lineHeight: 21,
           }}
         >
           {subtitle}
         </Text>
       ) : null}
 
-      {/* Optional CTA */}
       {action ? (
         <TouchableOpacity
           onPress={action.onPress}
           activeOpacity={0.85}
           style={{
-            marginTop: 20,
+            marginTop: 24,
             backgroundColor: COLORS.primary,
-            borderRadius: 12,
-            paddingHorizontal: 20,
-            paddingVertical: 11,
+            borderRadius: 14,
+            paddingHorizontal: 22,
+            paddingVertical: 13,
+            shadowColor: COLORS.primary,
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.35,
+            shadowRadius: 14,
+            elevation: 4,
           }}
         >
-          <Text
-            style={{ color: "#fff", fontSize: 14, fontWeight: "600" }}
-          >
+          <Text style={{ color: "#fff", fontSize: 14, fontWeight: "700", letterSpacing: 0.2 }}>
             {action.label}
           </Text>
         </TouchableOpacity>

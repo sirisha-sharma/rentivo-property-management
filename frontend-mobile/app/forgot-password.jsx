@@ -64,7 +64,7 @@ export default function ForgotPasswordScreen() {
   if (sent) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
-        <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+        <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
         <View
           style={{
             flex: 1,
@@ -79,7 +79,7 @@ export default function ForgotPasswordScreen() {
               width: 88,
               height: 88,
               borderRadius: 44,
-              backgroundColor: "#EFF6FF",
+              backgroundColor: COLORS.primarySoft,
               alignItems: "center",
               justifyContent: "center",
               marginBottom: 28,
@@ -182,7 +182,7 @@ export default function ForgotPasswordScreen() {
   // ── Form State ──
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
 
       <KeyboardContainer style={{ flex: 1 }} {...keyboardContainerProps}>
         <ScrollView
@@ -212,33 +212,35 @@ export default function ForgotPasswordScreen() {
                 width: 40,
                 height: 40,
                 borderRadius: 10,
-                backgroundColor: COLORS.muted,
+                backgroundColor: COLORS.surface,
+                borderWidth: 1,
+                borderColor: COLORS.border,
                 alignItems: "center",
                 justifyContent: "center",
                 marginBottom: 24,
               }}
             >
-              <Ionicons name="arrow-back" size={20} color={COLORS.foreground} />
+              <Ionicons name="chevron-back" size={20} color={COLORS.foreground} />
             </TouchableOpacity>
 
             <View
               style={{
-                backgroundColor: COLORS.card,
-                borderRadius: 24,
+                backgroundColor: COLORS.surface,
+                borderRadius: 28,
                 borderWidth: 1,
                 borderColor: COLORS.border,
                 padding: surfacePadding,
-                shadowColor: "#0F172A",
-                shadowOffset: { width: 0, height: 10 },
-                shadowOpacity: 0.06,
-                shadowRadius: 24,
-                elevation: 4,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 18 },
+                shadowOpacity: 0.35,
+                shadowRadius: 28,
+                elevation: 10,
               }}
             >
               {/* Header */}
               <View style={{ marginBottom: 28 }}>
                 <LinearGradient
-                  colors={["#3B82F6", "#1D4ED8"]}
+                  colors={[COLORS.primary, COLORS.primaryDeep]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={{
@@ -248,7 +250,7 @@ export default function ForgotPasswordScreen() {
                     alignItems: "center",
                     justifyContent: "center",
                     marginBottom: 20,
-                    shadowColor: "#2563EB",
+                    shadowColor: COLORS.primary,
                     shadowOffset: { width: 0, height: 6 },
                     shadowOpacity: 0.3,
                     shadowRadius: 12,
@@ -284,9 +286,9 @@ export default function ForgotPasswordScreen() {
               {error ? (
                 <View
                   style={{
-                    backgroundColor: "#FEF2F2",
+                    backgroundColor: COLORS.destructiveSoft,
                     borderWidth: 1,
-                    borderColor: "#FECACA",
+                    borderColor: "rgba(239,68,68,0.35)",
                     borderRadius: 12,
                     padding: 14,
                     marginBottom: 20,
@@ -336,7 +338,7 @@ export default function ForgotPasswordScreen() {
                   disabled={loading}
                   activeOpacity={0.85}
                   style={{
-                    backgroundColor: loading ? "#93C5FD" : COLORS.primary,
+                    backgroundColor: loading ? "rgba(47,123,255,0.45)" : COLORS.primary,
                     borderRadius: 14,
                     paddingVertical: 16,
                     alignItems: "center",

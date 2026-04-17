@@ -110,11 +110,11 @@ export default function MaintenanceList() {
     const getPriorityColor = (priority) => {
         switch (priority) {
             case "High":
-                return { bg: "#FEE2E2", text: "#991B1B" };
+                return { bg: COLORS.destructiveSoft, text: COLORS.destructive };
             case "Medium":
-                return { bg: "#FEF9C3", text: "#854D0E" };
+                return { bg: COLORS.warningSoft, text: COLORS.warning };
             case "Low":
-                return { bg: "#DCFCE7", text: "#166534" };
+                return { bg: COLORS.successSoft, text: COLORS.success };
             default:
                 return { bg: COLORS.muted, text: COLORS.mutedForeground };
         }
@@ -158,7 +158,7 @@ export default function MaintenanceList() {
                     <View style={styles.actionRow}>
                         {displayStatus === "Open" && (
                             <TouchableOpacity style={styles.progressBtn} onPress={() => handleMarkInProgress(item)}>
-                                <Ionicons name="play-circle-outline" size={16} color="#1E40AF" />
+                                <Ionicons name="play-circle-outline" size={16} color={COLORS.primary} />
                                 <Text style={styles.progressBtnText}>Start</Text>
                             </TouchableOpacity>
                         )}
@@ -169,7 +169,7 @@ export default function MaintenanceList() {
                             </TouchableOpacity>
                         )}
                         <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item)}>
-                            <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                            <Ionicons name="trash-outline" size={16} color={COLORS.destructive} />
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -297,12 +297,12 @@ const styles = StyleSheet.create({
         gap: 4,
         paddingHorizontal: 12,
         paddingVertical: 8,
-        backgroundColor: "#DBEAFE",
+        backgroundColor: COLORS.primarySoft,
         borderRadius: 8,
     },
     progressBtnText: {
         fontSize: 12,
-        color: "#1E40AF",
+        color: COLORS.primary,
         fontWeight: "500",
     },
     completeBtn: {
@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
         gap: 4,
         paddingHorizontal: 12,
         paddingVertical: 8,
-        backgroundColor: "#D1FAE5",
+        backgroundColor: COLORS.successSoft,
         borderRadius: 8,
     },
     completeBtnText: {
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
     deleteBtn: {
         paddingHorizontal: 12,
         paddingVertical: 8,
-        backgroundColor: "#FEE2E2",
+        backgroundColor: COLORS.destructiveSoft,
         borderRadius: 8,
     },
     fab: {

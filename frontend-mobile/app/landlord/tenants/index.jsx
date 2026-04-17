@@ -105,7 +105,7 @@ export default function TenantList() {
                         </TouchableOpacity>
                     )}
                     <TouchableOpacity style={styles.removeBtn} onPress={() => handleRemove(item)}>
-                        <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                        <Ionicons name="trash-outline" size={16} color={COLORS.destructive} />
                         <Text style={styles.removeBtnText}>Remove</Text>
                     </TouchableOpacity>
                 </View>
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
         gap: 4,
         paddingHorizontal: 12,
         paddingVertical: 8,
-        backgroundColor: "#DBEAFE",
+        backgroundColor: COLORS.primarySoft,
         borderRadius: 8,
     },
     messageBtnText: {
@@ -253,12 +253,12 @@ const styles = StyleSheet.create({
         gap: 4,
         paddingHorizontal: 12,
         paddingVertical: 8,
-        backgroundColor: "#FEE2E2",
+        backgroundColor: COLORS.destructiveSoft,
         borderRadius: 8,
     },
     removeBtnText: {
         fontSize: 12,
-        color: "#EF4444",
+        color: COLORS.destructive,
         fontWeight: "500",
     },
 });

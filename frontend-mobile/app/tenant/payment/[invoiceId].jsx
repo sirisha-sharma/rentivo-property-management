@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useContext } from "react";
+import React, { useState, useEffect, useContext, useCallback } from "react";
 import {
     View,
     Text,
@@ -9,8 +9,8 @@ import {
     ScrollView,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
-import { WebView } from "react-native-webview";
 import { Ionicons } from "@expo/vector-icons";
 import { TopBar } from "../../../components/TopBar";
 import { COLORS } from "../../../constants/theme";
@@ -20,29 +20,24 @@ import { InvoiceContext } from "../../../context/InvoiceContext";
 import { NotificationContext } from "../../../context/NotificationContext";
 
 export default function PaymentScreen() {
-    const { invoiceId } = useLocalSearchParams();
+    const {
+        invoiceId,
+        khaltiReturn,
+        paymentId: returnedPaymentId,
+        result: returnedResult,
+        reason: returnedReason,
+        status: returnedStatus,
+    } = useLocalSearchParams();
     const router = useRouter();
-    const webViewRef = useRef(null);
-    const handledGatewayResultRef = useRef(false);
     const { fetchInvoices } = useContext(InvoiceContext);
     const { fetchNotifications } = useContext(NotificationContext);
 
     const [invoice, setInvoice] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [paymentInitiated, setPaymentInitiated] = useState(false);
-    const [paymentData, setPaymentData] = useState(null);
     const [processing, setProcessing] = useState(false);
-    const [selectedGateway, setSelectedGateway] = useState(null);
+    const [activeGateway, setActiveGateway] = useState(null);
 
     const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-    const getInvoiceIdFromUrl = (url) => {
-        try {
-            return new URL(url).searchParams.get("invoice");
-        } catch (_error) {
-            return null;
-        }
-    };
 
     const getFailureMeta = ({ reason, status }) => {
         const normalized = (reason || status || "").toLowerCase();
@@ -50,7 +45,7 @@ export default function PaymentScreen() {
         if (["pending", "ambiguous", "not_found"].includes(normalized)) {
             return {
                 title: "Payment Processing",
-                message: "Your payment is still being verified with eSewa. Please check your invoices again in a few moments.",
+                message: "Your payment is still being verified. Please check your invoices again in a few moments.",
             };
         }
 
@@ -85,7 +80,7 @@ export default function PaymentScreen() {
         if (reason === "failed") {
             return {
                 title: "Payment Failed",
-                message: "eSewa reported this payment as failed.",
+                message: "The payment provider reported this payment as failed.",
             };
         }
 
@@ -102,19 +97,7 @@ export default function PaymentScreen() {
         };
     };
 
-    const getFailureMetaFromUrl = (url) => {
-        try {
-            const params = new URL(url).searchParams;
-            return getFailureMeta({
-                reason: params.get("reason"),
-                status: params.get("status"),
-            });
-        } catch (_error) {
-            return getFailureMeta({});
-        }
-    };
-
-    const fetchInvoiceDetails = React.useCallback(async () => {
+    const fetchInvoiceDetails = useCallback(async () => {
         try {
             setLoading(true);
             const data = await getInvoiceById(invoiceId);
@@ -131,86 +114,7 @@ export default function PaymentScreen() {
         void fetchInvoiceDetails();
     }, [fetchInvoiceDetails]);
 
-    const handleEsewaPayment = async () => {
-        try {
-            setProcessing(true);
-            handledGatewayResultRef.current = false;
-            const response = await initiatePayment(invoiceId, "esewa");
-
-            if (response.success && response.launchUrl && response.payment?.paymentId) {
-                Alert.alert(
-                    "Continue in Browser",
-                    "eSewa will open in your browser or eSewa app. After completing the payment, return to Rentivo.",
-                    [
-                        {
-                            text: "Continue",
-                            onPress: async () => {
-                                try {
-                                    await WebBrowser.openBrowserAsync(response.launchUrl, {
-                                        showTitle: true,
-                                        enableDefaultShareMenuItem: false,
-                                    });
-                                } finally {
-                                    await checkEsewaBrowserPaymentResult(response.payment.paymentId);
-                                }
-                            },
-                        },
-                    ]
-                );
-            } else {
-                Alert.alert("Error", "Failed to initialize payment");
-            }
-        } catch (error) {
-            Alert.alert("Error", error.message || "Failed to initiate payment");
-        } finally {
-            setProcessing(false);
-        }
-    };
-
-    const handleKhaltiPayment = async () => {
-        try {
-            setProcessing(true);
-            handledGatewayResultRef.current = false;
-            const response = await initiatePayment(invoiceId, "khalti");
-
-            if (response.success && response.gatewayData) {
-                setPaymentData(response.gatewayData);
-                setSelectedGateway("khalti");
-                setPaymentInitiated(true);
-            } else {
-                Alert.alert("Error", "Failed to initialize payment");
-            }
-        } catch (error) {
-            Alert.alert("Error", error.message || "Failed to initiate payment");
-        } finally {
-            setProcessing(false);
-        }
-    };
-
-    const syncSuccessfulPaymentState = async (targetInvoiceId) => {
-        const invoiceToRefresh = targetInvoiceId || invoiceId;
-        let latestInvoice = null;
-
-        for (let attempt = 0; attempt < 5; attempt++) {
-            const data = await getInvoiceById(invoiceToRefresh);
-            latestInvoice = data.invoice;
-            setInvoice(data.invoice);
-
-            if (data.invoice?.status === "Paid") {
-                break;
-            }
-
-            await sleep(1000);
-        }
-
-        if (latestInvoice?.status !== "Paid") {
-            throw new Error("Invoice status is still pending after payment verification");
-        }
-
-        await Promise.allSettled([fetchInvoices(), fetchNotifications()]);
-    };
-
-    const checkEsewaBrowserPaymentResult = async (paymentId) => {
+    const checkBrowserPaymentResult = useCallback(async (paymentId) => {
         setProcessing(true);
 
         try {
@@ -244,9 +148,7 @@ export default function PaymentScreen() {
                     Alert.alert(failureMeta.title, failureMeta.message, [
                         {
                             text: "OK",
-                            onPress: () => {
-                                handledGatewayResultRef.current = false;
-                            },
+                            onPress: () => {},
                         },
                     ]);
                     return;
@@ -261,6 +163,18 @@ export default function PaymentScreen() {
                 [{ text: "OK", onPress: () => router.replace("/tenant/invoices") }]
             );
         } catch (_error) {
+            if (returnedResult === "failed" || returnedReason || returnedStatus) {
+                const failureMeta = getFailureMeta({
+                    reason: returnedReason,
+                    status: returnedStatus,
+                });
+
+                Alert.alert(failureMeta.title, failureMeta.message, [
+                    { text: "OK", onPress: () => router.replace("/tenant/invoices") },
+                ]);
+                return;
+            }
+
             Alert.alert(
                 "Payment Processing",
                 "Your payment is being processed. Please check your invoices again in a moment.",
@@ -268,172 +182,85 @@ export default function PaymentScreen() {
             );
         } finally {
             setProcessing(false);
+            setActiveGateway(null);
         }
-    };
+    }, [
+        fetchInvoices,
+        fetchNotifications,
+        invoiceId,
+        returnedReason,
+        returnedResult,
+        returnedStatus,
+        router,
+    ]);
 
-    const handleSuccessfulGatewayReturn = async (url) => {
-        setPaymentInitiated(false);
-        setProcessing(true);
+    useEffect(() => {
+        if (khaltiReturn !== "1" || !returnedPaymentId) {
+            return;
+        }
+
+        void checkBrowserPaymentResult(returnedPaymentId);
+    }, [checkBrowserPaymentResult, khaltiReturn, returnedPaymentId]);
+
+    const handleGatewayPayment = async (gateway) => {
+        const gatewayLabel = gateway === "esewa" ? "eSewa" : "Khalti";
 
         try {
-            await syncSuccessfulPaymentState(getInvoiceIdFromUrl(url));
+            setActiveGateway(gateway);
+            const clientRedirectUri =
+                gateway === "khalti"
+                    ? Linking.createURL("khalti-payment-return")
+                    : null;
+            const response = await initiatePayment(invoiceId, gateway, clientRedirectUri);
+            const launchUrl =
+                gateway === "esewa"
+                    ? response.launchUrl
+                    : response.gatewayData?.payment_url;
 
-            Alert.alert(
-                "Payment Successful",
-                "Your payment has been processed successfully and the invoice is now marked as Paid.",
-                [
-                    {
-                        text: "OK",
-                        onPress: () => {
-                            router.replace("/tenant/invoices");
-                        },
-                    },
-                ]
-            );
-        } catch (_error) {
-            Alert.alert(
-                "Payment Successful",
-                "Your payment was confirmed, but the latest status is still syncing. Please reopen your invoices in a moment.",
-                [
-                    {
-                        text: "OK",
-                        onPress: () => {
-                            router.replace("/tenant/invoices");
-                        },
-                    },
-                ]
-            );
-        } finally {
-            setProcessing(false);
-        }
-    };
-
-    const handleGatewayResult = (url) => {
-        if (handledGatewayResultRef.current) return;
-        handledGatewayResultRef.current = true;
-
-        if (url.includes("/payment-success")) {
-            void handleSuccessfulGatewayReturn(url);
-        } else {
-            const failureMeta = getFailureMetaFromUrl(url);
-            setPaymentInitiated(false);
-            if (failureMeta.title === "Payment Processing") {
-                void Promise.allSettled([fetchInvoices(), fetchNotifications()]);
+            if (!response.success || !launchUrl || !response.payment?.paymentId) {
+                throw new Error(`Failed to initialize ${gatewayLabel} payment`);
             }
-            Alert.alert(failureMeta.title, failureMeta.message, [
-                {
-                    text: "OK",
-                    onPress: () => {
-                        handledGatewayResultRef.current = false;
-                        if (failureMeta.title === "Payment Processing") {
-                            router.replace("/tenant/invoices");
-                            return;
-                        }
-                        setPaymentInitiated(false);
-                    },
-                },
-            ]);
-        }
-    };
 
-    /**
-     * Intercept the gateway callback URL and hit it from React Native
-     * directly. This bypasses ngrok's free-tier interstitial page which
-     * blocks browser-initiated requests and prevents the backend from
-     * ever receiving the payment verification callback.
-     */
-    const verifyPaymentDirectly = async (verifyUrl) => {
-        if (handledGatewayResultRef.current) return;
-        handledGatewayResultRef.current = true;
-
-        setPaymentInitiated(false);
-        setProcessing(true);
-
-        try {
-            // fetch from RN native networking (not WebView) — CORS and
-            // ngrok interstitial do not apply.
-            const response = await fetch(verifyUrl, {
-                headers: { "ngrok-skip-browser-warning": "true" },
-                redirect: "follow",
-            });
-
-            // After redirects, response.url is the final destination
-            // e.g. https://host/payment-success?txn=...&invoice=...
-            const finalUrl = response.url || "";
-
-            if (finalUrl.includes("/payment-success")) {
-                await syncSuccessfulPaymentState(getInvoiceIdFromUrl(finalUrl));
-                Alert.alert(
-                    "Payment Successful",
-                    "Your payment has been processed successfully and the invoice is now marked as Paid.",
-                    [{ text: "OK", onPress: () => router.replace("/tenant/invoices") }]
-                );
-            } else if (finalUrl.includes("/payment-failed")) {
-                const failureMeta = getFailureMetaFromUrl(finalUrl);
-                if (failureMeta.title === "Payment Processing") {
-                    await Promise.allSettled([fetchInvoices(), fetchNotifications()]);
-                }
-                setProcessing(false);
-                Alert.alert(failureMeta.title, failureMeta.message, [
+            Alert.alert(
+                "Continue in Browser",
+                `${gatewayLabel} will open in your browser or app. After completing the payment, return to Rentivo.`,
+                [
                     {
-                        text: "OK",
-                        onPress: () => {
-                            handledGatewayResultRef.current = false;
-                            if (failureMeta.title === "Payment Processing") {
-                                router.replace("/tenant/invoices");
+                        text: "Continue",
+                        onPress: async () => {
+                            let shouldSyncPayment = true;
+
+                            try {
+                                if (gateway === "khalti") {
+                                    const sessionResult = await WebBrowser.openAuthSessionAsync(
+                                        launchUrl,
+                                        clientRedirectUri
+                                    );
+
+                                    if (sessionResult.type !== "success") {
+                                        shouldSyncPayment = false;
+                                        setActiveGateway(null);
+                                        return;
+                                    }
+                                } else {
+                                    await WebBrowser.openBrowserAsync(launchUrl, {
+                                        showTitle: true,
+                                        enableDefaultShareMenuItem: false,
+                                    });
+                                }
+                            } finally {
+                                if (shouldSyncPayment) {
+                                    await checkBrowserPaymentResult(response.payment.paymentId);
+                                }
                             }
                         },
                     },
-                ]);
-                return;
-            } else {
-                // Redirect URL not recognised — fall back to polling
-                await syncSuccessfulPaymentState();
-                Alert.alert(
-                    "Payment Successful",
-                    "Your payment has been processed successfully.",
-                    [{ text: "OK", onPress: () => router.replace("/tenant/invoices") }]
-                );
-            }
-        } catch (_error) {
-            Alert.alert(
-                "Payment Processing",
-                "Your payment is being processed. Please check your invoices in a moment.",
-                [{ text: "OK", onPress: () => router.replace("/tenant/invoices") }]
+                ]
             );
-        } finally {
-            setProcessing(false);
+        } catch (error) {
+            Alert.alert("Error", error.message || "Failed to initiate payment");
+            setActiveGateway(null);
         }
-    };
-
-    const handleWebViewNavigationStateChange = (navState) => {
-        const { url } = navState;
-        if (url.includes("/payment-success") || url.includes("/payment-failed")) {
-            handleGatewayResult(url);
-        }
-    };
-
-    const handleShouldStartLoadWithRequest = (request) => {
-        const { url } = request;
-
-        // Final result pages — handle directly
-        if (url.includes("/payment-success") || url.includes("/payment-failed")) {
-            handleGatewayResult(url);
-            return false;
-        }
-
-        // Intercept verify / failure callbacks heading to our backend.
-        // Make the request from RN so ngrok interstitial cannot block it.
-        if (
-            url.includes("/api/payments/esewa/verify") ||
-            url.includes("/api/payments/khalti/verify") ||
-            url.includes("/api/payments/failure")
-        ) {
-            void verifyPaymentDirectly(url);
-            return false;
-        }
-
-        return true;
     };
 
     if (loading) {
@@ -444,63 +271,6 @@ export default function PaymentScreen() {
                     <ActivityIndicator size="large" color={COLORS.primary} />
                     <Text style={styles.loadingText}>Loading invoice...</Text>
                 </View>
-            </View>
-        );
-    }
-
-    if (paymentInitiated && paymentData) {
-        let gatewayTitle = "Payment";
-        let webViewSource = null;
-
-        if (selectedGateway === "esewa") {
-            gatewayTitle = "eSewa Payment";
-        } else if (selectedGateway === "khalti") {
-            gatewayTitle = "Khalti Payment";
-            // Khalti e-Payment v2: directly load the payment_url returned by the API
-            webViewSource = { uri: paymentData.payment_url };
-        }
-
-        if (selectedGateway === "esewa") {
-            return null;
-        }
-
-        return (
-            <View style={styles.container}>
-                <TopBar
-                    title={gatewayTitle}
-                    showBack
-                    onBackPress={() => {
-                        Alert.alert(
-                            "Cancel Payment",
-                            "Are you sure you want to cancel this payment?",
-                            [
-                                { text: "No", style: "cancel" },
-                                {
-                                    text: "Yes",
-                                    onPress: () => {
-                                        handledGatewayResultRef.current = false;
-                                        setPaymentInitiated(false);
-                                    },
-                                },
-                            ]
-                        );
-                    }}
-                />
-                <WebView
-                    ref={webViewRef}
-                    source={webViewSource}
-                    style={{ flex: 1 }}
-                    onNavigationStateChange={handleWebViewNavigationStateChange}
-                    onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
-                    javaScriptEnabled={true}
-                    domStorageEnabled={true}
-                    startInLoadingState={true}
-                    renderLoading={() => (
-                        <View style={styles.webViewLoading}>
-                            <ActivityIndicator size="large" color={COLORS.primary} />
-                        </View>
-                    )}
-                />
             </View>
         );
     }
@@ -611,19 +381,22 @@ export default function PaymentScreen() {
                     <View style={styles.divider} />
 
                     <TouchableOpacity
-                        style={styles.paymentOption}
-                        onPress={handleEsewaPayment}
-                        disabled={processing}
+                        style={[
+                            styles.paymentOption,
+                            activeGateway === "esewa" && styles.paymentOptionActive,
+                        ]}
+                        onPress={() => handleGatewayPayment("esewa")}
+                        disabled={Boolean(activeGateway) || processing}
                     >
                         <View style={styles.paymentOptionContent}>
-                            <Ionicons name="wallet-outline" size={24} color="#2563EB" />
+                            <Ionicons name="wallet-outline" size={24} color={COLORS.primary} />
                             <View style={{ flex: 1, marginLeft: 12 }}>
                                 <Text style={styles.paymentOptionTitle}>eSewa</Text>
                                 <Text style={styles.paymentOptionSubtitle}>
                                     Pay securely using eSewa wallet
                                 </Text>
                             </View>
-                            {processing ? (
+                            {activeGateway === "esewa" ? (
                                 <ActivityIndicator size="small" color={COLORS.primary} />
                             ) : (
                                 <Ionicons name="chevron-forward" size={20} color={COLORS.mutedForeground} />
@@ -632,19 +405,27 @@ export default function PaymentScreen() {
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        style={[styles.paymentOption, { marginTop: 12 }]}
-                        onPress={handleKhaltiPayment}
-                        disabled={processing}
+                        style={[
+                            styles.paymentOption,
+                            styles.paymentOptionSpacing,
+                            activeGateway === "khalti" && styles.paymentOptionActive,
+                        ]}
+                        onPress={() => handleGatewayPayment("khalti")}
+                        disabled={Boolean(activeGateway) || processing}
                     >
                         <View style={styles.paymentOptionContent}>
-                            <Ionicons name="wallet-outline" size={24} color="#5C2D91" />
+                            <Ionicons
+                                name="wallet-outline"
+                                size={24}
+                                color={COLORS.accentLilac}
+                            />
                             <View style={{ flex: 1, marginLeft: 12 }}>
                                 <Text style={styles.paymentOptionTitle}>Khalti</Text>
                                 <Text style={styles.paymentOptionSubtitle}>
                                     Pay securely using Khalti wallet
                                 </Text>
                             </View>
-                            {processing ? (
+                            {activeGateway === "khalti" ? (
                                 <ActivityIndicator size="small" color={COLORS.primary} />
                             ) : (
                                 <Ionicons name="chevron-forward" size={20} color={COLORS.mutedForeground} />
@@ -725,9 +506,15 @@ const styles = StyleSheet.create({
     paymentOption: {
         borderWidth: 1,
         borderColor: COLORS.border,
-        borderRadius: 8,
+        borderRadius: 14,
         padding: 16,
-        marginBottom: 12,
+    },
+    paymentOptionSpacing: {
+        marginTop: 12,
+    },
+    paymentOptionActive: {
+        borderColor: COLORS.primary,
+        backgroundColor: COLORS.primarySoft,
     },
     paymentOptionContent: {
         flexDirection: "row",
@@ -745,17 +532,20 @@ const styles = StyleSheet.create({
     },
     infoCard: {
         flexDirection: "row",
-        backgroundColor: COLORS.muted,
-        borderRadius: 8,
-        padding: 12,
-        marginBottom: 16,
         alignItems: "flex-start",
+        gap: 10,
+        backgroundColor: COLORS.surfaceElevated,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 24,
     },
     infoText: {
         flex: 1,
         fontSize: 13,
         color: COLORS.mutedForeground,
-        marginLeft: 8,
+        lineHeight: 20,
     },
     webViewLoading: {
         position: "absolute",

@@ -4,10 +4,10 @@ import { COLORS } from "../constants/theme";
 import { getSubscriptionStatusLabel, getSubscriptionStatusTone } from "../utils/subscription";
 
 const TONE_STYLES = {
-    success: { bg: "#DCFCE7", text: "#166534" },
-    info: { bg: "#DBEAFE", text: "#1D4ED8" },
-    warning: { bg: "#FEF3C7", text: "#92400E" },
-    danger: { bg: "#FEE2E2", text: "#B91C1C" },
+    success: { bg: COLORS.successSoft, text: COLORS.success },
+    info: { bg: COLORS.infoSoft, text: COLORS.info },
+    warning: { bg: COLORS.warningSoft, text: COLORS.warning },
+    danger: { bg: COLORS.destructiveSoft, text: COLORS.destructive },
     muted: { bg: COLORS.muted, text: COLORS.mutedForeground },
 };
 
@@ -27,11 +27,11 @@ export function SubscriptionStatusPill({ status }) {
         >
             <Text
                 style={{
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: "700",
                     color: colors.text,
                     textTransform: "uppercase",
-                    letterSpacing: 0.4,
+                    letterSpacing: 0.5,
                 }}
             >
                 {getSubscriptionStatusLabel(status)}

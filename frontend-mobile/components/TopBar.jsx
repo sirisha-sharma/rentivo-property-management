@@ -7,7 +7,7 @@ import { COLORS } from "../constants/theme";
 
 /**
  * Shared top navigation bar used by all inner screens.
- * Handles safe area (top/left/right only — no bottom inset).
+ * Dark-mode premium styling. Safe area top/left/right only.
  *
  * Props:
  *  title       — screen title string
@@ -32,7 +32,7 @@ export const TopBar = ({ title, showBack, onBack, rightIcon, onRightPress }) => 
       edges={["top", "left", "right"]}
       style={{ backgroundColor: COLORS.background }}
     >
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
       <View
         style={{
           flexDirection: "row",
@@ -43,34 +43,35 @@ export const TopBar = ({ title, showBack, onBack, rightIcon, onRightPress }) => 
           borderBottomWidth: 1,
           borderBottomColor: COLORS.border,
           backgroundColor: COLORS.background,
-          minHeight: 52,
+          minHeight: 56,
         }}
       >
-        {/* Left: back button + title */}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, flex: 1 }}>
           {showBack && (
             <TouchableOpacity
               onPress={handleBack}
-              activeOpacity={0.7}
+              activeOpacity={0.75}
               style={{
-                width: 34,
-                height: 34,
-                borderRadius: 9,
-                backgroundColor: COLORS.muted,
+                width: 38,
+                height: 38,
+                borderRadius: 12,
+                backgroundColor: COLORS.surface,
+                borderWidth: 1,
+                borderColor: COLORS.border,
                 alignItems: "center",
                 justifyContent: "center",
               }}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Ionicons name="arrow-back" size={18} color={COLORS.foreground} />
+              <Ionicons name="chevron-back" size={20} color={COLORS.foreground} />
             </TouchableOpacity>
           )}
           <Text
             style={{
-              fontSize: 17,
+              fontSize: 18,
               fontWeight: "700",
               color: COLORS.foreground,
-              letterSpacing: -0.2,
+              letterSpacing: -0.3,
               flexShrink: 1,
             }}
             numberOfLines={1}
@@ -79,16 +80,17 @@ export const TopBar = ({ title, showBack, onBack, rightIcon, onRightPress }) => 
           </Text>
         </View>
 
-        {/* Right action */}
         {rightIcon && (
           <TouchableOpacity
             onPress={onRightPress}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
             style={{
-              width: 34,
-              height: 34,
-              borderRadius: 9,
-              backgroundColor: "#EFF6FF",
+              width: 38,
+              height: 38,
+              borderRadius: 12,
+              backgroundColor: COLORS.primarySoft,
+              borderWidth: 1,
+              borderColor: "rgba(47,123,255,0.25)",
               alignItems: "center",
               justifyContent: "center",
             }}

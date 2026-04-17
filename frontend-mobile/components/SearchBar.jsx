@@ -4,13 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../constants/theme";
 
 /**
- * Consistent search input for list screens.
- *
- * Props:
- *  value         — controlled string value
- *  onChangeText  — change handler
- *  placeholder   — input placeholder (default "Search…")
- *  style         — optional wrapper style override
+ * Consistent search input for list screens (dark mode).
  */
 export function SearchBar({ value, onChangeText, placeholder = "Search…", style }) {
   const [focused, setFocused] = useState(false);
@@ -21,13 +15,13 @@ export function SearchBar({ value, onChangeText, placeholder = "Search…", styl
         {
           flexDirection: "row",
           alignItems: "center",
-          backgroundColor: focused ? "#EFF6FF" : COLORS.input,
-          borderRadius: 12,
-          borderWidth: 1.5,
+          backgroundColor: focused ? COLORS.primarySoft : COLORS.surface,
+          borderRadius: 14,
+          borderWidth: 1,
           borderColor: focused ? COLORS.primary : COLORS.border,
-          paddingHorizontal: 12,
-          height: 44,
-          gap: 8,
+          paddingHorizontal: 14,
+          height: 48,
+          gap: 10,
         },
         style,
       ]}
@@ -45,7 +39,7 @@ export function SearchBar({ value, onChangeText, placeholder = "Search…", styl
           includeFontPadding: false,
         }}
         placeholder={placeholder}
-        placeholderTextColor={COLORS.mutedForeground}
+        placeholderTextColor={COLORS.faintForeground}
         value={value}
         onChangeText={onChangeText}
         onFocus={() => setFocused(true)}
@@ -56,6 +50,7 @@ export function SearchBar({ value, onChangeText, placeholder = "Search…", styl
         selectionColor={COLORS.primary}
         cursorColor={COLORS.primary}
         underlineColorAndroid="transparent"
+        keyboardAppearance="dark"
       />
       {value.length > 0 && (
         <TouchableOpacity

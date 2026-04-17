@@ -15,6 +15,17 @@ import {
 import { initializeKhaltiPayment, verifyKhaltiPayment as khaltiLookup } from "../payment/gateways/khaltiGateway.js";
 import { createNotification } from "./notificationController.js";
 
+const ALLOWED_CLIENT_REDIRECT_PROTOCOLS = new Set([
+    "frontendmobile:",
+    "exp:",
+    "exps:",
+]);
+
+const DEFAULT_CLIENT_REDIRECT_ROUTES = {
+    "payment-success": "frontendmobile://khalti-payment-return",
+    "payment-failed": "frontendmobile://khalti-payment-return",
+};
+
 const buildRedirectUrl = (path, params = {}) => {
     const searchParams = new URLSearchParams();
 
@@ -26,6 +37,45 @@ const buildRedirectUrl = (path, params = {}) => {
 
     const query = searchParams.toString();
     return query ? `/${path}?${query}` : `/${path}`;
+};
+
+const isAllowedClientRedirectUri = (value = "") => {
+    try {
+        if (typeof value !== "string" || !value) {
+            return false;
+        }
+
+        const parsed = new URL(value);
+        return ALLOWED_CLIENT_REDIRECT_PROTOCOLS.has(parsed.protocol);
+    } catch (_error) {
+        return false;
+    }
+};
+
+const buildClientRedirectUrl = (clientRedirectUri, params = {}) => {
+    const redirectUrl = new URL(clientRedirectUri);
+
+    Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== "") {
+            redirectUrl.searchParams.set(key, value.toString());
+        }
+    });
+
+    return redirectUrl.toString();
+};
+
+const getDefaultClientRedirectUri = (webPath) => DEFAULT_CLIENT_REDIRECT_ROUTES[webPath] || null;
+
+const redirectToClientOrWeb = (res, { clientRedirectUri, webPath, params = {} }) => {
+    const effectiveClientRedirectUri = isAllowedClientRedirectUri(clientRedirectUri)
+        ? clientRedirectUri
+        : getDefaultClientRedirectUri(webPath);
+
+    const redirectTarget = effectiveClientRedirectUri
+        ? buildClientRedirectUrl(effectiveClientRedirectUri, params)
+        : buildRedirectUrl(webPath, params);
+
+    return res.redirect(redirectTarget);
 };
 
 const escapeHtmlAttribute = (value) =>
@@ -249,7 +299,7 @@ const finalizeOnlinePayment = async ({
  */
 export const initiatePayment = async (req, res) => {
     try {
-        const { invoiceId, gateway } = req.body;
+        const { invoiceId, gateway, clientRedirectUri } = req.body;
 
         // Validate gateway
         if (!["esewa", "khalti"].includes(gateway)) {
@@ -297,6 +347,7 @@ export const initiatePayment = async (req, res) => {
 
         // Initialize payment with selected gateway
         let gatewayResponse;
+        const baseUrl = getPublicBaseUrl();
         const customerInfo = {
             name: req.user.name,
             email: req.user.email,
@@ -309,11 +360,21 @@ export const initiatePayment = async (req, res) => {
                 transactionId
             );
         } else if (gateway === "khalti") {
+            const khaltiReturnUrl = new URL(`${baseUrl}/api/payments/khalti/verify`);
+            if (isAllowedClientRedirectUri(clientRedirectUri)) {
+                khaltiReturnUrl.searchParams.set("clientRedirectUri", clientRedirectUri);
+            }
+
             gatewayResponse = await initializeKhaltiPayment(
                 invoice.amount,
                 transactionId,
                 invoiceId,
-                customerInfo
+                customerInfo,
+                {
+                    returnUrl: khaltiReturnUrl.toString(),
+                    websiteUrl: baseUrl,
+                    purchaseOrderName: `Rent Payment - ${invoice.invoiceNumber || invoiceId}`,
+                }
             );
         }
 
@@ -344,7 +405,6 @@ export const initiatePayment = async (req, res) => {
             );
         }
 
-        const baseUrl = getPublicBaseUrl();
         const esewaLaunchUrl =
             gateway === "esewa"
                 ? `${baseUrl}/api/payments/esewa/launch/${createEsewaLaunchToken(payment._id)}`
@@ -1121,17 +1181,28 @@ export const verifyEsewaPayment = async (req, res) => {
  */
 export const verifyKhaltiPayment = async (req, res) => {
     try {
-        const { pidx, txnId, amount, mobile, purchase_order_id, purchase_order_name, transaction_id } =
-            req.method === 'GET' ? req.query : req.body;
+        const callbackPayload =
+            req.method === "GET" || req.method === "HEAD" ? req.query : req.body || {};
+        const {
+            pidx,
+            txnId,
+            amount,
+            mobile,
+            purchase_order_id,
+            purchase_order_name,
+            transaction_id,
+            clientRedirectUri,
+        } = callbackPayload;
 
         if (!pidx) {
-            console.error("Khalti verification failed: No pidx parameter");
-            return res.redirect(
-                buildRedirectUrl("payment-failed", {
+            return redirectToClientOrWeb(res, {
+                clientRedirectUri,
+                webPath: "payment-failed",
+                params: {
                     reason: "no_pidx",
                     gateway: "khalti",
-                })
-            );
+                },
+            });
         }
 
         console.log("Khalti callback received:", {
@@ -1146,12 +1217,14 @@ export const verifyKhaltiPayment = async (req, res) => {
             lookupResult = await khaltiLookup(pidx);
         } catch (error) {
             console.error("Khalti lookup API failed:", error.message);
-            return res.redirect(
-                buildRedirectUrl("payment-failed", {
+            return redirectToClientOrWeb(res, {
+                clientRedirectUri,
+                webPath: "payment-failed",
+                params: {
                     reason: "lookup_failed",
                     gateway: "khalti",
-                })
-            );
+                },
+            });
         }
 
         console.log("Khalti lookup result:", lookupResult);
@@ -1160,25 +1233,29 @@ export const verifyKhaltiPayment = async (req, res) => {
 
         if (!transactionId) {
             console.error("Transaction ID not found in Khalti response");
-            return res.redirect(
-                buildRedirectUrl("payment-failed", {
+            return redirectToClientOrWeb(res, {
+                clientRedirectUri,
+                webPath: "payment-failed",
+                params: {
                     reason: "no_txn_id",
                     gateway: "khalti",
-                })
-            );
+                },
+            });
         }
 
         const payment = await Payment.findOne({ transactionId });
 
         if (!payment) {
             console.error(`Payment record not found for transaction: ${transactionId}`);
-            return res.redirect(
-                buildRedirectUrl("payment-failed", {
+            return redirectToClientOrWeb(res, {
+                clientRedirectUri,
+                webPath: "payment-failed",
+                params: {
                     reason: "not_found",
                     txn: transactionId,
                     gateway: "khalti",
-                })
-            );
+                },
+            });
         }
 
         // Already processed — ensure invoice is marked Paid and redirect
@@ -1191,14 +1268,18 @@ export const verifyKhaltiPayment = async (req, res) => {
                 gatewayLabel: "Khalti",
             });
 
-            return res.redirect(
-                buildRedirectUrl("payment-success", {
+            return redirectToClientOrWeb(res, {
+                clientRedirectUri,
+                webPath: "payment-success",
+                params: {
+                    result: "success",
+                    paymentId: payment._id,
                     txn: transactionId,
                     amount: lookupResult.total_amount / 100,
                     invoice: payment.invoiceId,
                     gateway: "khalti",
-                })
-            );
+                },
+            });
         }
 
         // Check Khalti payment status
@@ -1218,13 +1299,18 @@ export const verifyKhaltiPayment = async (req, res) => {
                 );
             }
 
-            return res.redirect(
-                buildRedirectUrl("payment-failed", {
+            return redirectToClientOrWeb(res, {
+                clientRedirectUri,
+                webPath: "payment-failed",
+                params: {
+                    result: "failed",
+                    paymentId: payment._id,
+                    invoice: payment.invoiceId,
                     status: lookupResult.status,
                     txn: transactionId,
                     gateway: "khalti",
-                })
-            );
+                },
+            });
         }
 
         // Verify amount (Khalti returns amount in paisa)
@@ -1240,13 +1326,18 @@ export const verifyKhaltiPayment = async (req, res) => {
             payment.gatewayResponse = lookupResult;
             await payment.save();
 
-            return res.redirect(
-                buildRedirectUrl("payment-failed", {
+            return redirectToClientOrWeb(res, {
+                clientRedirectUri,
+                webPath: "payment-failed",
+                params: {
+                    result: "failed",
+                    paymentId: payment._id,
+                    invoice: payment.invoiceId,
                     reason: "amount_mismatch",
                     txn: transactionId,
                     gateway: "khalti",
-                })
-            );
+                },
+            });
         }
 
         await finalizeOnlinePayment({
@@ -1258,21 +1349,27 @@ export const verifyKhaltiPayment = async (req, res) => {
 
         console.log(`✓ Khalti payment verified successfully: ${transactionId}`);
 
-        return res.redirect(
-            buildRedirectUrl("payment-success", {
+        return redirectToClientOrWeb(res, {
+            clientRedirectUri,
+            webPath: "payment-success",
+            params: {
+                result: "success",
+                paymentId: payment._id,
                 txn: transactionId,
                 amount: paidAmount,
                 invoice: payment.invoiceId,
                 gateway: "khalti",
-            })
-        );
+            },
+        });
     } catch (error) {
         console.error("Khalti verification error:", error);
-        return res.redirect(
-            buildRedirectUrl("payment-failed", {
+        return redirectToClientOrWeb(res, {
+            clientRedirectUri: req.method === "GET" ? req.query?.clientRedirectUri : req.body?.clientRedirectUri,
+            webPath: "payment-failed",
+            params: {
                 reason: "server_error",
                 gateway: "khalti",
-            })
-        );
+            },
+        });
     }
 };

@@ -52,11 +52,11 @@ export default function TenantMaintenanceDetail() {
     const getPriorityColor = (priority) => {
         switch (priority) {
             case "High":
-                return { bg: "#FEE2E2", text: "#991B1B" };
+                return { bg: COLORS.destructiveSoft, text: COLORS.destructive };
             case "Medium":
-                return { bg: "#FEF9C3", text: "#854D0E" };
+                return { bg: COLORS.warningSoft, text: COLORS.warning };
             case "Low":
-                return { bg: "#DCFCE7", text: "#166534" };
+                return { bg: COLORS.successSoft, text: COLORS.success };
             default:
                 return { bg: COLORS.muted, text: COLORS.mutedForeground };
         }
@@ -143,24 +143,24 @@ export default function TenantMaintenanceDetail() {
                 {/* Status Info */}
                 {displayStatus === "Open" && (
                     <View style={styles.infoBox}>
-                        <Ionicons name="information-circle-outline" size={20} color="#854D0E" />
+                        <Ionicons name="information-circle-outline" size={20} color={COLORS.warning} />
                         <Text style={styles.infoText}>Your request is open. The landlord will review it soon.</Text>
                     </View>
                 )}
 
                 {displayStatus === "In Progress" && (
-                    <View style={[styles.infoBox, { backgroundColor: "#DBEAFE" }]}>
-                        <Ionicons name="construct-outline" size={20} color="#1E40AF" />
-                        <Text style={[styles.infoText, { color: "#1E40AF" }]}>
+                    <View style={[styles.infoBox, { backgroundColor: COLORS.primarySoft }]}>
+                        <Ionicons name="construct-outline" size={20} color={COLORS.primary} />
+                        <Text style={[styles.infoText, { color: COLORS.primary }]}>
                             Your request is being worked on. You will be notified when it is resolved.
                         </Text>
                     </View>
                 )}
 
                 {displayStatus === "Resolved" && (
-                    <View style={[styles.infoBox, { backgroundColor: "#DCFCE7" }]}>
-                        <Ionicons name="checkmark-circle-outline" size={20} color="#166534" />
-                        <Text style={[styles.infoText, { color: "#166534" }]}>
+                    <View style={[styles.infoBox, { backgroundColor: COLORS.successSoft }]}>
+                        <Ionicons name="checkmark-circle-outline" size={20} color={COLORS.success} />
+                        <Text style={[styles.infoText, { color: COLORS.success }]}>
                             This maintenance request has been resolved.
                         </Text>
                     </View>
@@ -245,14 +245,16 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "flex-start",
         gap: 10,
-        backgroundColor: "#FEF9C3",
+        backgroundColor: COLORS.warningSoft,
         padding: 16,
         borderRadius: 12,
+        borderWidth: 1,
+        borderColor: "rgba(245, 158, 11, 0.24)",
     },
     infoText: {
         flex: 1,
         fontSize: 13,
-        color: "#854D0E",
+        color: COLORS.warning,
         lineHeight: 20,
     },
 });

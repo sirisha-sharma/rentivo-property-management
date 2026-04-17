@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, FlatList, StyleSheet } from "react-native";
 import { DocumentContext } from "../../../context/DocumentContext";
 import { Ionicons } from "@expo/vector-icons";
 import { TopBar } from "../../../components/TopBar";
@@ -30,9 +30,9 @@ export default function TenantDocumentList() {
     const getTypeColor = (type) => {
         switch (type) {
             case "Lease Agreement":
-                return { bg: "#DBEAFE", text: "#1E40AF" };
+                return { bg: COLORS.primarySoft, text: COLORS.primary };
             case "ID Proof":
-                return { bg: "#FEF9C3", text: "#854D0E" };
+                return { bg: COLORS.warningSoft, text: COLORS.warning };
             default:
                 return { bg: COLORS.muted, text: COLORS.mutedForeground };
         }

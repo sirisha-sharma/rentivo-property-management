@@ -46,11 +46,11 @@ export default function TenantMaintenance() {
     const getPriorityColor = (priority) => {
         switch (priority) {
             case "High":
-                return { bg: "#FEE2E2", text: "#991B1B" };
+                return { bg: COLORS.destructiveSoft, text: COLORS.destructive };
             case "Medium":
-                return { bg: "#FEF9C3", text: "#854D0E" };
+                return { bg: COLORS.warningSoft, text: COLORS.warning };
             case "Low":
-                return { bg: "#DCFCE7", text: "#166534" };
+                return { bg: COLORS.successSoft, text: COLORS.success };
             default:
                 return { bg: COLORS.muted, text: COLORS.mutedForeground };
         }

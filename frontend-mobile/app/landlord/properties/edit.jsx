@@ -314,7 +314,7 @@ export default function EditProperty() {
                                 <View key={index} style={styles.imagePreviewContainer}>
                                     <Image source={{ uri: getImageUri(img) }} style={styles.imagePreview} />
                                     <TouchableOpacity style={styles.removeImageBtn} onPress={() => removeImage(index)}>
-                                        <Ionicons name="close-circle" size={24} color="#EF4444" />
+                                        <Ionicons name="close-circle" size={24} color={COLORS.destructive} />
                                     </TouchableOpacity>
                                 </View>
                             ))}

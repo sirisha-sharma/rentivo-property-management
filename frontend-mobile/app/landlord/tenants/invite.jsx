@@ -130,6 +130,18 @@ export default function InviteTenant() {
             <TopBar title="Invite Tenant" showBack />
 
             <ScrollView contentContainerStyle={styles.content}>
+                <View style={styles.introCard}>
+                    <View style={styles.introIcon}>
+                        <Ionicons name="mail-open-outline" size={20} color={COLORS.primary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.introTitle}>Invite a tenant with confidence</Text>
+                        <Text style={styles.introText}>
+                            Select the property, set the lease dates, and Rentivo will handle the invitation flow.
+                        </Text>
+                    </View>
+                </View>
+
                 {shouldShowBanner ? (
                     <SubscriptionGateBanner
                         title={actionPrompt.title}
@@ -243,6 +255,37 @@ const styles = StyleSheet.create({
     content: {
         padding: 16,
         gap: 16,
+    },
+    introCard: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        gap: 14,
+        backgroundColor: COLORS.surface,
+        borderRadius: 18,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        padding: 16,
+    },
+    introIcon: {
+        width: 42,
+        height: 42,
+        borderRadius: 14,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: COLORS.primarySoft,
+        borderWidth: 1,
+        borderColor: "rgba(47,123,255,0.22)",
+    },
+    introTitle: {
+        fontSize: 16,
+        fontWeight: "700",
+        color: COLORS.foreground,
+    },
+    introText: {
+        marginTop: 4,
+        fontSize: 13,
+        lineHeight: 20,
+        color: COLORS.mutedForeground,
     },
     inputGroup: {
         gap: 8,

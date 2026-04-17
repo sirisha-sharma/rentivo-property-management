@@ -12,6 +12,7 @@ import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { MessageContext } from "../../context/MessageContext";
+import { EmptyState } from "../../components/EmptyState";
 import { TopBar } from "../../components/TopBar";
 import { COLORS } from "../../constants/theme";
 
@@ -59,15 +60,29 @@ export default function NewConversationScreen() {
         <View style={styles.container}>
             <TopBar title="New Chat" showBack />
 
-            <View style={styles.searchWrap}>
-                <Ionicons name="search-outline" size={18} color={COLORS.mutedForeground} />
-                <TextInput
-                    style={styles.searchInput}
-                    value={query}
-                    onChangeText={setQuery}
-                    placeholder="Search landlord, tenant, or property"
-                    placeholderTextColor={COLORS.mutedForeground}
-                />
+            <View style={styles.headerBlock}>
+                <View style={styles.heroCard}>
+                    <View style={styles.heroIcon}>
+                        <Ionicons name="create-outline" size={22} color={COLORS.primary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.heroTitle}>Start a conversation</Text>
+                        <Text style={styles.heroSubtitle}>
+                            Search contacts by person, property, or email and jump straight into chat.
+                        </Text>
+                    </View>
+                </View>
+
+                <View style={styles.searchWrap}>
+                    <Ionicons name="search-outline" size={18} color={COLORS.mutedForeground} />
+                    <TextInput
+                        style={styles.searchInput}
+                        value={query}
+                        onChangeText={setQuery}
+                        placeholder="Search landlord, tenant, or property"
+                        placeholderTextColor={COLORS.mutedForeground}
+                    />
+                </View>
             </View>
 
             {loading ? (
@@ -106,13 +121,11 @@ export default function NewConversationScreen() {
                         </TouchableOpacity>
                     )}
                     ListEmptyComponent={
-                        <View style={styles.emptyState}>
-                            <Ionicons name="people-outline" size={52} color={COLORS.border} />
-                            <Text style={styles.emptyTitle}>No available contacts</Text>
-                            <Text style={styles.emptyText}>
-                                You can only message your own landlord or active tenants.
-                            </Text>
-                        </View>
+                        <EmptyState
+                            icon="people-outline"
+                            title="No available contacts"
+                            subtitle="You can only message your own landlord or active tenants."
+                        />
                     }
                 />
             )}
@@ -125,19 +138,53 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: COLORS.background,
     },
+    headerBlock: {
+        paddingHorizontal: 16,
+        paddingTop: 16,
+        gap: 14,
+    },
+    heroCard: {
+        flexDirection: "row",
+        gap: 14,
+        alignItems: "center",
+        backgroundColor: COLORS.surface,
+        borderRadius: 22,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        padding: 18,
+    },
+    heroIcon: {
+        width: 48,
+        height: 48,
+        borderRadius: 16,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: COLORS.primarySoft,
+        borderWidth: 1,
+        borderColor: "rgba(47,123,255,0.24)",
+    },
+    heroTitle: {
+        fontSize: 17,
+        fontWeight: "800",
+        color: COLORS.foreground,
+        letterSpacing: -0.3,
+    },
+    heroSubtitle: {
+        marginTop: 4,
+        fontSize: 13,
+        lineHeight: 19,
+        color: COLORS.mutedForeground,
+    },
     searchWrap: {
         flexDirection: "row",
         alignItems: "center",
         gap: 8,
-        marginHorizontal: 16,
-        marginTop: 16,
-        marginBottom: 8,
-        backgroundColor: COLORS.card,
-        borderRadius: 12,
+        backgroundColor: COLORS.surfaceElevated,
+        borderRadius: 16,
         borderWidth: 1,
         borderColor: COLORS.border,
         paddingHorizontal: 14,
-        paddingVertical: 10,
+        paddingVertical: 12,
     },
     searchInput: {
         flex: 1,
@@ -146,13 +193,14 @@ const styles = StyleSheet.create({
     },
     list: {
         padding: 16,
+        paddingTop: 14,
     },
     card: {
         flexDirection: "row",
         alignItems: "center",
         gap: 12,
-        backgroundColor: COLORS.card,
-        borderRadius: 14,
+        backgroundColor: COLORS.surface,
+        borderRadius: 18,
         borderWidth: 1,
         borderColor: COLORS.border,
         padding: 14,
@@ -161,15 +209,17 @@ const styles = StyleSheet.create({
     avatar: {
         width: 44,
         height: 44,
-        borderRadius: 22,
-        backgroundColor: COLORS.primary,
+        borderRadius: 16,
+        backgroundColor: COLORS.primarySoft,
+        borderWidth: 1,
+        borderColor: "rgba(47,123,255,0.24)",
         alignItems: "center",
         justifyContent: "center",
     },
     avatarText: {
-        color: "#fff",
+        color: COLORS.primary,
         fontSize: 17,
-        fontWeight: "700",
+        fontWeight: "800",
     },
     cardContent: {
         flex: 1,
@@ -182,29 +232,12 @@ const styles = StyleSheet.create({
     meta: {
         marginTop: 3,
         color: COLORS.primary,
-        fontSize: 13,
+        fontSize: 12,
+        fontWeight: "600",
     },
     email: {
         marginTop: 3,
         color: COLORS.mutedForeground,
         fontSize: 12,
-    },
-    emptyState: {
-        alignItems: "center",
-        justifyContent: "center",
-        paddingTop: 80,
-        paddingHorizontal: 32,
-    },
-    emptyTitle: {
-        marginTop: 16,
-        fontSize: 18,
-        fontWeight: "700",
-        color: COLORS.foreground,
-    },
-    emptyText: {
-        marginTop: 8,
-        textAlign: "center",
-        color: COLORS.mutedForeground,
-        lineHeight: 20,
     },
 });

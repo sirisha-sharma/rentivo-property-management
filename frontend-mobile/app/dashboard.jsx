@@ -42,35 +42,32 @@ function getInitials(name) {
 
 // ─── Sub-components ────────────────────────────────────────────────────────
 
-function StatTile({ icon, iconBg, iconColor, value, label, loading }) {
+function StatTile({ icon, iconTint, value, label, loading }) {
   return (
     <View
       style={{
         flex: 1,
-        backgroundColor: "#fff",
-        borderRadius: 16,
+        backgroundColor: COLORS.surface,
+        borderRadius: 18,
         borderWidth: 1,
         borderColor: COLORS.border,
         padding: 16,
-        shadowColor: "#0F172A",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.04,
-        shadowRadius: 8,
-        elevation: 2,
       }}
     >
       <View
         style={{
-          width: 38,
-          height: 38,
-          borderRadius: 10,
-          backgroundColor: iconBg,
+          width: 40,
+          height: 40,
+          borderRadius: 12,
+          backgroundColor: iconTint.bg,
+          borderWidth: 1,
+          borderColor: iconTint.border,
           alignItems: "center",
           justifyContent: "center",
-          marginBottom: 12,
+          marginBottom: 14,
         }}
       >
-        <Ionicons name={icon} size={18} color={iconColor} />
+        <Ionicons name={icon} size={18} color={iconTint.color} />
       </View>
       {loading ? (
         <ActivityIndicator size="small" color={COLORS.primary} />
@@ -78,11 +75,11 @@ function StatTile({ icon, iconBg, iconColor, value, label, loading }) {
         <>
           <Text
             style={{
-              fontSize: 24,
+              fontSize: 26,
               fontWeight: "700",
               color: COLORS.foreground,
-              letterSpacing: -0.5,
-              lineHeight: 28,
+              letterSpacing: -0.6,
+              lineHeight: 30,
             }}
           >
             {value}
@@ -108,16 +105,11 @@ function SectionCard({ title, subtitle, children, style }) {
     <View
       style={[
         {
-          backgroundColor: "#fff",
+          backgroundColor: COLORS.surface,
           borderRadius: 20,
           borderWidth: 1,
           borderColor: COLORS.border,
           padding: 20,
-          shadowColor: "#0F172A",
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.04,
-          shadowRadius: 10,
-          elevation: 2,
         },
         style,
       ]}
@@ -134,17 +126,17 @@ function SectionCard({ title, subtitle, children, style }) {
           {title ? (
             <Text
               style={{
-                fontSize: 15,
+                fontSize: 16,
                 fontWeight: "700",
                 color: COLORS.foreground,
-                letterSpacing: -0.1,
+                letterSpacing: -0.2,
               }}
             >
               {title}
             </Text>
           ) : null}
           {subtitle ? (
-            <Text style={{ fontSize: 12, color: COLORS.mutedForeground }}>
+            <Text style={{ fontSize: 12, color: COLORS.mutedForeground, fontWeight: "500" }}>
               {subtitle}
             </Text>
           ) : null}
@@ -160,16 +152,18 @@ function EmptyChartState({ message }) {
     <View
       style={{
         alignItems: "center",
-        paddingVertical: 24,
-        gap: 8,
+        paddingVertical: 28,
+        gap: 10,
       }}
     >
       <View
         style={{
-          width: 44,
-          height: 44,
-          borderRadius: 22,
-          backgroundColor: COLORS.muted,
+          width: 48,
+          height: 48,
+          borderRadius: 16,
+          backgroundColor: COLORS.surfaceElevated,
+          borderWidth: 1,
+          borderColor: COLORS.border,
           alignItems: "center",
           justifyContent: "center",
         }}
@@ -190,31 +184,43 @@ function EmptyChartState({ message }) {
   );
 }
 
-function BadgeCount({ count }) {
+function BadgeCount({ count, floating = false }) {
   if (!count) return null;
   return (
     <View
       style={{
-        position: "absolute",
-        top: -5,
-        right: -5,
+        position: floating ? "absolute" : "relative",
+        top: floating ? -6 : undefined,
+        right: floating ? -6 : undefined,
         backgroundColor: COLORS.destructive,
         borderRadius: 10,
-        minWidth: 18,
-        height: 18,
+        minWidth: 20,
+        height: 20,
         alignItems: "center",
         justifyContent: "center",
-        paddingHorizontal: 4,
-        borderWidth: 1.5,
-        borderColor: "#fff",
+        paddingHorizontal: 5,
+        borderWidth: 2,
+        borderColor: COLORS.background,
       }}
     >
-      <Text style={{ color: "#fff", fontSize: 10, fontWeight: "700" }}>
+      <Text style={{ color: "#fff", fontSize: 10, fontWeight: "800" }}>
         {count > 9 ? "9+" : count}
       </Text>
     </View>
   );
 }
+
+// Dark-mode tint palette for stat tiles and quick actions.
+const TINTS = {
+  primary: { bg: COLORS.primarySoft, border: "rgba(47,123,255,0.3)", color: COLORS.primary },
+  success: { bg: COLORS.successSoft, border: "rgba(16,185,129,0.3)", color: COLORS.success },
+  warning: { bg: COLORS.warningSoft, border: "rgba(245,158,11,0.3)", color: COLORS.warning },
+  danger: { bg: COLORS.destructiveSoft, border: "rgba(239,68,68,0.3)", color: COLORS.destructive },
+  lilac: { bg: COLORS.accentLilacSoft, border: "rgba(200,210,255,0.3)", color: COLORS.accentLilac },
+  teal: { bg: COLORS.accentTealSoft, border: "rgba(52,212,198,0.3)", color: COLORS.accentTealBright },
+  pink: { bg: "rgba(244,114,182,0.16)", border: "rgba(244,114,182,0.3)", color: "#F472B6" },
+  orange: { bg: "rgba(251,146,60,0.16)", border: "rgba(251,146,60,0.3)", color: "#FB923C" },
+};
 
 // ─── Main Component ────────────────────────────────────────────────────────
 
@@ -224,13 +230,11 @@ export default function DashboardScreen() {
 
   const { unreadCount, fetchNotifications } = useContext(NotificationContext);
   const { unreadMessageCount, fetchUnreadCount } = useContext(MessageContext);
-  const { subscription, loading: subscriptionLoading, fetchSubscription } =
+  const { subscription, fetchSubscription } =
     useContext(SubscriptionContext);
   const { width: screenWidth } = useWindowDimensions();
-  // chart width = screen - horizontal page padding - card padding
   const chartWidth = screenWidth - 40 - 40 - 8;
 
-  // ── State ──
   const [stats, setStats] = useState({
     propertiesCount: 0,
     tenantsCount: 0,
@@ -265,7 +269,6 @@ export default function DashboardScreen() {
 
   const [loading, setLoading] = useState(true);
 
-  // ── Data fetching ──
   const fetchStats = useCallback(async () => {
     if (!user?.token) return;
     try {
@@ -294,7 +297,6 @@ export default function DashboardScreen() {
     }
   }, [user?.role, user?.token]);
 
-  // ── Chart data memos ──
   const monthlyCollectionData = useMemo(
     () =>
       landlordCharts.monthlyRentCollection.map((item) => ({
@@ -312,21 +314,9 @@ export default function DashboardScreen() {
 
   const paymentPieData = useMemo(
     () => [
-      {
-        value: landlordCharts.paymentStatusBreakdown.Paid,
-        color: COLORS.success,
-        label: "Paid",
-      },
-      {
-        value: landlordCharts.paymentStatusBreakdown.Pending,
-        color: COLORS.warning,
-        label: "Pending",
-      },
-      {
-        value: landlordCharts.paymentStatusBreakdown.Overdue,
-        color: COLORS.destructive,
-        label: "Overdue",
-      },
+      { value: landlordCharts.paymentStatusBreakdown.Paid, color: COLORS.success, label: "Paid" },
+      { value: landlordCharts.paymentStatusBreakdown.Pending, color: COLORS.warning, label: "Pending" },
+      { value: landlordCharts.paymentStatusBreakdown.Overdue, color: COLORS.destructive, label: "Overdue" },
     ],
     [landlordCharts.paymentStatusBreakdown]
   );
@@ -348,21 +338,9 @@ export default function DashboardScreen() {
 
   const tenantPaymentPieData = useMemo(
     () => [
-      {
-        value: tenantCharts.paymentStatusBreakdown.Paid,
-        color: COLORS.success,
-        label: "Paid",
-      },
-      {
-        value: tenantCharts.paymentStatusBreakdown.Pending,
-        color: COLORS.warning,
-        label: "Pending",
-      },
-      {
-        value: tenantCharts.paymentStatusBreakdown.Overdue,
-        color: COLORS.destructive,
-        label: "Overdue",
-      },
+      { value: tenantCharts.paymentStatusBreakdown.Paid, color: COLORS.success, label: "Paid" },
+      { value: tenantCharts.paymentStatusBreakdown.Pending, color: COLORS.warning, label: "Pending" },
+      { value: tenantCharts.paymentStatusBreakdown.Overdue, color: COLORS.destructive, label: "Overdue" },
     ],
     [tenantCharts.paymentStatusBreakdown]
   );
@@ -380,7 +358,6 @@ export default function DashboardScreen() {
       if (user?.role === "landlord") {
         void fetchSubscription();
       }
-
       return undefined;
     }, [fetchNotifications, fetchStats, fetchSubscription, fetchUnreadCount, user?.role])
   );
@@ -392,138 +369,48 @@ export default function DashboardScreen() {
 
   const isLandlord = user?.role === "landlord";
 
-  // ── Quick action definitions ──
   const landlordActions = [
-    {
-      label: "Properties",
-      icon: "home",
-      bg: "#EFF6FF",
-      color: COLORS.primary,
-      route: "/landlord/properties",
-    },
-    {
-      label: "Tenants",
-      icon: "people",
-      bg: "#ECFDF5",
-      color: COLORS.success,
-      route: "/landlord/tenants",
-    },
-    {
-      label: "Maintenance",
-      icon: "construct",
-      bg: "#FFFBEB",
-      color: COLORS.warning,
-      route: "/landlord/maintenance",
-    },
-    {
-      label: "Invoices",
-      icon: "document-text",
-      bg: "#F5F3FF",
-      color: "#7C3AED",
-      route: "/landlord/invoices",
-    },
-    {
-      label: "Documents",
-      icon: "folder-open",
-      bg: "#F0FDFA",
-      color: "#0D9488",
-      route: "/landlord/documents",
-    },
-    {
-      label: "Messages",
-      icon: "chatbubbles",
-      bg: "#FDF2F8",
-      color: "#DB2777",
-      route: "/messages",
-      badge: unreadMessageCount,
-    },
-    {
-      label: "Subscription",
-      icon: "ribbon",
-      bg: "#F0FDFA",
-      color: "#0F766E",
-      route: "/landlord/subscription",
-    },
+    { label: "Properties", icon: "home", tint: "primary", route: "/landlord/properties" },
+    { label: "Tenants", icon: "people", tint: "success", route: "/landlord/tenants" },
+    { label: "Maintenance", icon: "construct", tint: "warning", route: "/landlord/maintenance" },
+    { label: "Invoices", icon: "document-text", tint: "lilac", route: "/landlord/invoices" },
+    { label: "Documents", icon: "folder-open", tint: "teal", route: "/landlord/documents" },
+    { label: "Messages", icon: "chatbubbles", tint: "pink", route: "/messages", badge: unreadMessageCount },
+    { label: "Subscription", icon: "ribbon", tint: "teal", route: "/landlord/subscription" },
   ];
 
   const tenantActions = [
-    {
-      label: "Browse",
-      icon: "search",
-      bg: "#EFF6FF",
-      color: COLORS.primary,
-      route: "/tenant/marketplace",
-    },
-    {
-      label: "Invitations",
-      icon: "mail",
-      bg: "#EFF6FF",
-      color: "#3B82F6",
-      route: "/tenant/invitations",
-    },
-    {
-      label: "My Rentals",
-      icon: "home",
-      bg: "#ECFDF5",
-      color: COLORS.success,
-      route: "/tenant/rentals",
-    },
-    {
-      label: "Invoices",
-      icon: "document-text",
-      bg: "#FFF7ED",
-      color: "#EA580C",
-      route: "/tenant/invoices",
-    },
-    {
-      label: "Maintenance",
-      icon: "construct",
-      bg: "#FEF2F2",
-      color: COLORS.destructive,
-      route: "/tenant/maintenance",
-    },
-    {
-      label: "Documents",
-      icon: "folder-open",
-      bg: "#F0FDFA",
-      color: "#0D9488",
-      route: "/tenant/documents",
-    },
-    {
-      label: "Payments",
-      icon: "receipt",
-      bg: "#F5F3FF",
-      color: "#7C3AED",
-      route: "/tenant/payments",
-    },
-    {
-      label: "Messages",
-      icon: "chatbubbles",
-      bg: "#FDF2F8",
-      color: "#DB2777",
-      route: "/messages",
-      badge: unreadMessageCount,
-    },
+    { label: "Browse", icon: "search", tint: "primary", route: "/tenant/marketplace" },
+    { label: "Invitations", icon: "mail", tint: "lilac", route: "/tenant/invitations" },
+    { label: "My Rentals", icon: "home", tint: "success", route: "/tenant/rentals" },
+    { label: "Invoices", icon: "document-text", tint: "orange", route: "/tenant/invoices" },
+    { label: "Maintenance", icon: "construct", tint: "danger", route: "/tenant/maintenance" },
+    { label: "Documents", icon: "folder-open", tint: "teal", route: "/tenant/documents" },
+    { label: "Payments", icon: "receipt", tint: "lilac", route: "/tenant/payments" },
+    { label: "Messages", icon: "chatbubbles", tint: "pink", route: "/messages", badge: unreadMessageCount },
   ];
 
   const actions = isLandlord ? landlordActions : tenantActions;
-  // ─── Render ──────────────────────────────────────────────────────────────
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }} edges={["top"]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#EFF6FF" />
+    <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+      <SafeAreaView edges={["top"]} style={{ backgroundColor: COLORS.background }} />
 
       <ScrollView
-        contentContainerStyle={{
-          paddingBottom: 48,
-        }}
+        contentContainerStyle={{ paddingBottom: 56 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Header ── */}
+        {/* ── Hero Header ── */}
         <LinearGradient
-          colors={["#EFF6FF", "#F8FAFC"]}
+          colors={[COLORS.primaryDeep, "#1544B8", COLORS.background]}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
-          style={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 24 }}
+          style={{
+            paddingHorizontal: 20,
+            paddingTop: 20,
+            paddingBottom: 40,
+          }}
         >
           <View
             style={{
@@ -532,42 +419,36 @@ export default function DashboardScreen() {
               alignItems: "center",
             }}
           >
-            {/* Left: avatar + greeting */}
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12, flex: 1 }}>
-              <LinearGradient
-                colors={["#3B82F6", "#1D4ED8"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
+              <View
                 style={{
-                  width: 46,
-                  height: 46,
-                  borderRadius: 14,
+                  width: 48,
+                  height: 48,
+                  borderRadius: 16,
+                  backgroundColor: "rgba(255,255,255,0.15)",
+                  borderWidth: 1,
+                  borderColor: "rgba(255,255,255,0.25)",
                   alignItems: "center",
                   justifyContent: "center",
-                  shadowColor: "#2563EB",
-                  shadowOffset: { width: 0, height: 3 },
-                  shadowOpacity: 0.25,
-                  shadowRadius: 6,
-                  elevation: 4,
                 }}
               >
                 <Text
                   style={{
                     color: "#fff",
-                    fontSize: 16,
+                    fontSize: 17,
                     fontWeight: "700",
                     letterSpacing: 0.5,
                   }}
                 >
                   {getInitials(user?.name)}
                 </Text>
-              </LinearGradient>
+              </View>
 
               <View style={{ flex: 1 }}>
                 <Text
                   style={{
                     fontSize: 13,
-                    color: COLORS.mutedForeground,
+                    color: "rgba(245,247,255,0.8)",
                     fontWeight: "500",
                   }}
                 >
@@ -575,9 +456,9 @@ export default function DashboardScreen() {
                 </Text>
                 <Text
                   style={{
-                    fontSize: 18,
+                    fontSize: 19,
                     fontWeight: "700",
-                    color: COLORS.foreground,
+                    color: "#fff",
                     letterSpacing: -0.3,
                   }}
                   numberOfLines={1}
@@ -587,53 +468,51 @@ export default function DashboardScreen() {
               </View>
             </View>
 
-            {/* Right: notification bell */}
             <TouchableOpacity
               onPress={() => router.push("/notifications")}
               style={{
-                width: 42,
-                height: 42,
-                borderRadius: 12,
-                backgroundColor: "#fff",
+                width: 44,
+                height: 44,
+                borderRadius: 14,
+                backgroundColor: "rgba(255,255,255,0.15)",
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.25)",
                 alignItems: "center",
                 justifyContent: "center",
-                shadowColor: "#0F172A",
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.06,
-                shadowRadius: 4,
-                elevation: 2,
               }}
               activeOpacity={0.8}
             >
-              <Ionicons name="notifications-outline" size={22} color={COLORS.foreground} />
-              <BadgeCount count={unreadCount} />
+              <Ionicons name="notifications-outline" size={20} color="#fff" />
+              <BadgeCount count={unreadCount} floating />
             </TouchableOpacity>
           </View>
 
           {/* Role badge + Upgrade button row */}
-          <View style={{ flexDirection: "row", alignItems: "center", marginTop: 14, gap: 8 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", marginTop: 18, gap: 8 }}>
             <View
               style={{
                 flexDirection: "row",
                 alignItems: "center",
-                backgroundColor: isLandlord ? "#DBEAFE" : "#D1FAE5",
-                borderRadius: 20,
-                paddingHorizontal: 10,
-                paddingVertical: 5,
-                gap: 5,
+                backgroundColor: "rgba(255,255,255,0.16)",
+                borderRadius: 999,
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                gap: 6,
+                borderWidth: 1,
+                borderColor: "rgba(255,255,255,0.22)",
               }}
             >
               <Ionicons
                 name={isLandlord ? "home-outline" : "person-outline"}
                 size={13}
-                color={isLandlord ? COLORS.primary : COLORS.success}
+                color="#fff"
               />
               <Text
                 style={{
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: "700",
-                  color: isLandlord ? "#1D4ED8" : "#065F46",
-                  letterSpacing: 0.5,
+                  color: "#fff",
+                  letterSpacing: 0.6,
                   textTransform: "uppercase",
                 }}
               >
@@ -649,15 +528,15 @@ export default function DashboardScreen() {
                   flexDirection: "row",
                   alignItems: "center",
                   gap: 4,
-                  backgroundColor: COLORS.primary,
-                  borderRadius: 20,
-                  paddingHorizontal: 10,
-                  paddingVertical: 5,
+                  backgroundColor: "#fff",
+                  borderRadius: 999,
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
                 }}
               >
-                <Ionicons name="trending-up-outline" size={11} color="#fff" />
-                <Text style={{ fontSize: 12, fontWeight: "700", color: "#fff" }}>
-                  Upgrade
+                <Ionicons name="trending-up-outline" size={12} color={COLORS.primary} />
+                <Text style={{ fontSize: 11, fontWeight: "700", color: COLORS.primary, letterSpacing: 0.3 }}>
+                  UPGRADE
                 </Text>
               </TouchableOpacity>
             )}
@@ -665,7 +544,7 @@ export default function DashboardScreen() {
         </LinearGradient>
 
         {/* ── Content ── */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 24, gap: 16 }}>
+        <View style={{ paddingHorizontal: 20, marginTop: -20, gap: 16 }}>
 
           {/* ── Stats Grid ── */}
           {isLandlord ? (
@@ -673,16 +552,14 @@ export default function DashboardScreen() {
               <View style={{ flexDirection: "row", gap: 12 }}>
                 <StatTile
                   icon="home"
-                  iconBg="#EFF6FF"
-                  iconColor={COLORS.primary}
+                  iconTint={TINTS.primary}
                   value={stats.propertiesCount}
                   label="Properties"
                   loading={loading}
                 />
                 <StatTile
                   icon="people"
-                  iconBg="#ECFDF5"
-                  iconColor={COLORS.success}
+                  iconTint={TINTS.success}
                   value={stats.tenantsCount}
                   label="Active Tenants"
                   loading={loading}
@@ -691,16 +568,14 @@ export default function DashboardScreen() {
               <View style={{ flexDirection: "row", gap: 12 }}>
                 <StatTile
                   icon="time-outline"
-                  iconBg="#FFFBEB"
-                  iconColor={COLORS.warning}
+                  iconTint={TINTS.warning}
                   value={stats.pendingTenantsCount}
                   label="Pending Tenants"
                   loading={loading}
                 />
                 <StatTile
                   icon="alert-circle-outline"
-                  iconBg="#FEF2F2"
-                  iconColor={COLORS.destructive}
+                  iconTint={TINTS.danger}
                   value={stats.overdueInvoices}
                   label="Overdue Invoices"
                   loading={loading}
@@ -712,16 +587,14 @@ export default function DashboardScreen() {
               <View style={{ flexDirection: "row", gap: 12 }}>
                 <StatTile
                   icon="home"
-                  iconBg="#EFF6FF"
-                  iconColor={COLORS.primary}
+                  iconTint={TINTS.primary}
                   value={tenantStats.activeProperties}
                   label="Active Rentals"
                   loading={loading}
                 />
                 <StatTile
                   icon="mail-outline"
-                  iconBg="#FFFBEB"
-                  iconColor={COLORS.warning}
+                  iconTint={TINTS.warning}
                   value={tenantStats.pendingInvitations}
                   label="Pending Invites"
                   loading={loading}
@@ -730,16 +603,14 @@ export default function DashboardScreen() {
               <View style={{ flexDirection: "row", gap: 12 }}>
                 <StatTile
                   icon="document-text-outline"
-                  iconBg="#FFF7ED"
-                  iconColor="#EA580C"
+                  iconTint={TINTS.orange}
                   value={tenantStats.pendingInvoices}
                   label="Pending Invoices"
                   loading={loading}
                 />
                 <StatTile
                   icon="alert-circle-outline"
-                  iconBg="#FEF2F2"
-                  iconColor={COLORS.destructive}
+                  iconTint={TINTS.danger}
                   value={tenantStats.overdueInvoices}
                   label="Overdue Invoices"
                   loading={loading}
@@ -755,26 +626,10 @@ export default function DashboardScreen() {
             ) : (
               <View style={{ flexDirection: "row", gap: 0 }}>
                 {[
-                  {
-                    label: "Total",
-                    value: isLandlord ? stats.totalInvoices : tenantStats.totalInvoices,
-                    color: COLORS.foreground,
-                  },
-                  {
-                    label: "Pending",
-                    value: isLandlord ? stats.pendingInvoices : tenantStats.pendingInvoices,
-                    color: COLORS.warning,
-                  },
-                  {
-                    label: "Paid",
-                    value: isLandlord ? stats.paidInvoices : tenantStats.paidInvoices,
-                    color: COLORS.success,
-                  },
-                  {
-                    label: "Overdue",
-                    value: isLandlord ? stats.overdueInvoices : tenantStats.overdueInvoices,
-                    color: COLORS.destructive,
-                  },
+                  { label: "Total", value: isLandlord ? stats.totalInvoices : tenantStats.totalInvoices, color: COLORS.foreground },
+                  { label: "Pending", value: isLandlord ? stats.pendingInvoices : tenantStats.pendingInvoices, color: COLORS.warning },
+                  { label: "Paid", value: isLandlord ? stats.paidInvoices : tenantStats.paidInvoices, color: COLORS.success },
+                  { label: "Overdue", value: isLandlord ? stats.overdueInvoices : tenantStats.overdueInvoices, color: COLORS.destructive },
                 ].map((item, idx, arr) => (
                   <View
                     key={item.label}
@@ -787,7 +642,7 @@ export default function DashboardScreen() {
                   >
                     <Text
                       style={{
-                        fontSize: 22,
+                        fontSize: 24,
                         fontWeight: "700",
                         color: item.color,
                         letterSpacing: -0.5,
@@ -799,8 +654,10 @@ export default function DashboardScreen() {
                       style={{
                         fontSize: 11,
                         color: COLORS.mutedForeground,
-                        marginTop: 2,
+                        marginTop: 3,
                         fontWeight: "500",
+                        textTransform: "uppercase",
+                        letterSpacing: 0.5,
                       }}
                     >
                       {item.label}
@@ -834,9 +691,7 @@ export default function DashboardScreen() {
                     yAxisTextStyle={{ color: COLORS.mutedForeground, fontSize: 10 }}
                     xAxisLabelTextStyle={{ color: COLORS.mutedForeground, fontSize: 11 }}
                     noOfSections={4}
-                    maxValue={
-                      Math.max(...monthlyCollectionData.map((d) => d.value), 0) || 100
-                    }
+                    maxValue={Math.max(...monthlyCollectionData.map((d) => d.value), 0) || 100}
                   />
                 )}
               </SectionCard>
@@ -854,6 +709,8 @@ export default function DashboardScreen() {
                         donut
                         radius={88}
                         innerRadius={54}
+                        innerCircleColor={COLORS.surface}
+                        backgroundColor={COLORS.surface}
                         textColor="#fff"
                         textSize={12}
                         centerLabelComponent={() => (
@@ -861,20 +718,14 @@ export default function DashboardScreen() {
                             <Text style={{ fontSize: 11, color: COLORS.mutedForeground }}>
                               Invoices
                             </Text>
-                            <Text
-                              style={{
-                                fontSize: 20,
-                                fontWeight: "700",
-                                color: COLORS.foreground,
-                              }}
-                            >
+                            <Text style={{ fontSize: 20, fontWeight: "700", color: COLORS.foreground }}>
                               {stats.totalInvoices}
                             </Text>
                           </View>
                         )}
                       />
                     </View>
-                    <View style={{ gap: 10, marginTop: 8 }}>
+                    <View style={{ gap: 10, marginTop: 12 }}>
                       {paymentPieData.map((item) => (
                         <View
                           key={item.label}
@@ -897,13 +748,7 @@ export default function DashboardScreen() {
                               {item.label}
                             </Text>
                           </View>
-                          <Text
-                            style={{
-                              fontSize: 14,
-                              fontWeight: "600",
-                              color: COLORS.foreground,
-                            }}
-                          >
+                          <Text style={{ fontSize: 14, fontWeight: "600", color: COLORS.foreground }}>
                             {item.value}
                           </Text>
                         </View>
@@ -926,62 +771,37 @@ export default function DashboardScreen() {
                     }}
                   >
                     {[
-                      {
-                        label: "Occupancy Rate",
-                        value: `${landlordCharts.occupancy.occupancyRate}%`,
-                        sub: `${landlordCharts.occupancy.occupiedProperties}/${landlordCharts.occupancy.totalProperties} occupied`,
-                        iconBg: "#EFF6FF",
-                        icon: "business-outline",
-                        iconColor: COLORS.primary,
-                      },
-                      {
-                        label: "Open Maintenance",
-                        value: landlordCharts.maintenanceStats.pending,
-                        sub: "Pending or in progress",
-                        iconBg: "#FFFBEB",
-                        icon: "construct-outline",
-                        iconColor: COLORS.warning,
-                      },
-                      {
-                        label: "Resolved",
-                        value: landlordCharts.maintenanceStats.resolved,
-                        sub: "Completed requests",
-                        iconBg: "#ECFDF5",
-                        icon: "checkmark-circle-outline",
-                        iconColor: COLORS.success,
-                      },
-                      {
-                        label: "Paid Invoices",
-                        value: stats.paidInvoices,
-                        sub: "Total paid so far",
-                        iconBg: "#F5F3FF",
-                        icon: "receipt-outline",
-                        iconColor: "#7C3AED",
-                      },
+                      { label: "Occupancy Rate", value: `${landlordCharts.occupancy.occupancyRate}%`, sub: `${landlordCharts.occupancy.occupiedProperties}/${landlordCharts.occupancy.totalProperties} occupied`, tint: TINTS.primary, icon: "business-outline" },
+                      { label: "Open Maintenance", value: landlordCharts.maintenanceStats.pending, sub: "Pending or in progress", tint: TINTS.warning, icon: "construct-outline" },
+                      { label: "Resolved", value: landlordCharts.maintenanceStats.resolved, sub: "Completed requests", tint: TINTS.success, icon: "checkmark-circle-outline" },
+                      { label: "Paid Invoices", value: stats.paidInvoices, sub: "Total paid so far", tint: TINTS.lilac, icon: "receipt-outline" },
                     ].map((item) => (
                       <View
                         key={item.label}
                         style={{
                           width: "48%",
-                          backgroundColor: COLORS.muted,
-                          borderRadius: 14,
+                          backgroundColor: COLORS.surfaceElevated,
+                          borderRadius: 16,
                           padding: 14,
-                          minWidth: 0,
+                          borderWidth: 1,
+                          borderColor: COLORS.border,
                           marginBottom: 12,
                         }}
                       >
                         <View
                           style={{
-                            width: 32,
-                            height: 32,
-                            borderRadius: 8,
-                            backgroundColor: item.iconBg,
+                            width: 34,
+                            height: 34,
+                            borderRadius: 10,
+                            backgroundColor: item.tint.bg,
+                            borderWidth: 1,
+                            borderColor: item.tint.border,
                             alignItems: "center",
                             justifyContent: "center",
                             marginBottom: 10,
                           }}
                         >
-                          <Ionicons name={item.icon} size={16} color={item.iconColor} />
+                          <Ionicons name={item.icon} size={16} color={item.tint.color} />
                         </View>
                         <Text
                           style={{
@@ -989,6 +809,8 @@ export default function DashboardScreen() {
                             color: COLORS.mutedForeground,
                             fontWeight: "500",
                             marginBottom: 4,
+                            textTransform: "uppercase",
+                            letterSpacing: 0.4,
                           }}
                         >
                           {item.label}
@@ -1043,9 +865,7 @@ export default function DashboardScreen() {
                     yAxisTextStyle={{ color: COLORS.mutedForeground, fontSize: 10 }}
                     xAxisLabelTextStyle={{ color: COLORS.mutedForeground, fontSize: 11 }}
                     noOfSections={4}
-                    maxValue={
-                      Math.max(...tenantMonthlyPaidData.map((d) => d.value), 0) || 100
-                    }
+                    maxValue={Math.max(...tenantMonthlyPaidData.map((d) => d.value), 0) || 100}
                   />
                 )}
               </SectionCard>
@@ -1063,6 +883,8 @@ export default function DashboardScreen() {
                         donut
                         radius={88}
                         innerRadius={54}
+                        innerCircleColor={COLORS.surface}
+                        backgroundColor={COLORS.surface}
                         textColor="#fff"
                         textSize={12}
                         centerLabelComponent={() => (
@@ -1070,20 +892,14 @@ export default function DashboardScreen() {
                             <Text style={{ fontSize: 11, color: COLORS.mutedForeground }}>
                               Invoices
                             </Text>
-                            <Text
-                              style={{
-                                fontSize: 20,
-                                fontWeight: "700",
-                                color: COLORS.foreground,
-                              }}
-                            >
+                            <Text style={{ fontSize: 20, fontWeight: "700", color: COLORS.foreground }}>
                               {tenantStats.totalInvoices}
                             </Text>
                           </View>
                         )}
                       />
                     </View>
-                    <View style={{ gap: 10, marginTop: 8 }}>
+                    <View style={{ gap: 10, marginTop: 12 }}>
                       {tenantPaymentPieData.map((item) => (
                         <View
                           key={item.label}
@@ -1106,13 +922,7 @@ export default function DashboardScreen() {
                               {item.label}
                             </Text>
                           </View>
-                          <Text
-                            style={{
-                              fontSize: 14,
-                              fontWeight: "600",
-                              color: COLORS.foreground,
-                            }}
-                          >
+                          <Text style={{ fontSize: 14, fontWeight: "600", color: COLORS.foreground }}>
                             {item.value}
                           </Text>
                         </View>
@@ -1135,64 +945,37 @@ export default function DashboardScreen() {
                     }}
                   >
                     {[
-                      {
-                        label: "Active Rentals",
-                        value: tenantStats.activeProperties,
-                        sub: "Current properties",
-                        iconBg: "#EFF6FF",
-                        icon: "home-outline",
-                        iconColor: COLORS.primary,
-                      },
-                      {
-                        label: "Pending Invites",
-                        value: tenantStats.pendingInvitations,
-                        sub: "Waiting for action",
-                        iconBg: "#FFFBEB",
-                        icon: "mail-outline",
-                        iconColor: COLORS.warning,
-                      },
-                      {
-                        label: "Open Requests",
-                        value:
-                          tenantCharts.maintenanceStats.pending +
-                          tenantCharts.maintenanceStats.inProgress,
-                        sub: "Active maintenance",
-                        iconBg: "#FEF2F2",
-                        icon: "construct-outline",
-                        iconColor: COLORS.destructive,
-                      },
-                      {
-                        label: "Resolved",
-                        value: tenantCharts.maintenanceStats.resolved,
-                        sub: "Completed issues",
-                        iconBg: "#ECFDF5",
-                        icon: "checkmark-circle-outline",
-                        iconColor: COLORS.success,
-                      },
+                      { label: "Active Rentals", value: tenantStats.activeProperties, sub: "Current properties", tint: TINTS.primary, icon: "home-outline" },
+                      { label: "Pending Invites", value: tenantStats.pendingInvitations, sub: "Waiting for action", tint: TINTS.warning, icon: "mail-outline" },
+                      { label: "Open Requests", value: tenantCharts.maintenanceStats.pending + tenantCharts.maintenanceStats.inProgress, sub: "Active maintenance", tint: TINTS.danger, icon: "construct-outline" },
+                      { label: "Resolved", value: tenantCharts.maintenanceStats.resolved, sub: "Completed issues", tint: TINTS.success, icon: "checkmark-circle-outline" },
                     ].map((item) => (
                       <View
                         key={item.label}
                         style={{
                           width: "48%",
-                          backgroundColor: COLORS.muted,
-                          borderRadius: 14,
+                          backgroundColor: COLORS.surfaceElevated,
+                          borderRadius: 16,
                           padding: 14,
-                          minWidth: 0,
+                          borderWidth: 1,
+                          borderColor: COLORS.border,
                           marginBottom: 12,
                         }}
                       >
                         <View
                           style={{
-                            width: 32,
-                            height: 32,
-                            borderRadius: 8,
-                            backgroundColor: item.iconBg,
+                            width: 34,
+                            height: 34,
+                            borderRadius: 10,
+                            backgroundColor: item.tint.bg,
+                            borderWidth: 1,
+                            borderColor: item.tint.border,
                             alignItems: "center",
                             justifyContent: "center",
                             marginBottom: 10,
                           }}
                         >
-                          <Ionicons name={item.icon} size={16} color={item.iconColor} />
+                          <Ionicons name={item.icon} size={16} color={item.tint.color} />
                         </View>
                         <Text
                           style={{
@@ -1200,6 +983,8 @@ export default function DashboardScreen() {
                             color: COLORS.mutedForeground,
                             fontWeight: "500",
                             marginBottom: 4,
+                            textTransform: "uppercase",
+                            letterSpacing: 0.4,
                           }}
                         >
                           {item.label}
@@ -1235,11 +1020,12 @@ export default function DashboardScreen() {
           <View style={{ marginTop: 4 }}>
             <Text
               style={{
-                fontSize: 16,
+                fontSize: 11,
                 fontWeight: "700",
-                color: COLORS.foreground,
-                marginBottom: 14,
-                letterSpacing: -0.2,
+                color: COLORS.accentLilac,
+                marginBottom: 12,
+                letterSpacing: 1.2,
+                textTransform: "uppercase",
               }}
             >
               Quick Actions
@@ -1252,127 +1038,100 @@ export default function DashboardScreen() {
                 marginBottom: -12,
               }}
             >
-              {actions.map((action) => (
-                <TouchableOpacity
-                  key={action.label}
-                  onPress={() => router.push(action.route)}
-                  activeOpacity={0.8}
-                  style={{
-                    width: "48%",
-                    backgroundColor: "#fff",
-                    borderRadius: 18,
-                    borderWidth: 1,
-                    borderColor: COLORS.border,
-                    padding: 16,
-                    alignItems: "center",
-                    shadowColor: "#0F172A",
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.04,
-                    shadowRadius: 8,
-                    elevation: 2,
-                    marginBottom: 12,
-                  }}
-                >
-                  <View
+              {actions.map((action) => {
+                const tint = TINTS[action.tint] || TINTS.primary;
+                return (
+                  <TouchableOpacity
+                    key={action.label}
+                    onPress={() => router.push(action.route)}
+                    activeOpacity={0.8}
                     style={{
-                      width: 50,
-                      height: 50,
-                      borderRadius: 14,
-                      backgroundColor: action.bg,
+                      width: "48%",
+                      backgroundColor: COLORS.surface,
+                      borderRadius: 20,
+                      borderWidth: 1,
+                      borderColor: COLORS.border,
+                      padding: 16,
                       alignItems: "center",
-                      justifyContent: "center",
-                      marginBottom: 10,
+                      marginBottom: 12,
                     }}
                   >
-                    <Ionicons name={action.icon} size={24} color={action.color} />
-                    {action.badge > 0 && (
-                      <BadgeCount count={action.badge} />
-                    )}
-                  </View>
-                  <Text
-                    style={{
-                      fontSize: 13,
-                      fontWeight: "600",
-                      color: COLORS.foreground,
-                      textAlign: "center",
-                    }}
-                  >
-                    {action.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <View
+                      style={{
+                        width: 54,
+                        height: 54,
+                        borderRadius: 16,
+                        backgroundColor: tint.bg,
+                        borderWidth: 1,
+                        borderColor: tint.border,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        marginBottom: 12,
+                      }}
+                    >
+                      <Ionicons name={action.icon} size={24} color={tint.color} />
+                      {action.badge > 0 && <BadgeCount count={action.badge} floating />}
+                    </View>
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: "600",
+                        color: COLORS.foreground,
+                        textAlign: "center",
+                        letterSpacing: 0.2,
+                      }}
+                    >
+                      {action.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
 
-          {/* ── Account Footer ── */}
+          {/* ── Sign out ── */}
           <TouchableOpacity
             onPress={handleLogout}
             activeOpacity={0.82}
             style={{
               marginTop: 8,
-              backgroundColor: "#FFF1F2",
+              backgroundColor: COLORS.surface,
               borderRadius: 18,
               borderWidth: 1,
-              borderColor: "#FECDD3",
+              borderColor: "rgba(239,68,68,0.3)",
               paddingHorizontal: 18,
               paddingVertical: 16,
               flexDirection: "row",
               alignItems: "center",
-              justifyContent: "center",
               gap: 12,
-              shadowColor: "#881337",
-              shadowOffset: { width: 0, height: 6 },
-              shadowOpacity: 0.08,
-              shadowRadius: 16,
-              elevation: 2,
             }}
           >
             <View
               style={{
-                width: 38,
-                height: 38,
+                width: 40,
+                height: 40,
                 borderRadius: 12,
-                backgroundColor: "#FFE4E6",
+                backgroundColor: COLORS.destructiveSoft,
                 borderWidth: 1,
-                borderColor: "#FDA4AF",
+                borderColor: "rgba(239,68,68,0.3)",
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
-              <Ionicons name="log-out-outline" size={18} color="#BE123C" />
+              <Ionicons name="log-out-outline" size={18} color={COLORS.destructive} />
             </View>
-            <View
-              style={{
-                flex: 1,
-                minWidth: 0,
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 15,
-                  fontWeight: "700",
-                  color: "#BE123C",
-                  letterSpacing: -0.2,
-                }}
-              >
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ fontSize: 15, fontWeight: "700", color: COLORS.foreground, letterSpacing: -0.2 }}>
                 Sign out
               </Text>
-              <Text
-                style={{
-                  fontSize: 12,
-                  color: "#9F1239",
-                  marginTop: 2,
-                }}
-                numberOfLines={1}
-              >
+              <Text style={{ fontSize: 12, color: COLORS.mutedForeground, marginTop: 2 }} numberOfLines={1}>
                 End this session on this device
               </Text>
             </View>
-            <Ionicons name="arrow-forward" size={18} color="#BE123C" />
+            <Ionicons name="chevron-forward" size={18} color={COLORS.destructive} />
           </TouchableOpacity>
-
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

@@ -210,9 +210,16 @@ export default function MessageThreadScreen() {
         <View style={styles.container}>
             <TopBar title={name ? `${name}` : "Chat"} showBack />
             {property ? (
-                <View style={styles.propertyBar}>
-                    <Ionicons name="home-outline" size={14} color={COLORS.mutedForeground} />
-                    <Text style={styles.propertyBarText} numberOfLines={1}>{property}</Text>
+                <View style={styles.threadMetaWrap}>
+                    <View style={styles.threadMetaCard}>
+                        <View style={styles.threadMetaIcon}>
+                            <Ionicons name="home-outline" size={16} color={COLORS.primary} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.threadMetaLabel}>Conversation for</Text>
+                            <Text style={styles.propertyBarText} numberOfLines={1}>{property}</Text>
+                        </View>
+                    </View>
                 </View>
             ) : null}
 
@@ -297,7 +304,8 @@ const styles = StyleSheet.create({
     },
     messageList: {
         paddingHorizontal: 16,
-        paddingVertical: 12,
+        paddingTop: 8,
+        paddingBottom: 12,
         flexGrow: 1,
     },
     dateHeader: {
@@ -330,10 +338,12 @@ const styles = StyleSheet.create({
     },
     bubbleMe: {
         backgroundColor: COLORS.primary,
+        borderWidth: 1,
+        borderColor: "rgba(255,255,255,0.08)",
         borderBottomRightRadius: 4,
     },
     bubbleThem: {
-        backgroundColor: COLORS.card,
+        backgroundColor: COLORS.surface,
         borderWidth: 1,
         borderColor: COLORS.border,
         borderBottomLeftRadius: 4,
@@ -376,7 +386,7 @@ const styles = StyleSheet.create({
         gap: 10,
         paddingHorizontal: 16,
         paddingVertical: 12,
-        backgroundColor: COLORS.card,
+        backgroundColor: COLORS.background,
         borderTopWidth: 1,
         borderTopColor: COLORS.border,
     },
@@ -388,13 +398,13 @@ const styles = StyleSheet.create({
         borderColor: COLORS.border,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: COLORS.background,
+        backgroundColor: COLORS.surface,
     },
     input: {
         flex: 1,
         minHeight: 44,
         maxHeight: 120,
-        backgroundColor: COLORS.background,
+        backgroundColor: COLORS.surface,
         borderRadius: 22,
         borderWidth: 1,
         borderColor: COLORS.border,
@@ -414,19 +424,42 @@ const styles = StyleSheet.create({
     sendBtnDisabled: {
         backgroundColor: COLORS.muted,
     },
-    propertyBar: {
+    threadMetaWrap: {
+        paddingHorizontal: 16,
+        paddingBottom: 10,
+    },
+    threadMetaCard: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 6,
-        paddingHorizontal: 16,
-        paddingVertical: 6,
-        backgroundColor: COLORS.muted,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.border,
+        gap: 12,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        backgroundColor: COLORS.surface,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        borderRadius: 18,
+    },
+    threadMetaIcon: {
+        width: 38,
+        height: 38,
+        borderRadius: 14,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: COLORS.primarySoft,
+        borderWidth: 1,
+        borderColor: "rgba(47,123,255,0.18)",
+    },
+    threadMetaLabel: {
+        fontSize: 11,
+        color: COLORS.faintForeground,
+        textTransform: "uppercase",
+        letterSpacing: 0.7,
+        marginBottom: 2,
     },
     propertyBarText: {
-        fontSize: 12,
-        color: COLORS.mutedForeground,
+        fontSize: 13,
+        color: COLORS.foreground,
+        fontWeight: "600",
         flex: 1,
     },
     attachmentCard: {
@@ -466,10 +499,10 @@ const styles = StyleSheet.create({
         marginBottom: 8,
         paddingHorizontal: 14,
         paddingVertical: 10,
-        borderRadius: 12,
+        borderRadius: 16,
         borderWidth: 1,
         borderColor: COLORS.border,
-        backgroundColor: COLORS.card,
+        backgroundColor: COLORS.surface,
     },
     attachmentPreviewLeft: {
         flex: 1,

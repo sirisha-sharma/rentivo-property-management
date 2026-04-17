@@ -53,11 +53,11 @@ export default function MaintenanceDetail() {
     const getPriorityColor = (priority) => {
         switch (priority) {
             case "High":
-                return { bg: "#FEE2E2", text: "#991B1B" };
+                return { bg: COLORS.destructiveSoft, text: COLORS.destructive };
             case "Medium":
-                return { bg: "#FEF9C3", text: "#854D0E" };
+                return { bg: COLORS.warningSoft, text: COLORS.warning };
             case "Low":
-                return { bg: "#DCFCE7", text: "#166534" };
+                return { bg: COLORS.successSoft, text: COLORS.success };
             default:
                 return { bg: COLORS.muted, text: COLORS.mutedForeground };
         }
@@ -208,7 +208,7 @@ export default function MaintenanceDetail() {
                     )}
 
                     <TouchableOpacity style={styles.deleteBtnLarge} onPress={handleDelete}>
-                        <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                        <Ionicons name="trash-outline" size={20} color={COLORS.destructive} />
                         <Text style={styles.deleteBtnText}>Delete Request</Text>
                     </TouchableOpacity>
                 </View>
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
         gap: 8,
-        backgroundColor: "#2563EB",
+        backgroundColor: COLORS.primary,
         paddingVertical: 16,
         borderRadius: 12,
     },
@@ -319,15 +319,15 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
         gap: 8,
-        backgroundColor: "#FEE2E2",
+        backgroundColor: COLORS.destructiveSoft,
         paddingVertical: 16,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: "#EF4444",
+        borderColor: "rgba(239,68,68,0.35)",
     },
     deleteBtnText: {
         fontSize: 16,
         fontWeight: "600",
-        color: "#EF4444",
+        color: COLORS.destructive,
     },
 });

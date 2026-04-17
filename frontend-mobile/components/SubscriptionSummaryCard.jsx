@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { COLORS } from "../constants/theme";
 import { SubscriptionStatusPill } from "./SubscriptionStatusPill";
 import {
@@ -23,11 +24,11 @@ export function SubscriptionSummaryCard({
         return (
             <View
                 style={{
-                    backgroundColor: "#fff",
-                    borderRadius: 20,
+                    backgroundColor: COLORS.surface,
+                    borderRadius: 22,
                     borderWidth: 1,
                     borderColor: COLORS.border,
-                    padding: 20,
+                    padding: 22,
                     alignItems: "center",
                     justifyContent: "center",
                     minHeight: 140,
@@ -38,9 +39,7 @@ export function SubscriptionSummaryCard({
         );
     }
 
-    if (!subscription) {
-        return null;
-    }
+    if (!subscription) return null;
 
     const isTrial = isTrialSubscription(subscription);
     const usage = subscription.usage || {};
@@ -48,36 +47,38 @@ export function SubscriptionSummaryCard({
     const noticePalette = expiryNotice
         ? expiryNotice.tone === "danger"
             ? {
-                background: "#FEF2F2",
-                border: "#FECACA",
-                iconBackground: "#FEE2E2",
-                icon: "#B91C1C",
-                title: "#B91C1C",
-                text: "#991B1B",
+                background: COLORS.destructiveSoft,
+                border: "rgba(239,68,68,0.35)",
+                iconBackground: "rgba(239,68,68,0.22)",
+                icon: COLORS.destructive,
+                title: COLORS.destructive,
+                text: "rgba(248,113,113,0.92)",
             }
             : {
-                background: "#FFFBEB",
-                border: "#FDE68A",
-                iconBackground: "#FEF3C7",
-                icon: "#D97706",
-                title: "#92400E",
-                text: "#92400E",
+                background: COLORS.warningSoft,
+                border: "rgba(245,158,11,0.35)",
+                iconBackground: "rgba(245,158,11,0.22)",
+                icon: COLORS.warning,
+                title: COLORS.warning,
+                text: "rgba(251,191,36,0.92)",
             }
         : null;
 
     return (
-        <View
+        <LinearGradient
+            colors={[COLORS.surface, "#1C2236"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
             style={{
-                backgroundColor: "#fff",
-                borderRadius: 20,
+                borderRadius: 24,
                 borderWidth: 1,
                 borderColor: COLORS.border,
-                padding: 20,
-                shadowColor: "#0F172A",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.04,
-                shadowRadius: 10,
-                elevation: 2,
+                padding: 22,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 10 },
+                shadowOpacity: 0.35,
+                shadowRadius: 18,
+                elevation: 6,
             }}
         >
             <View
@@ -88,27 +89,29 @@ export function SubscriptionSummaryCard({
                     gap: 16,
                 }}
             >
-                <View style={{ flex: 1, gap: 8 }}>
+                <View style={{ flex: 1, gap: 10 }}>
                     <View
                         style={{
-                            width: 42,
-                            height: 42,
+                            width: 46,
+                            height: 46,
                             borderRadius: 14,
-                            backgroundColor: "#F0FDFA",
+                            backgroundColor: COLORS.accentTealSoft,
+                            borderWidth: 1,
+                            borderColor: "rgba(52,212,198,0.35)",
                             alignItems: "center",
                             justifyContent: "center",
                         }}
                     >
-                        <Ionicons name="ribbon-outline" size={20} color="#0F766E" />
+                        <Ionicons name="ribbon-outline" size={22} color={COLORS.accentTealBright} />
                     </View>
 
                     <View style={{ gap: 4 }}>
                         <Text
                             style={{
-                                fontSize: 12,
+                                fontSize: 11,
                                 fontWeight: "700",
-                                letterSpacing: 1.2,
-                                color: "#0F766E",
+                                letterSpacing: 1.4,
+                                color: COLORS.accentTealBright,
                                 textTransform: "uppercase",
                             }}
                         >
@@ -116,7 +119,7 @@ export function SubscriptionSummaryCard({
                         </Text>
                         <Text
                             style={{
-                                fontSize: 22,
+                                fontSize: 24,
                                 fontWeight: "700",
                                 color: COLORS.foreground,
                                 letterSpacing: -0.4,
@@ -209,6 +212,7 @@ export function SubscriptionSummaryCard({
                                 fontSize: 12,
                                 fontWeight: "700",
                                 color: noticePalette.title,
+                                letterSpacing: 0.3,
                             }}
                         >
                             {formatDaysRemaining(subscription.daysRemaining)} remaining
@@ -227,12 +231,23 @@ export function SubscriptionSummaryCard({
                 <View
                     style={{
                         flex: 1,
-                        backgroundColor: COLORS.muted,
+                        backgroundColor: COLORS.surfaceElevated,
                         borderRadius: 14,
                         padding: 14,
+                        borderWidth: 1,
+                        borderColor: COLORS.border,
                     }}
                 >
-                    <Text style={{ fontSize: 11, color: COLORS.mutedForeground, marginBottom: 4 }}>
+                    <Text
+                        style={{
+                            fontSize: 11,
+                            color: COLORS.mutedForeground,
+                            marginBottom: 6,
+                            textTransform: "uppercase",
+                            letterSpacing: 0.6,
+                            fontWeight: "600",
+                        }}
+                    >
                         Valid Until
                     </Text>
                     <Text style={{ fontSize: 15, fontWeight: "700", color: COLORS.foreground }}>
@@ -243,12 +258,23 @@ export function SubscriptionSummaryCard({
                 <View
                     style={{
                         flex: 1,
-                        backgroundColor: COLORS.muted,
+                        backgroundColor: COLORS.surfaceElevated,
                         borderRadius: 14,
                         padding: 14,
+                        borderWidth: 1,
+                        borderColor: COLORS.border,
                     }}
                 >
-                    <Text style={{ fontSize: 11, color: COLORS.mutedForeground, marginBottom: 4 }}>
+                    <Text
+                        style={{
+                            fontSize: 11,
+                            color: COLORS.mutedForeground,
+                            marginBottom: 6,
+                            textTransform: "uppercase",
+                            letterSpacing: 0.6,
+                            fontWeight: "600",
+                        }}
+                    >
                         Payment Status
                     </Text>
                     <Text style={{ fontSize: 15, fontWeight: "700", color: COLORS.foreground }}>
@@ -266,14 +292,24 @@ export function SubscriptionSummaryCard({
             {isTrial ? (
                 <View
                     style={{
-                        backgroundColor: "#F8FAFC",
+                        backgroundColor: COLORS.surfaceElevated,
                         borderRadius: 16,
                         padding: 16,
                         marginTop: 16,
-                        gap: 10,
+                        borderWidth: 1,
+                        borderColor: COLORS.border,
+                        gap: 8,
                     }}
                 >
-                    <Text style={{ fontSize: 13, fontWeight: "700", color: COLORS.foreground }}>
+                    <Text
+                        style={{
+                            fontSize: 12,
+                            fontWeight: "700",
+                            color: COLORS.accentLilac,
+                            textTransform: "uppercase",
+                            letterSpacing: 0.8,
+                        }}
+                    >
                         Trial Usage
                     </Text>
                     <Text style={{ fontSize: 13, color: COLORS.mutedForeground }}>
@@ -288,17 +324,27 @@ export function SubscriptionSummaryCard({
             {subscription.plan !== "trial" ? (
                 <View
                     style={{
-                        backgroundColor: "#F8FAFC",
+                        backgroundColor: COLORS.surfaceElevated,
                         borderRadius: 16,
                         padding: 16,
                         marginTop: 16,
+                        borderWidth: 1,
+                        borderColor: COLORS.border,
                         gap: 6,
                     }}
                 >
-                    <Text style={{ fontSize: 13, fontWeight: "700", color: COLORS.foreground }}>
+                    <Text
+                        style={{
+                            fontSize: 12,
+                            fontWeight: "700",
+                            color: COLORS.accentTealBright,
+                            textTransform: "uppercase",
+                            letterSpacing: 0.8,
+                        }}
+                    >
                         Full Access
                     </Text>
-                    <Text style={{ fontSize: 13, color: COLORS.mutedForeground }}>
+                    <Text style={{ fontSize: 13, color: COLORS.mutedForeground, lineHeight: 19 }}>
                         Your paid subscription unlocks unlimited property and tenant management.
                     </Text>
                     {subscription.amount ? (
@@ -315,18 +361,23 @@ export function SubscriptionSummaryCard({
                     activeOpacity={0.85}
                     style={{
                         marginTop: 18,
-                        backgroundColor: COLORS.foreground,
+                        backgroundColor: COLORS.primary,
                         borderRadius: 14,
-                        paddingVertical: 13,
+                        paddingVertical: 14,
                         alignItems: "center",
                         justifyContent: "center",
+                        shadowColor: COLORS.primary,
+                        shadowOffset: { width: 0, height: 6 },
+                        shadowOpacity: 0.4,
+                        shadowRadius: 14,
+                        elevation: 4,
                     }}
                 >
-                    <Text style={{ color: "#fff", fontSize: 14, fontWeight: "700" }}>
+                    <Text style={{ color: "#fff", fontSize: 15, fontWeight: "700", letterSpacing: 0.3 }}>
                         {buttonLabel}
                     </Text>
                 </TouchableOpacity>
             ) : null}
-        </View>
+        </LinearGradient>
     );
 }

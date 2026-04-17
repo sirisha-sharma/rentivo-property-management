@@ -22,15 +22,15 @@ export default function NotificationsScreen() {
             case "maintenance":
                 return { name: "construct-outline", color: COLORS.warning };
             case "invoice":
-                return { name: "receipt-outline", color: "#9333EA" };
+                return { name: "receipt-outline", color: COLORS.accentLilac };
             case "tenant":
                 return { name: "person-add-outline", color: COLORS.success };
             case "document":
-                return { name: "folder-open-outline", color: "#0D9488" };
+                return { name: "folder-open-outline", color: COLORS.accentTealBright };
             case "payment":
                 return { name: "card-outline", color: COLORS.primary };
             case "subscription":
-                return { name: "ribbon-outline", color: "#0F766E" };
+                return { name: "ribbon-outline", color: COLORS.accentTealBright };
             default:
                 return { name: "notifications-outline", color: COLORS.primary };
         }
@@ -125,8 +125,8 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     unreadCard: {
-        backgroundColor: "#EFF6FF",
-        borderColor: "#BFDBFE",
+        backgroundColor: COLORS.primarySoft,
+        borderColor: "rgba(47,123,255,0.3)",
     },
     iconCircle: {
         width: 40,

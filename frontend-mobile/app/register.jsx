@@ -33,7 +33,7 @@ function getPasswordStrength(password) {
 }
 
 const STRENGTH_LABELS = ["", "Weak", "Fair", "Good", "Strong"];
-const STRENGTH_COLORS = ["", "#EF4444", "#F59E0B", "#3B82F6", "#10B981"];
+const STRENGTH_COLORS = ["", "#F87171", "#FBBF24", "#60A5FA", "#34D399"];
 
 function PasswordStrengthBar({ password }) {
   const strength = getPasswordStrength(password);
@@ -199,7 +199,7 @@ export default function RegisterScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.background} />
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
 
       <KeyboardContainer style={{ flex: 1 }} {...keyboardContainerProps}>
         <ScrollView
@@ -229,7 +229,7 @@ export default function RegisterScreen() {
               }}
             >
               <LinearGradient
-                colors={["#3B82F6", "#1D4ED8"]}
+                colors={[COLORS.primary, COLORS.primaryDeep]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={{
@@ -239,11 +239,11 @@ export default function RegisterScreen() {
                   alignItems: "center",
                   justifyContent: "center",
                   marginBottom: 14,
-                  shadowColor: "#2563EB",
-                  shadowOffset: { width: 0, height: 6 },
-                  shadowOpacity: 0.3,
-                  shadowRadius: 14,
-                  elevation: 8,
+                  shadowColor: COLORS.primary,
+                  shadowOffset: { width: 0, height: 10 },
+                  shadowOpacity: 0.5,
+                  shadowRadius: 18,
+                  elevation: 10,
                 }}
               >
                 <Ionicons
@@ -283,26 +283,26 @@ export default function RegisterScreen() {
 
             <View
               style={{
-                backgroundColor: COLORS.card,
-                borderRadius: 24,
+                backgroundColor: COLORS.surface,
+                borderRadius: 28,
                 borderWidth: 1,
                 borderColor: COLORS.border,
                 padding: surfacePadding,
-                shadowColor: "#0F172A",
-                shadowOffset: { width: 0, height: 10 },
-                shadowOpacity: 0.06,
-                shadowRadius: 24,
-                elevation: 4,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 18 },
+                shadowOpacity: 0.35,
+                shadowRadius: 28,
+                elevation: 10,
               }}
             >
               {/* ── API Error Banner ── */}
               {errors._api ? (
                 <View
                   style={{
-                    backgroundColor: "#FEF2F2",
+                    backgroundColor: COLORS.destructiveSoft,
                     borderWidth: 1,
-                    borderColor: "#FECACA",
-                    borderRadius: 12,
+                    borderColor: "rgba(239,68,68,0.35)",
+                    borderRadius: 14,
                     padding: 14,
                     marginBottom: 20,
                     flexDirection: "row",
@@ -346,10 +346,12 @@ export default function RegisterScreen() {
                 <View
                   style={{
                     flexDirection: "row",
-                    backgroundColor: COLORS.muted,
+                    backgroundColor: COLORS.surfaceElevated,
                     borderRadius: 14,
                     padding: 4,
                     gap: 4,
+                    borderWidth: 1,
+                    borderColor: COLORS.border,
                   }}
                 >
                   {[
@@ -372,12 +374,12 @@ export default function RegisterScreen() {
                         },
                         role === key
                           ? {
-                              backgroundColor: COLORS.card,
-                              shadowColor: "#000",
-                              shadowOffset: { width: 0, height: 1 },
-                              shadowOpacity: 0.08,
-                              shadowRadius: 4,
-                              elevation: 2,
+                              backgroundColor: COLORS.primary,
+                              shadowColor: COLORS.primary,
+                              shadowOffset: { width: 0, height: 4 },
+                              shadowOpacity: 0.4,
+                              shadowRadius: 8,
+                              elevation: 3,
                             }
                           : {},
                       ]}
@@ -385,18 +387,14 @@ export default function RegisterScreen() {
                       <Ionicons
                         name={icon}
                         size={16}
-                        color={
-                          role === key ? COLORS.primary : COLORS.mutedForeground
-                        }
+                        color={role === key ? "#fff" : COLORS.mutedForeground}
                       />
                       <Text
                         style={{
                           fontSize: 14,
-                          fontWeight: role === key ? "600" : "500",
-                          color:
-                            role === key
-                              ? COLORS.foreground
-                              : COLORS.mutedForeground,
+                          fontWeight: role === key ? "700" : "500",
+                          color: role === key ? "#fff" : COLORS.mutedForeground,
+                          letterSpacing: 0.2,
                         }}
                       >
                         {label}
@@ -561,17 +559,17 @@ export default function RegisterScreen() {
                   disabled={loading}
                   activeOpacity={0.85}
                   style={{
-                    backgroundColor: loading ? "#93C5FD" : COLORS.primary,
+                    backgroundColor: loading ? "rgba(47,123,255,0.45)" : COLORS.primary,
                     borderRadius: 14,
                     paddingVertical: 16,
                     alignItems: "center",
                     justifyContent: "center",
                     marginTop: 4,
                     shadowColor: COLORS.primary,
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: loading ? 0 : 0.25,
-                    shadowRadius: 10,
-                    elevation: loading ? 0 : 4,
+                    shadowOffset: { width: 0, height: 8 },
+                    shadowOpacity: loading ? 0 : 0.45,
+                    shadowRadius: 14,
+                    elevation: loading ? 0 : 6,
                     flexDirection: "row",
                     gap: 8,
                   }}

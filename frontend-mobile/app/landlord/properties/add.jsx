@@ -250,6 +250,18 @@ export default function AddProperty() {
                     />
                 ) : null}
 
+                <View className="bg-card border border-border rounded-[24px] p-4 flex-row gap-4 items-start">
+                    <View className="w-12 h-12 rounded-2xl bg-primary/15 border border-primary/20 items-center justify-center">
+                        <Ionicons name="business-outline" size={20} color={COLORS.primary} />
+                    </View>
+                    <View className="flex-1">
+                        <Text className="text-base font-semibold text-foreground">Build a polished listing</Text>
+                        <Text className="mt-1 text-sm leading-5 text-mutedForeground">
+                            Add the essentials first, then enrich the property with photos, amenities, and utility setup.
+                        </Text>
+                    </View>
+                </View>
+
                 <View className="gap-2">
                     <Text className="text-sm font-medium text-foreground">Property Name</Text>
                     <TextInput

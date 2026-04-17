@@ -32,6 +32,9 @@ export default function TenantInvoices() {
         if (filter === "all") return true;
         return inv.status?.toLowerCase() === filter;
     });
+    const outstandingInvoices = invoices.filter(
+        (inv) => ["pending", "overdue"].includes(inv.status?.toLowerCase())
+    );
 
     const formatDate = (dateStr) => {
         if (!dateStr) return "N/A";
@@ -89,6 +92,20 @@ export default function TenantInvoices() {
         <View style={styles.container}>
             <TopBar title="My Invoices" showBack />
 
+            <View style={styles.heroCard}>
+                <View style={styles.heroIcon}>
+                    <Ionicons name="receipt-outline" size={22} color={COLORS.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                    <Text style={styles.heroTitle}>Billing overview</Text>
+                    <Text style={styles.heroText}>
+                        {outstandingInvoices.length
+                            ? `${outstandingInvoices.length} invoice${outstandingInvoices.length > 1 ? "s" : ""} still need attention.`
+                            : "All invoices are up to date right now."}
+                    </Text>
+                </View>
+            </View>
+
             <FilterChips options={FILTERS} selected={filter} onSelect={setFilter} />
 
             {loading ? (
@@ -118,6 +135,40 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: COLORS.background,
+    },
+    heroCard: {
+        marginHorizontal: 16,
+        marginTop: 16,
+        marginBottom: 8,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 14,
+        backgroundColor: COLORS.surface,
+        borderRadius: 22,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        padding: 16,
+    },
+    heroIcon: {
+        width: 46,
+        height: 46,
+        borderRadius: 16,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: COLORS.primarySoft,
+        borderWidth: 1,
+        borderColor: "rgba(47,123,255,0.22)",
+    },
+    heroTitle: {
+        fontSize: 17,
+        fontWeight: "800",
+        color: COLORS.foreground,
+    },
+    heroText: {
+        marginTop: 4,
+        fontSize: 13,
+        lineHeight: 19,
+        color: COLORS.mutedForeground,
     },
     listContent: {
         padding: 16,

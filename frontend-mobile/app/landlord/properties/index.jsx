@@ -97,9 +97,9 @@ export default function PropertyList() {
                     borderColor: COLORS.border,
                     padding: 16,
                     marginBottom: 12,
-                    shadowColor: "#0F172A",
+                    shadowColor: "#000",
                     shadowOffset: { width: 0, height: 1 },
-                    shadowOpacity: 0.04,
+                    shadowOpacity: 0.25,
                     shadowRadius: 4,
                     elevation: 1,
                 }}

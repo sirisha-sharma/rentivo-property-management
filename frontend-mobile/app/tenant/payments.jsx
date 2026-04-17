@@ -67,8 +67,8 @@ export default function PaymentHistory() {
 
     const getGatewayIcon = (gateway) => {
         const colors = {
-            esewa: "#2563EB",
-            khalti: "#5C2D91",
+            esewa: COLORS.primary,
+            khalti: COLORS.accentLilac,
         };
         return colors[gateway?.toLowerCase()] || COLORS.primary;
     };
@@ -85,11 +85,11 @@ export default function PaymentHistory() {
         switch (status?.toLowerCase()) {
             case "completed":
             case "success":
-                return "#10B981";
+                return COLORS.success;
             case "pending":
-                return "#F59E0B";
+                return COLORS.warning;
             case "failed":
-                return "#EF4444";
+                return COLORS.destructive;
             default:
                 return COLORS.mutedForeground;
         }

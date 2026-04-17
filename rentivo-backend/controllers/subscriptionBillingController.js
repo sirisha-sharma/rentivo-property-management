@@ -24,6 +24,17 @@ import {
     getSubscriptionPlansForClient,
 } from "../utils/subscriptionService.js";
 
+const ALLOWED_CLIENT_REDIRECT_PROTOCOLS = new Set([
+    "frontendmobile:",
+    "exp:",
+    "exps:",
+]);
+
+const DEFAULT_CLIENT_REDIRECT_ROUTES = {
+    "subscription-success": "frontendmobile://khalti-subscription-return",
+    "subscription-failed": "frontendmobile://khalti-subscription-return",
+};
+
 const buildRedirectUrl = (path, params = {}) => {
     const searchParams = new URLSearchParams();
 
@@ -35,6 +46,45 @@ const buildRedirectUrl = (path, params = {}) => {
 
     const query = searchParams.toString();
     return query ? `/${path}?${query}` : `/${path}`;
+};
+
+const isAllowedClientRedirectUri = (value = "") => {
+    try {
+        if (typeof value !== "string" || !value) {
+            return false;
+        }
+
+        const parsed = new URL(value);
+        return ALLOWED_CLIENT_REDIRECT_PROTOCOLS.has(parsed.protocol);
+    } catch (_error) {
+        return false;
+    }
+};
+
+const buildClientRedirectUrl = (clientRedirectUri, params = {}) => {
+    const redirectUrl = new URL(clientRedirectUri);
+
+    Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== "") {
+            redirectUrl.searchParams.set(key, value.toString());
+        }
+    });
+
+    return redirectUrl.toString();
+};
+
+const getDefaultClientRedirectUri = (webPath) => DEFAULT_CLIENT_REDIRECT_ROUTES[webPath] || null;
+
+const redirectToClientOrWeb = (res, { clientRedirectUri, webPath, params = {} }) => {
+    const effectiveClientRedirectUri = isAllowedClientRedirectUri(clientRedirectUri)
+        ? clientRedirectUri
+        : getDefaultClientRedirectUri(webPath);
+
+    const redirectTarget = effectiveClientRedirectUri
+        ? buildClientRedirectUrl(effectiveClientRedirectUri, params)
+        : buildRedirectUrl(webPath, params);
+
+    return res.redirect(redirectTarget);
 };
 
 const escapeHtmlAttribute = (value) =>
@@ -273,7 +323,7 @@ export const initiateSubscriptionCheckout = async (req, res) => {
             return;
         }
 
-        const { plan, gateway } = req.body;
+        const { plan, gateway, clientRedirectUri } = req.body;
 
         if (!SUBSCRIPTION_GATEWAYS.includes(gateway)) {
             return res.status(400).json({
@@ -308,13 +358,18 @@ export const initiateSubscriptionCheckout = async (req, res) => {
                 failureUrl: `${baseUrl}/api/subscriptions/esewa/failure/${encodeURIComponent(transactionId)}`,
             });
         } else {
+            const khaltiReturnUrl = new URL(`${baseUrl}/api/subscriptions/khalti/verify`);
+            if (isAllowedClientRedirectUri(clientRedirectUri)) {
+                khaltiReturnUrl.searchParams.set("clientRedirectUri", clientRedirectUri);
+            }
+
             gatewayResponse = await initializeKhaltiPayment(
                 planDetails.amount,
                 transactionId,
                 subscription._id,
                 customerInfo,
                 {
-                    returnUrl: `${baseUrl}/api/subscriptions/khalti/verify`,
+                    returnUrl: khaltiReturnUrl.toString(),
                     websiteUrl: baseUrl,
                     purchaseOrderName: `Rentivo ${planDetails.label} Plan`,
                 }
@@ -939,20 +994,25 @@ export const verifySubscriptionEsewaPayment = async (req, res) => {
 
 export const verifySubscriptionKhaltiPayment = async (req, res) => {
     try {
+        const callbackPayload =
+            req.method === "GET" || req.method === "HEAD" ? req.query : req.body || {};
         const {
             pidx,
             purchase_order_id,
             transaction_id,
             txnId,
-        } = req.method === "GET" ? req.query : req.body;
+            clientRedirectUri,
+        } = callbackPayload;
 
         if (!pidx) {
-            return res.redirect(
-                buildRedirectUrl("subscription-failed", {
+            return redirectToClientOrWeb(res, {
+                clientRedirectUri,
+                webPath: "subscription-failed",
+                params: {
                     reason: "no_pidx",
                     gateway: "khalti",
-                })
-            );
+                },
+            });
         }
 
         let lookupResult;
@@ -960,12 +1020,14 @@ export const verifySubscriptionKhaltiPayment = async (req, res) => {
             lookupResult = await khaltiLookup(pidx);
         } catch (error) {
             console.error("Subscription Khalti lookup failed:", error.message);
-            return res.redirect(
-                buildRedirectUrl("subscription-failed", {
+            return redirectToClientOrWeb(res, {
+                clientRedirectUri,
+                webPath: "subscription-failed",
+                params: {
                     reason: "lookup_failed",
                     gateway: "khalti",
-                })
-            );
+                },
+            });
         }
 
         const transactionId =
@@ -975,37 +1037,44 @@ export const verifySubscriptionKhaltiPayment = async (req, res) => {
             txnId;
 
         if (!transactionId) {
-            return res.redirect(
-                buildRedirectUrl("subscription-failed", {
+            return redirectToClientOrWeb(res, {
+                clientRedirectUri,
+                webPath: "subscription-failed",
+                params: {
                     reason: "no_txn_id",
                     gateway: "khalti",
-                })
-            );
+                },
+            });
         }
 
         const payment = await SubscriptionPayment.findOne({ transactionId });
 
         if (!payment) {
-            return res.redirect(
-                buildRedirectUrl("subscription-failed", {
+            return redirectToClientOrWeb(res, {
+                clientRedirectUri,
+                webPath: "subscription-failed",
+                params: {
                     reason: "not_found",
                     txn: transactionId,
                     gateway: "khalti",
-                })
-            );
+                },
+            });
         }
 
         if (payment.status === "completed" && payment.appliedAt) {
-            return res.redirect(
-                buildRedirectUrl(
-                    "subscription-success",
-                    createSubscriptionSuccessParams(
+            return redirectToClientOrWeb(res, {
+                clientRedirectUri,
+                webPath: "subscription-success",
+                params: {
+                    result: "success",
+                    paymentId: payment._id,
+                    ...createSubscriptionSuccessParams(
                         payment,
                         payment.amount,
                         payment.periodEnd
-                    )
-                )
-            );
+                    ),
+                },
+            });
         }
 
         if (lookupResult.status !== "Completed") {
@@ -1023,15 +1092,18 @@ export const verifySubscriptionKhaltiPayment = async (req, res) => {
                 );
             }
 
-            return res.redirect(
-                buildRedirectUrl(
-                    "subscription-failed",
-                    createSubscriptionFailureParams(payment, {
+            return redirectToClientOrWeb(res, {
+                clientRedirectUri,
+                webPath: "subscription-failed",
+                params: {
+                    result: "failed",
+                    paymentId: payment._id,
+                    ...createSubscriptionFailureParams(payment, {
                         status: lookupResult.status,
                         gateway: "khalti",
-                    })
-                )
-            );
+                    }),
+                },
+            });
         }
 
         const paidAmount = lookupResult.total_amount / 100;
@@ -1043,15 +1115,18 @@ export const verifySubscriptionKhaltiPayment = async (req, res) => {
                 notify: false,
             });
 
-            return res.redirect(
-                buildRedirectUrl(
-                    "subscription-failed",
-                    createSubscriptionFailureParams(payment, {
+            return redirectToClientOrWeb(res, {
+                clientRedirectUri,
+                webPath: "subscription-failed",
+                params: {
+                    result: "failed",
+                    paymentId: payment._id,
+                    ...createSubscriptionFailureParams(payment, {
                         reason: "amount_mismatch",
                         gateway: "khalti",
-                    })
-                )
-            );
+                    }),
+                },
+            });
         }
 
         const finalized = await finalizeSuccessfulSubscriptionPayment({
@@ -1062,24 +1137,29 @@ export const verifySubscriptionKhaltiPayment = async (req, res) => {
             gatewayReference: lookupResult.pidx || payment.transactionId,
         });
 
-        return res.redirect(
-            buildRedirectUrl(
-                "subscription-success",
-                createSubscriptionSuccessParams(
+        return redirectToClientOrWeb(res, {
+            clientRedirectUri,
+            webPath: "subscription-success",
+            params: {
+                result: "success",
+                paymentId: payment._id,
+                ...createSubscriptionSuccessParams(
                     payment,
                     paidAmount,
                     finalized.periodEnd || finalized.subscription?.endDate
-                )
-            )
-        );
+                ),
+            },
+        });
     } catch (error) {
         console.error("Subscription Khalti verification error:", error);
-        return res.redirect(
-            buildRedirectUrl("subscription-failed", {
+        return redirectToClientOrWeb(res, {
+            clientRedirectUri: req.method === "GET" ? req.query?.clientRedirectUri : req.body?.clientRedirectUri,
+            webPath: "subscription-failed",
+            params: {
                 reason: "server_error",
                 gateway: "khalti",
-            })
-        );
+            },
+        });
     }
 };
 

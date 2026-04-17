@@ -2,35 +2,35 @@ import React from "react";
 import { View, Text } from "react-native";
 import { COLORS } from "../constants/theme";
 
+// Dark-mode tuned status palette.
 const STATUS_MAP = {
   // property states
-  occupied: { bg: "#DCFCE7", text: "#166534" },
-  vacant: { bg: "#FEF9C3", text: "#854D0E" },
-  maintenance: { bg: "#DBEAFE", text: "#1E40AF" },
+  occupied: { bg: COLORS.successSoft, text: COLORS.success },
+  vacant: { bg: COLORS.warningSoft, text: COLORS.warning },
+  maintenance: { bg: COLORS.infoSoft, text: COLORS.info },
 
   // tenant states
-  Active: { bg: "#DCFCE7", text: "#166534" },
-  active: { bg: "#DCFCE7", text: "#166534" },
-  Pending: { bg: "#FEF9C3", text: "#854D0E" },
-  pending: { bg: "#FEF9C3", text: "#854D0E" },
+  Active: { bg: COLORS.successSoft, text: COLORS.success },
+  active: { bg: COLORS.successSoft, text: COLORS.success },
+  Pending: { bg: COLORS.warningSoft, text: COLORS.warning },
+  pending: { bg: COLORS.warningSoft, text: COLORS.warning },
 
   // maintenance states
-  Open: { bg: "#FEF9C3", text: "#854D0E" },
-  submitted: { bg: "#FEF9C3", text: "#854D0E" },
-  "In Progress": { bg: "#DBEAFE", text: "#1E40AF" },
-  "in-progress": { bg: "#DBEAFE", text: "#1E40AF" },
-  Resolved: { bg: "#DCFCE7", text: "#166534" },
+  Open: { bg: COLORS.warningSoft, text: COLORS.warning },
+  submitted: { bg: COLORS.warningSoft, text: COLORS.warning },
+  "In Progress": { bg: COLORS.infoSoft, text: COLORS.info },
+  "in-progress": { bg: COLORS.infoSoft, text: COLORS.info },
+  Resolved: { bg: COLORS.successSoft, text: COLORS.success },
 
   // invoice states
-  Paid: { bg: "#DCFCE7", text: "#166534" },
-  paid: { bg: "#DCFCE7", text: "#166534" },
-  Overdue: { bg: "#FEE2E2", text: "#991B1B" },
-  overdue: { bg: "#FEE2E2", text: "#991B1B" },
+  Paid: { bg: COLORS.successSoft, text: COLORS.success },
+  paid: { bg: COLORS.successSoft, text: COLORS.success },
+  Overdue: { bg: COLORS.destructiveSoft, text: COLORS.destructive },
+  overdue: { bg: COLORS.destructiveSoft, text: COLORS.destructive },
 };
 
 /**
  * Pill badge for showing status labels on cards.
- * Handles all known status strings with correct color coding.
  */
 export const StatusBadge = ({ status }) => {
   const colors = STATUS_MAP[status] ?? {
@@ -42,18 +42,19 @@ export const StatusBadge = ({ status }) => {
     <View
       style={{
         paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 20,
+        paddingVertical: 5,
+        borderRadius: 999,
         backgroundColor: colors.bg,
         alignSelf: "flex-start",
       }}
     >
       <Text
         style={{
-          fontSize: 12,
-          fontWeight: "600",
+          fontSize: 11,
+          fontWeight: "700",
           color: colors.text,
-          textTransform: "capitalize",
+          textTransform: "uppercase",
+          letterSpacing: 0.5,
         }}
       >
         {status}

@@ -10,8 +10,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "../constants/theme";
 
 /**
- * Shared input primitive for all auth screens.
- * Handles: label, left icon, focus states, error states, password visibility toggle.
+ * Shared input primitive (dark mode). Used across auth + form screens.
+ * Handles label, left icon, focus states, error states, password toggle.
  */
 const AuthInput = forwardRef(function AuthInput(
   {
@@ -22,20 +22,16 @@ const AuthInput = forwardRef(function AuthInput(
     error,
     onFocus,
     onBlur,
-    // password toggle
     isPassword = false,
     showPassword = false,
     onTogglePassword,
-    // input config
     keyboardType = "default",
     autoCapitalize = "sentences",
     autoCorrect = false,
     returnKeyType = "next",
     onSubmitEditing,
     textContentType,
-    // optional left icon (Ionicons name)
     leftIcon,
-    // extra style for wrapper
     style,
   },
   ref
@@ -56,9 +52,9 @@ const AuthInput = forwardRef(function AuthInput(
     : COLORS.border;
 
   const containerBg = hasError
-    ? "#FEF2F2"
+    ? COLORS.destructiveSoft
     : shouldTrackFocus && focused
-    ? "#EFF6FF"
+    ? COLORS.primarySoft
     : COLORS.input;
 
   const iconColor = hasError
@@ -68,30 +64,25 @@ const AuthInput = forwardRef(function AuthInput(
     : COLORS.mutedForeground;
 
   const handleFocus = (event) => {
-    if (shouldTrackFocus) {
-      setFocused(true);
-    }
-
+    if (shouldTrackFocus) setFocused(true);
     onFocus?.(event);
   };
 
   const handleBlur = (event) => {
-    if (shouldTrackFocus) {
-      setFocused(false);
-    }
-
+    if (shouldTrackFocus) setFocused(false);
     onBlur?.(event);
   };
 
   return (
-    <View style={[{ gap: 6 }, style]}>
+    <View style={[{ gap: 8 }, style]}>
       {label ? (
         <Text
           style={{
-            fontSize: 14,
+            fontSize: 13,
             fontWeight: "600",
-            color: COLORS.foreground,
-            letterSpacing: 0.1,
+            color: COLORS.mutedForeground,
+            letterSpacing: 0.3,
+            textTransform: "uppercase",
           }}
         >
           {label}
@@ -102,21 +93,20 @@ const AuthInput = forwardRef(function AuthInput(
         style={{
           flexDirection: "row",
           alignItems: "center",
-          borderWidth: 1.5,
+          borderWidth: 1.25,
           borderColor,
-          borderRadius: 12,
+          borderRadius: 14,
           backgroundColor: containerBg,
-          minHeight: 52,
-          // subtle transition feel via shadow on focus
+          minHeight: 54,
           shadowColor: shouldTrackFocus && focused ? COLORS.primary : "transparent",
           shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: shouldTrackFocus && focused ? 0.15 : 0,
-          shadowRadius: 6,
-          elevation: shouldTrackFocus && focused ? 2 : 0,
+          shadowOpacity: shouldTrackFocus && focused ? 0.22 : 0,
+          shadowRadius: 10,
+          elevation: shouldTrackFocus && focused ? 3 : 0,
         }}
       >
         {leftIcon ? (
-          <View style={{ paddingLeft: 14, paddingRight: 2 }}>
+          <View style={{ paddingLeft: 16, paddingRight: 2 }}>
             <Ionicons name={leftIcon} size={18} color={iconColor} />
           </View>
         ) : null}
@@ -129,11 +119,10 @@ const AuthInput = forwardRef(function AuthInput(
             paddingVertical: 14,
             fontSize: 16,
             color: COLORS.foreground,
-            // prevent Android from adding extra padding
             includeFontPadding: false,
           }}
           placeholder={placeholder}
-          placeholderTextColor={COLORS.mutedForeground}
+          placeholderTextColor={COLORS.faintForeground}
           value={value}
           onChangeText={onChangeText}
           secureTextEntry={isPassword && !showPassword}
@@ -151,6 +140,7 @@ const AuthInput = forwardRef(function AuthInput(
           selectionColor={COLORS.primary}
           cursorColor={COLORS.primary}
           blurOnSubmit={returnKeyType === "done"}
+          keyboardAppearance="dark"
         />
 
         {isPassword && onTogglePassword ? (
@@ -170,7 +160,7 @@ const AuthInput = forwardRef(function AuthInput(
       </View>
 
       {hasError ? (
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
           <Ionicons name="alert-circle" size={13} color={COLORS.destructive} />
           <Text style={{ fontSize: 12, color: COLORS.destructive, flex: 1 }}>
             {error}

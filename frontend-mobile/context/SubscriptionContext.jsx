@@ -95,10 +95,14 @@ export const SubscriptionProvider = ({ children }) => {
         await Promise.allSettled([fetchSubscription(), fetchPaymentHistory()]);
     }, [fetchPaymentHistory, fetchSubscription, user?.role, user?.token]);
 
-    const startCheckout = useCallback(async (plan, gateway) => {
+    const startCheckout = useCallback(async (plan, gateway, clientRedirectUri = null) => {
         setCheckoutLoading(true);
         try {
-            const response = await initiateSubscriptionCheckout(plan, gateway);
+            const response = await initiateSubscriptionCheckout(
+                plan,
+                gateway,
+                clientRedirectUri
+            );
             await fetchPaymentHistory();
             setError(null);
             return response;

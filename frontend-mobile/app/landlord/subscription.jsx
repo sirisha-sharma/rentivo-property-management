@@ -1,4 +1,4 @@
-import React, { useContext, useMemo, useRef, useState } from "react";
+import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import {
     View,
     Text,
@@ -9,8 +9,9 @@ import {
     StyleSheet,
 } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { useLocalSearchParams } from "expo-router";
+import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
-import { WebView } from "react-native-webview";
 import { Ionicons } from "@expo/vector-icons";
 import { TopBar } from "../../components/TopBar";
 import { COLORS } from "../../constants/theme";
@@ -28,11 +29,11 @@ import {
 } from "../../utils/subscription";
 
 const PAYMENT_STATUS_TONES = {
-    completed: { bg: "#DCFCE7", text: "#166534" },
-    initiated: { bg: "#DBEAFE", text: "#1D4ED8" },
-    pending: { bg: "#FEF3C7", text: "#92400E" },
-    failed: { bg: "#FEE2E2", text: "#B91C1C" },
-    cancelled: { bg: "#FEE2E2", text: "#B91C1C" },
+    completed: { bg: COLORS.successSoft, text: COLORS.success },
+    initiated: { bg: COLORS.primarySoft, text: COLORS.primary },
+    pending: { bg: COLORS.warningSoft, text: COLORS.warning },
+    failed: { bg: COLORS.destructiveSoft, text: COLORS.destructive },
+    cancelled: { bg: COLORS.destructiveSoft, text: COLORS.destructive },
 };
 
 const paymentStatusLabel = (status) => {
@@ -53,9 +54,13 @@ const paymentStatusLabel = (status) => {
 };
 
 export default function LandlordSubscriptionScreen() {
-    const handledGatewayResultRef = useRef(false);
-    const activePaymentIdRef = useRef(null);
-
+    const {
+        khaltiReturn,
+        paymentId: returnedPaymentId,
+        result: returnedResult,
+        reason: returnedReason,
+        status: returnedStatus,
+    } = useLocalSearchParams();
     const {
         subscription,
         plans,
@@ -70,10 +75,8 @@ export default function LandlordSubscriptionScreen() {
     } = useContext(SubscriptionContext);
     const { fetchNotifications } = useContext(NotificationContext);
 
-    const [paymentInitiated, setPaymentInitiated] = useState(false);
-    const [paymentData, setPaymentData] = useState(null);
-    const [selectedGateway, setSelectedGateway] = useState(null);
     const [processing, setProcessing] = useState(false);
+    const [activeCheckoutKey, setActiveCheckoutKey] = useState(null);
 
     const paidPlans = useMemo(
         () => (plans || []).filter((plan) => plan.plan !== "trial"),
@@ -81,6 +84,7 @@ export default function LandlordSubscriptionScreen() {
     );
 
     const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    const buildCheckoutKey = (planKey, gateway) => `${planKey}:${gateway}`;
 
     useFocusEffect(
         React.useCallback(() => {
@@ -140,69 +144,14 @@ export default function LandlordSubscriptionScreen() {
         };
     };
 
-    const getFailureMetaFromUrl = (url) => {
-        try {
-            const params = new URL(url).searchParams;
-            return getFailureMeta({
-                reason: params.get("reason"),
-                status: params.get("status"),
-            });
-        } catch (_error) {
-            return getFailureMeta({});
-        }
-    };
-
-    const refreshAfterPayment = async () => {
+    const refreshAfterPayment = useCallback(async () => {
         await Promise.allSettled([
             refreshSubscriptionData(),
             fetchNotifications(),
         ]);
-    };
+    }, [fetchNotifications, refreshSubscriptionData]);
 
-    const syncSubscriptionPaymentState = async (paymentId) => {
-        let latestPayment = null;
-
-        for (let attempt = 0; attempt < 8; attempt++) {
-            const response = await getSubscriptionPaymentById(paymentId);
-            latestPayment = response.payment;
-
-            if (["completed", "failed", "cancelled"].includes(response.payment?.status)) {
-                break;
-            }
-
-            await sleep(1500);
-        }
-
-        await refreshAfterPayment();
-        return latestPayment;
-    };
-
-    const handleSuccessfulPayment = async (paymentId) => {
-        setPaymentInitiated(false);
-        setProcessing(true);
-
-        try {
-            const payment = await syncSubscriptionPaymentState(paymentId);
-            const validUntil =
-                payment?.periodEnd || subscription?.endDate;
-
-            Alert.alert(
-                "Subscription Activated",
-                `Your ${getSubscriptionPlanLabel(payment?.plan)} plan is active until ${formatSubscriptionDate(validUntil)}.`,
-                [{ text: "OK" }]
-            );
-        } catch (_error) {
-            Alert.alert(
-                "Subscription Updated",
-                "Your payment was confirmed and the subscription is still syncing. Refresh the page in a moment.",
-                [{ text: "OK" }]
-            );
-        } finally {
-            setProcessing(false);
-        }
-    };
-
-    const checkEsewaBrowserPaymentResult = async (paymentId) => {
+    const checkBrowserPaymentResult = useCallback(async (paymentId) => {
         setProcessing(true);
 
         try {
@@ -228,9 +177,6 @@ export default function LandlordSubscriptionScreen() {
                     Alert.alert(failureMeta.title, failureMeta.message, [
                         {
                             text: "OK",
-                            onPress: () => {
-                                handledGatewayResultRef.current = false;
-                            },
                         },
                     ]);
                     return;
@@ -246,6 +192,16 @@ export default function LandlordSubscriptionScreen() {
                 [{ text: "OK" }]
             );
         } catch (_error) {
+            if (returnedResult === "failed" || returnedReason || returnedStatus) {
+                const failureMeta = getFailureMeta({
+                    reason: returnedReason,
+                    status: returnedStatus,
+                });
+
+                Alert.alert(failureMeta.title, failureMeta.message, [{ text: "OK" }]);
+                return;
+            }
+
             Alert.alert(
                 "Payment Processing",
                 "Your subscription payment is being processed. Refresh this screen in a moment to see the updated status.",
@@ -253,199 +209,86 @@ export default function LandlordSubscriptionScreen() {
             );
         } finally {
             setProcessing(false);
+            setActiveCheckoutKey(null);
         }
-    };
+    }, [
+        refreshAfterPayment,
+        returnedReason,
+        returnedResult,
+        returnedStatus,
+    ]);
 
-    const handleCheckout = async (planKey, gateway) => {
-        try {
-            setProcessing(true);
-            handledGatewayResultRef.current = false;
-
-            const response = await startCheckout(planKey, gateway);
-            activePaymentIdRef.current = response.payment?.paymentId;
-
-            if (gateway === "esewa") {
-                if (!response.launchUrl) {
-                    throw new Error("Failed to initialize eSewa checkout");
-                }
-
-                Alert.alert(
-                    "Continue in Browser",
-                    "eSewa will open in your browser or app. After completing the payment, return to Rentivo and we will sync your subscription automatically.",
-                    [
-                        {
-                            text: "Continue",
-                            onPress: async () => {
-                                try {
-                                    await WebBrowser.openBrowserAsync(response.launchUrl, {
-                                        showTitle: true,
-                                        enableDefaultShareMenuItem: false,
-                                    });
-                                } finally {
-                                    await checkEsewaBrowserPaymentResult(
-                                        response.payment.paymentId
-                                    );
-                                }
-                            },
-                        },
-                    ]
-                );
-
-                return;
-            }
-
-            if (response.gatewayData?.payment_url) {
-                setPaymentData(response.gatewayData);
-                setSelectedGateway("khalti");
-                setPaymentInitiated(true);
-                return;
-            }
-
-            throw new Error("Failed to initialize payment gateway");
-        } catch (error) {
-            Alert.alert("Upgrade Failed", error.message || "Failed to start payment");
-        } finally {
-            setProcessing(false);
-        }
-    };
-
-    const handleGatewayResult = (url) => {
-        if (handledGatewayResultRef.current) return;
-        handledGatewayResultRef.current = true;
-
-        if (url.includes("/subscription-success")) {
-            void handleSuccessfulPayment(activePaymentIdRef.current);
+    useEffect(() => {
+        if (khaltiReturn !== "1" || !returnedPaymentId) {
             return;
         }
 
-        const failureMeta = getFailureMetaFromUrl(url);
-        setPaymentInitiated(false);
-        Alert.alert(failureMeta.title, failureMeta.message, [
-            {
-                text: "OK",
-                onPress: () => {
-                    handledGatewayResultRef.current = false;
-                },
-            },
-        ]);
-    };
+        void checkBrowserPaymentResult(returnedPaymentId);
+    }, [checkBrowserPaymentResult, khaltiReturn, returnedPaymentId]);
 
-    const verifyPaymentDirectly = async (verifyUrl) => {
-        if (handledGatewayResultRef.current) return;
-        handledGatewayResultRef.current = true;
-
-        setPaymentInitiated(false);
-        setProcessing(true);
+    const handleCheckout = async (planKey, gateway) => {
+        const checkoutKey = buildCheckoutKey(planKey, gateway);
+        const gatewayLabel = gateway === "esewa" ? "eSewa" : "Khalti";
 
         try {
-            const response = await fetch(verifyUrl, {
-                headers: { "ngrok-skip-browser-warning": "true" },
-                redirect: "follow",
-            });
+            setActiveCheckoutKey(checkoutKey);
+            const clientRedirectUri =
+                gateway === "khalti"
+                    ? Linking.createURL("khalti-subscription-return")
+                    : null;
 
-            const finalUrl = response.url || "";
+            const response = await startCheckout(planKey, gateway, clientRedirectUri);
 
-            if (finalUrl.includes("/subscription-success")) {
-                await handleSuccessfulPayment(activePaymentIdRef.current);
-                return;
+            const launchUrl =
+                gateway === "esewa"
+                    ? response.launchUrl
+                    : response.gatewayData?.payment_url;
+
+            if (!launchUrl || !response.payment?.paymentId) {
+                throw new Error(`Failed to initialize ${gatewayLabel} checkout`);
             }
 
-            if (finalUrl.includes("/subscription-failed")) {
-                const failureMeta = getFailureMetaFromUrl(finalUrl);
-                Alert.alert(failureMeta.title, failureMeta.message, [
+            Alert.alert(
+                "Continue in Browser",
+                `${gatewayLabel} will open in your browser or app. After completing the payment, return to Rentivo and we will sync your subscription automatically.`,
+                [
                     {
-                        text: "OK",
-                        onPress: () => {
-                            handledGatewayResultRef.current = false;
+                        text: "Continue",
+                        onPress: async () => {
+                            let shouldSyncPayment = true;
+
+                            try {
+                                if (gateway === "khalti") {
+                                    const sessionResult = await WebBrowser.openAuthSessionAsync(
+                                        launchUrl,
+                                        clientRedirectUri
+                                    );
+
+                                    if (sessionResult.type !== "success") {
+                                        shouldSyncPayment = false;
+                                        setActiveCheckoutKey(null);
+                                        return;
+                                    }
+                                } else {
+                                    await WebBrowser.openBrowserAsync(launchUrl, {
+                                        showTitle: true,
+                                        enableDefaultShareMenuItem: false,
+                                    });
+                                }
+                            } finally {
+                                if (shouldSyncPayment) {
+                                    await checkBrowserPaymentResult(response.payment.paymentId);
+                                }
+                            }
                         },
                     },
-                ]);
-                return;
-            }
-
-            await handleSuccessfulPayment(activePaymentIdRef.current);
-        } catch (_error) {
-            Alert.alert(
-                "Payment Processing",
-                "Your subscription payment is being processed. Refresh this screen in a moment to see the updated status.",
-                [{ text: "OK" }]
+                ]
             );
-        } finally {
-            setProcessing(false);
+        } catch (error) {
+            Alert.alert("Upgrade Failed", error.message || "Failed to start payment");
+            setActiveCheckoutKey(null);
         }
     };
-
-    const handleWebViewNavigationStateChange = (navState) => {
-        const { url } = navState;
-        if (url.includes("/subscription-success") || url.includes("/subscription-failed")) {
-            handleGatewayResult(url);
-        }
-    };
-
-    const handleShouldStartLoadWithRequest = (request) => {
-        const { url } = request;
-
-        if (url.includes("/subscription-success") || url.includes("/subscription-failed")) {
-            handleGatewayResult(url);
-            return false;
-        }
-
-        if (
-            url.includes("/api/subscriptions/esewa/verify") ||
-            url.includes("/api/subscriptions/khalti/verify") ||
-            url.includes("/api/subscriptions/failure")
-        ) {
-            void verifyPaymentDirectly(url);
-            return false;
-        }
-
-        return true;
-    };
-
-    if (paymentInitiated && paymentData && selectedGateway === "khalti") {
-        return (
-            <View style={styles.container}>
-                <TopBar
-                    title="Khalti Upgrade"
-                    showBack
-                    onBack={() => {
-                        Alert.alert(
-                            "Cancel Payment",
-                            "Are you sure you want to cancel this subscription payment?",
-                            [
-                                { text: "Keep Paying", style: "cancel" },
-                                {
-                                    text: "Cancel",
-                                    style: "destructive",
-                                    onPress: () => {
-                                        handledGatewayResultRef.current = false;
-                                        setPaymentInitiated(false);
-                                        setPaymentData(null);
-                                        setSelectedGateway(null);
-                                    },
-                                },
-                            ]
-                        );
-                    }}
-                />
-
-                <WebView
-                    source={{ uri: paymentData.payment_url }}
-                    style={{ flex: 1 }}
-                    onNavigationStateChange={handleWebViewNavigationStateChange}
-                    onShouldStartLoadWithRequest={handleShouldStartLoadWithRequest}
-                    javaScriptEnabled
-                    domStorageEnabled
-                    startInLoadingState
-                    renderLoading={() => (
-                        <View style={styles.webViewLoading}>
-                            <ActivityIndicator size="large" color={COLORS.primary} />
-                        </View>
-                    )}
-                />
-            </View>
-        );
-    }
 
     const buttonLabel =
         subscription?.plan === "trial" || subscription?.status !== "active"
@@ -476,7 +319,7 @@ export default function LandlordSubscriptionScreen() {
                     <View style={styles.card}>
                         <View style={styles.sectionHeader}>
                             <Text style={styles.sectionTitle}>Upgrade Options</Text>
-                            {processing || checkoutLoading ? (
+                            {Boolean(activeCheckoutKey) || processing || checkoutLoading ? (
                                 <ActivityIndicator size="small" color={COLORS.primary} />
                             ) : null}
                         </View>
@@ -489,6 +332,12 @@ export default function LandlordSubscriptionScreen() {
                                 const isCurrentPlan =
                                     subscription?.plan === plan.plan &&
                                     subscription?.status === "active";
+                                const esewaCheckoutKey = buildCheckoutKey(plan.plan, "esewa");
+                                const khaltiCheckoutKey = buildCheckoutKey(plan.plan, "khalti");
+                                const isEsewaLoading = activeCheckoutKey === esewaCheckoutKey;
+                                const isKhaltiLoading = activeCheckoutKey === khaltiCheckoutKey;
+                                const buttonsDisabled =
+                                    Boolean(activeCheckoutKey) || processing || checkoutLoading;
 
                                 return (
                                     <View
@@ -542,13 +391,17 @@ export default function LandlordSubscriptionScreen() {
                                             <TouchableOpacity
                                                 style={styles.gatewayButton}
                                                 onPress={() => handleCheckout(plan.plan, "esewa")}
-                                                disabled={processing || checkoutLoading}
+                                                disabled={buttonsDisabled}
                                             >
-                                                <Ionicons
-                                                    name="wallet-outline"
-                                                    size={16}
-                                                    color="#fff"
-                                                />
+                                                {isEsewaLoading ? (
+                                                    <ActivityIndicator size="small" color="#fff" />
+                                                ) : (
+                                                    <Ionicons
+                                                        name="wallet-outline"
+                                                        size={16}
+                                                        color="#fff"
+                                                    />
+                                                )}
                                                 <Text style={styles.gatewayButtonText}>
                                                     {isCurrentPlan ? "Extend with eSewa" : "Pay with eSewa"}
                                                 </Text>
@@ -557,13 +410,17 @@ export default function LandlordSubscriptionScreen() {
                                             <TouchableOpacity
                                                 style={[styles.gatewayButton, styles.gatewayButtonAlt]}
                                                 onPress={() => handleCheckout(plan.plan, "khalti")}
-                                                disabled={processing || checkoutLoading}
+                                                disabled={buttonsDisabled}
                                             >
-                                                <Ionicons
-                                                    name="card-outline"
-                                                    size={16}
-                                                    color={COLORS.primary}
-                                                />
+                                                {isKhaltiLoading ? (
+                                                    <ActivityIndicator size="small" color={COLORS.primary} />
+                                                ) : (
+                                                    <Ionicons
+                                                        name="card-outline"
+                                                        size={16}
+                                                        color={COLORS.primary}
+                                                    />
+                                                )}
                                                 <Text
                                                     style={[
                                                         styles.gatewayButtonText,
@@ -705,8 +562,8 @@ const styles = StyleSheet.create({
         gap: 14,
     },
     planCardActive: {
-        borderColor: "#93C5FD",
-        backgroundColor: "#EFF6FF",
+        borderColor: "rgba(47,123,255,0.45)",
+        backgroundColor: COLORS.primarySoft,
     },
     planHeader: {
         flexDirection: "row",
@@ -729,12 +586,12 @@ const styles = StyleSheet.create({
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 999,
-        backgroundColor: "#FEF3C7",
+        backgroundColor: COLORS.warningSoft,
     },
     recommendedText: {
         fontSize: 11,
         fontWeight: "700",
-        color: "#92400E",
+        color: COLORS.warning,
     },
     planAmount: {
         fontSize: 22,
@@ -775,9 +632,9 @@ const styles = StyleSheet.create({
         borderRadius: 12,
     },
     gatewayButtonAlt: {
-        backgroundColor: "#EFF6FF",
+        backgroundColor: COLORS.primarySoft,
         borderWidth: 1,
-        borderColor: "#BFDBFE",
+        borderColor: "rgba(47,123,255,0.3)",
     },
     gatewayButtonText: {
         color: "#fff",

@@ -49,9 +49,9 @@ export default function DocumentList() {
     const getTypeColor = (type) => {
         switch (type) {
             case "Lease Agreement":
-                return { bg: "#DBEAFE", text: "#1E40AF" };
+                return { bg: COLORS.primarySoft, text: COLORS.primary };
             case "ID Proof":
-                return { bg: "#FEF9C3", text: "#854D0E" };
+                return { bg: COLORS.warningSoft, text: COLORS.warning };
             default:
                 return { bg: COLORS.muted, text: COLORS.mutedForeground };
         }
@@ -88,7 +88,7 @@ export default function DocumentList() {
                 <View style={styles.cardFooter}>
                     <Text style={styles.dateText}>Uploaded: {formatDate(item.createdAt)}</Text>
                     <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item)}>
-                        <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                        <Ionicons name="trash-outline" size={16} color={COLORS.destructive} />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
     deleteBtn: {
         paddingHorizontal: 10,
         paddingVertical: 6,
-        backgroundColor: "#FEE2E2",
+        backgroundColor: COLORS.destructiveSoft,
         borderRadius: 6,
     },
     fab: {

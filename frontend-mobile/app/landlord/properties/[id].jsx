@@ -169,13 +169,41 @@ export default function PropertyDetails() {
 
                 {/* Edit/Delete Actions */}
                 <View className="flex-row gap-3 mb-4">
-                    <TouchableOpacity className="flex-1 flex-row items-center justify-center py-2.5 rounded-lg gap-1.5 bg-blue-50 border border-primary" onPress={handleEdit}>
+                    <TouchableOpacity
+                        onPress={handleEdit}
+                        style={{
+                            flex: 1,
+                            flexDirection: "row",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 6,
+                            paddingVertical: 10,
+                            borderRadius: 10,
+                            backgroundColor: COLORS.primarySoft,
+                            borderWidth: 1,
+                            borderColor: "rgba(47,123,255,0.35)",
+                        }}
+                    >
                         <Ionicons name="create-outline" size={18} color={COLORS.primary} />
-                        <Text className="text-primary font-semibold">Edit</Text>
+                        <Text style={{ color: COLORS.primary, fontWeight: "600" }}>Edit</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity className="flex-1 flex-row items-center justify-center py-2.5 rounded-lg gap-1.5 bg-red-50 border border-red-500" onPress={handleDelete}>
-                        <Ionicons name="trash-outline" size={18} color="#EF4444" />
-                        <Text className="text-red-500 font-semibold">Delete</Text>
+                    <TouchableOpacity
+                        onPress={handleDelete}
+                        style={{
+                            flex: 1,
+                            flexDirection: "row",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 6,
+                            paddingVertical: 10,
+                            borderRadius: 10,
+                            backgroundColor: COLORS.destructiveSoft,
+                            borderWidth: 1,
+                            borderColor: "rgba(239,68,68,0.35)",
+                        }}
+                    >
+                        <Ionicons name="trash-outline" size={18} color={COLORS.destructive} />
+                        <Text style={{ color: COLORS.destructive, fontWeight: "600" }}>Delete</Text>
                     </TouchableOpacity>
                 </View>
 

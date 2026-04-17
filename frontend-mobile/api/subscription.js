@@ -54,12 +54,16 @@ export const getSubscriptionConfig = async () => {
     }
 };
 
-export const initiateSubscriptionCheckout = async (plan, gateway) => {
+export const initiateSubscriptionCheckout = async (
+    plan,
+    gateway,
+    clientRedirectUri = null
+) => {
     try {
         const headers = await getAuthHeaders();
         const response = await axios.post(
             `${API_BASE_URL}/subscriptions/checkout`,
-            { plan, gateway },
+            { plan, gateway, clientRedirectUri },
             { headers }
         );
         return response.data;

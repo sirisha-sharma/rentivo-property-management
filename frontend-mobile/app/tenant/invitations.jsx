@@ -77,7 +77,7 @@ export default function TenantInvitations() {
                         <Text style={styles.acceptBtnText}>Accept</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={styles.rejectBtn} onPress={() => handleReject(item._id)}>
-                        <Ionicons name="close" size={18} color="#EF4444" />
+                        <Ionicons name="close" size={18} color={COLORS.destructive} />
                         <Text style={styles.rejectBtnText}>Reject</Text>
                     </TouchableOpacity>
                 </View>
@@ -183,15 +183,15 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#FEE2E2",
+        backgroundColor: COLORS.destructiveSoft,
         paddingVertical: 10,
         borderRadius: 8,
         gap: 6,
         borderWidth: 1,
-        borderColor: "#EF4444",
+        borderColor: "rgba(239,68,68,0.35)",
     },
     rejectBtnText: {
-        color: "#EF4444",
+        color: COLORS.destructive,
         fontWeight: "600",
     },
     emptyContainer: {

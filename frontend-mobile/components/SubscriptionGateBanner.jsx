@@ -12,43 +12,47 @@ export function SubscriptionGateBanner({
 }) {
     const palette = {
         info: {
-            background: "#EFF6FF",
-            border: "#BFDBFE",
-            iconBg: "#DBEAFE",
+            background: COLORS.primarySoft,
+            border: "rgba(47,123,255,0.35)",
+            iconBg: "rgba(47,123,255,0.22)",
             icon: COLORS.primary,
-            title: "#1D4ED8",
-            text: "#1E3A8A",
+            title: COLORS.foreground,
+            text: COLORS.mutedForeground,
+            button: COLORS.primary,
         },
         warning: {
-            background: "#FFFBEB",
-            border: "#FDE68A",
-            iconBg: "#FEF3C7",
+            background: COLORS.warningSoft,
+            border: "rgba(245,158,11,0.35)",
+            iconBg: "rgba(245,158,11,0.22)",
             icon: COLORS.warning,
-            title: "#92400E",
-            text: "#92400E",
+            title: COLORS.foreground,
+            text: COLORS.mutedForeground,
+            button: COLORS.primary,
         },
         danger: {
-            background: "#FEF2F2",
-            border: "#FECACA",
-            iconBg: "#FEE2E2",
+            background: COLORS.destructiveSoft,
+            border: "rgba(239,68,68,0.35)",
+            iconBg: "rgba(239,68,68,0.22)",
             icon: COLORS.destructive,
-            title: "#B91C1C",
-            text: "#991B1B",
+            title: COLORS.foreground,
+            text: COLORS.mutedForeground,
+            button: COLORS.destructive,
         },
     }[tone] || {
         background: COLORS.muted,
         border: COLORS.border,
-        iconBg: COLORS.background,
+        iconBg: COLORS.surface,
         icon: COLORS.primary,
         title: COLORS.foreground,
         text: COLORS.mutedForeground,
+        button: COLORS.primary,
     };
 
     return (
         <View
             style={{
                 backgroundColor: palette.background,
-                borderRadius: 16,
+                borderRadius: 18,
                 borderWidth: 1,
                 borderColor: palette.border,
                 padding: 16,
@@ -58,8 +62,8 @@ export function SubscriptionGateBanner({
             <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
                 <View
                     style={{
-                        width: 38,
-                        height: 38,
+                        width: 40,
+                        height: 40,
                         borderRadius: 12,
                         backgroundColor: palette.iconBg,
                         alignItems: "center",
@@ -98,13 +102,18 @@ export function SubscriptionGateBanner({
                     activeOpacity={0.85}
                     style={{
                         alignSelf: "flex-start",
-                        backgroundColor: COLORS.foreground,
-                        borderRadius: 10,
-                        paddingHorizontal: 14,
-                        paddingVertical: 10,
+                        backgroundColor: palette.button,
+                        borderRadius: 12,
+                        paddingHorizontal: 16,
+                        paddingVertical: 11,
+                        shadowColor: palette.button,
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.35,
+                        shadowRadius: 10,
+                        elevation: 3,
                     }}
                 >
-                    <Text style={{ color: "#fff", fontSize: 13, fontWeight: "700" }}>
+                    <Text style={{ color: "#fff", fontSize: 13, fontWeight: "700", letterSpacing: 0.2 }}>
                         {actionLabel}
                     </Text>
                 </TouchableOpacity>
