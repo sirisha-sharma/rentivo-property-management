@@ -1,12 +1,15 @@
 import React, { useContext, useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from "react-native";
 import { InvoiceContext } from "../../../context/InvoiceContext";
+import { PropertyContext } from "../../../context/PropertyContext";
+import { TenantContext } from "../../../context/TenantContext";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { TopBar } from "../../../components/TopBar";
 import { StatusBadge } from "../../../components/StatusBadge";
 import { FilterChips } from "../../../components/FilterChips";
 import { EmptyState } from "../../../components/EmptyState";
+import SplitUtilityBillModal from "../../../components/SplitUtilityBillModal";
 import { COLORS } from "../../../constants/theme";
 import { useFocusEffect } from "@react-navigation/native";
 import { shareInvoicePdfAsync } from "../../../utils/invoicePdf";
@@ -19,17 +22,33 @@ const FILTERS = [
 ];
 
 export default function InvoiceList() {
-    const { invoices, fetchInvoices, updateInvoiceStatus, deleteInvoice, loading } = useContext(InvoiceContext);
+    const {
+        invoices,
+        fetchInvoices,
+        updateInvoiceStatus,
+        deleteInvoice,
+        loading,
+        splitUtilityBill,
+    } = useContext(InvoiceContext);
+    const { properties, fetchProperties } = useContext(PropertyContext);
+    const { tenants, fetchTenants } = useContext(TenantContext);
     const router = useRouter();
     const { propertyId } = useLocalSearchParams();
     const [filter, setFilter] = useState("all");
     const [activeInvoiceId, setActiveInvoiceId] = useState(null);
+    const [splitModalVisible, setSplitModalVisible] = useState(false);
+    const [splitSubmitting, setSplitSubmitting] = useState(false);
 
     useFocusEffect(
         React.useCallback(() => {
-            void fetchInvoices();
-        }, [fetchInvoices])
+            void Promise.allSettled([fetchInvoices(), fetchProperties(), fetchTenants()]);
+        }, [fetchInvoices, fetchProperties, fetchTenants])
     );
+
+    const selectedPropertyId = propertyId ? String(propertyId) : "";
+    const modalProperties = selectedPropertyId
+        ? properties.filter((property) => String(property._id) === selectedPropertyId)
+        : properties;
 
     const propertyScopedInvoices = propertyId
         ? invoices.filter(
@@ -108,6 +127,27 @@ export default function InvoiceList() {
         }
     };
 
+    const handleOpenSplitModal = () => {
+        if (modalProperties.length === 0) {
+            Alert.alert("No Properties", "Add a property before splitting a utility bill.");
+            return;
+        }
+
+        setSplitModalVisible(true);
+    };
+
+    const handleSplitSubmit = async (formData) => {
+        try {
+            setSplitSubmitting(true);
+            const response = await splitUtilityBill(formData);
+            await fetchInvoices();
+            setSplitModalVisible(false);
+            Alert.alert("Success", response?.message || "Utility invoices created successfully.");
+        } finally {
+            setSplitSubmitting(false);
+        }
+    };
+
     const renderItem = ({ item }) => (
         <View style={styles.card}>
             <View style={styles.cardHeader}>
@@ -176,6 +216,18 @@ export default function InvoiceList() {
 
     const renderHeader = () => (
         <View style={styles.listHeader}>
+            <View style={styles.utilityCard}>
+                <View style={styles.utilityCardCopy}>
+                    <Text style={styles.utilityCardTitle}>Split a shared utility bill</Text>
+                    <Text style={styles.utilityCardText}>
+                        Upload one bill and create split invoices for every active tenant on the property.
+                    </Text>
+                </View>
+                <TouchableOpacity style={styles.utilityCardButton} onPress={handleOpenSplitModal}>
+                    <Ionicons name="git-branch-outline" size={16} color="#fff" />
+                    <Text style={styles.utilityCardButtonText}>Split Bill</Text>
+                </TouchableOpacity>
+            </View>
             <FilterChips
                 options={FILTERS}
                 selected={filter}
@@ -227,6 +279,17 @@ export default function InvoiceList() {
             >
                 <Ionicons name="add" size={24} color="#fff" />
             </TouchableOpacity>
+
+            <SplitUtilityBillModal
+                visible={splitModalVisible}
+                onClose={() => setSplitModalVisible(false)}
+                onSubmit={handleSplitSubmit}
+                properties={modalProperties}
+                tenants={tenants}
+                initialPropertyId={selectedPropertyId}
+                lockedPropertyId={selectedPropertyId}
+                submitting={splitSubmitting}
+            />
         </View>
     );
 }
@@ -243,6 +306,45 @@ const styles = StyleSheet.create({
     listHeader: {
         paddingTop: 12,
         paddingBottom: 8,
+    },
+    utilityCard: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 14,
+        backgroundColor: COLORS.surface,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 14,
+    },
+    utilityCardCopy: {
+        flex: 1,
+        gap: 4,
+    },
+    utilityCardTitle: {
+        fontSize: 15,
+        fontWeight: "700",
+        color: COLORS.foreground,
+    },
+    utilityCardText: {
+        fontSize: 13,
+        lineHeight: 19,
+        color: COLORS.mutedForeground,
+    },
+    utilityCardButton: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        borderRadius: 10,
+        backgroundColor: COLORS.primary,
+    },
+    utilityCardButtonText: {
+        fontSize: 13,
+        fontWeight: "700",
+        color: "#fff",
     },
     card: {
         backgroundColor: COLORS.card,

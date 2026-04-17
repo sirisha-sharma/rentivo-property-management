@@ -84,6 +84,35 @@ const invoiceSchema = mongoose.Schema(
                 default: 0
             }
         },
+        utilityBill: {
+            splitGroupId: {
+                type: String,
+            },
+            totalBillAmount: {
+                type: Number,
+            },
+            splitMethod: {
+                type: String,
+                enum: ["equal", "room-size", "occupancy", "custom"],
+            },
+            attachment: {
+                fileName: {
+                    type: String,
+                },
+                originalName: {
+                    type: String,
+                },
+                filePath: {
+                    type: String,
+                },
+                mimeType: {
+                    type: String,
+                },
+                size: {
+                    type: Number,
+                },
+            },
+        },
         paidDate: {
             type: Date,
         },
@@ -94,5 +123,6 @@ const invoiceSchema = mongoose.Schema(
 );
 
 invoiceSchema.index({ tenantId: 1, propertyId: 1, type: 1, billingYear: 1, billingMonth: 1 });
+invoiceSchema.index({ "utilityBill.splitGroupId": 1 });
 
 export default mongoose.model("Invoice", invoiceSchema);

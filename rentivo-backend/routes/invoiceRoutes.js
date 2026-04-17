@@ -5,10 +5,24 @@ import {
     getInvoiceById,
     updateInvoiceStatus,
     deleteInvoice,
+    splitUtilityBill,
 } from "../controllers/invoiceController.js";
 import { protect } from "../middleware/authMiddleware.js";
+import { upload } from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
+
+const handleUtilityBillUpload = (req, res, next) => {
+    upload.single("billDocument")(req, res, (error) => {
+        if (error) {
+            return res.status(400).json({ message: error.message });
+        }
+
+        next();
+    });
+};
+
+router.post("/split-utility-bill", protect, handleUtilityBillUpload, splitUtilityBill);
 
 router.route("/")
     .post(protect, createInvoice)

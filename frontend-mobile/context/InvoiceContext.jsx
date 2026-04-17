@@ -96,6 +96,31 @@ export const InvoiceProvider = ({ children }) => {
         }
     }, [API_URL, getAuthHeader]);
 
+    const splitUtilityBill = useCallback(async (formData) => {
+        try {
+            const response = await axios.post(`${API_URL}/split-utility-bill`, formData, {
+                headers: {
+                    Authorization: `Bearer ${user?.token}`,
+                    "Content-Type": "multipart/form-data",
+                },
+            });
+
+            const createdInvoices = response.data?.invoices || [];
+            const createdIds = new Set(createdInvoices.map((invoice) => invoice._id));
+
+            setInvoices((prev) => [
+                ...createdInvoices,
+                ...prev.filter((invoice) => !createdIds.has(invoice._id)),
+            ]);
+            setError(null);
+            return response.data;
+        } catch (err) {
+            console.log(err);
+            setError(err.response?.data?.message || "Failed to split utility bill");
+            throw err;
+        }
+    }, [API_URL, user?.token]);
+
     // Provide invoice state and methods to child components
     return (
         <InvoiceContext.Provider
@@ -107,6 +132,7 @@ export const InvoiceProvider = ({ children }) => {
                 createInvoice,
                 updateInvoiceStatus,
                 deleteInvoice,
+                splitUtilityBill,
             }}
         >
             {children}
