@@ -55,6 +55,7 @@ export const PropertyProvider = ({ children }) => {
             // Append text fields
             formData.append('title', propertyData.title);
             formData.append('address', propertyData.address);
+            formData.append('district', propertyData.district);
             formData.append('type', propertyData.type);
             formData.append('units', propertyData.units);
             formData.append('splitMethod', propertyData.splitMethod);
@@ -122,6 +123,7 @@ export const PropertyProvider = ({ children }) => {
             // Append text fields
             formData.append('title', propertyData.title);
             formData.append('address', propertyData.address);
+            formData.append('district', propertyData.district);
             formData.append('type', propertyData.type);
             formData.append('units', propertyData.units);
             formData.append('splitMethod', propertyData.splitMethod);

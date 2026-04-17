@@ -30,3 +30,34 @@ export const getMarketplaceProperties = async () => {
     throw error.response?.data || { message: "Failed to fetch properties" };
   }
 };
+
+export const getMarketplacePropertyDetail = async (propertyId) => {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await axios.get(`${API_BASE_URL}/properties/marketplace/${propertyId}`, {
+      headers,
+    });
+    return response.data;
+  } catch (error) {
+    console.error(
+      "Failed to fetch property details:",
+      error.response?.data || error.message
+    );
+    throw error.response?.data || { message: "Failed to fetch property details" };
+  }
+};
+
+export const submitPropertyRating = async (propertyId, payload) => {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await axios.post(
+      `${API_BASE_URL}/properties/${propertyId}/ratings`,
+      payload,
+      { headers }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Failed to save property rating:", error.response?.data || error.message);
+    throw error.response?.data || { message: "Failed to save rating" };
+  }
+};

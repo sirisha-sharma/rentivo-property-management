@@ -1,5 +1,90 @@
 import Property from "../models/propertyModel.js";
 import Tenant from "../models/tenantModel.js";
+import PropertyRating from "../models/propertyRatingModel.js";
+import PropertyAssociation from "../models/propertyAssociationModel.js";
+import {
+    inferNepalDistrictFromText,
+    resolveNepalDistrict,
+} from "../utils/nepalDistricts.js";
+
+const buildRatingSummaryMap = async (propertyIds) => {
+    if (!propertyIds.length) {
+        return new Map();
+    }
+
+    const summaries = await PropertyRating.aggregate([
+        {
+            $match: {
+                propertyId: { $in: propertyIds },
+            },
+        },
+        {
+            $group: {
+                _id: "$propertyId",
+                average: { $avg: "$rating" },
+                count: { $sum: 1 },
+            },
+        },
+    ]);
+
+    return new Map(
+        summaries.map((summary) => [
+            String(summary._id),
+            {
+                average: Number(summary.average.toFixed(1)),
+                count: summary.count,
+            },
+        ])
+    );
+};
+
+const serializeRecentRatings = (ratings) =>
+    ratings.map((rating) => ({
+        _id: rating._id,
+        rating: rating.rating,
+        review: rating.review || "",
+        updatedAt: rating.updatedAt,
+        reviewerName: rating.userId?.name || "Tenant",
+    }));
+
+const decoratePropertyPayloads = async (properties) => {
+    const propertyIds = properties.map((property) => property._id);
+    const ratingSummaryMap = await buildRatingSummaryMap(propertyIds);
+
+    return properties.map((property) => {
+        const plainProperty = property.toObject ? property.toObject() : property;
+        const district = plainProperty.district || inferNepalDistrictFromText(plainProperty.address);
+
+        return {
+            ...plainProperty,
+            district: district || null,
+            ratingSummary:
+                ratingSummaryMap.get(String(plainProperty._id)) || {
+                    average: 0,
+                    count: 0,
+                },
+        };
+    });
+};
+
+const canTenantRateProperty = async (userId, propertyId) => {
+    const activeOrPastTenant = await Tenant.findOne({
+        userId,
+        propertyId,
+        status: { $in: ["Active", "Past"] },
+    }).select("_id");
+
+    if (activeOrPastTenant) {
+        return true;
+    }
+
+    const association = await PropertyAssociation.findOne({
+        userId,
+        propertyId,
+    }).select("_id");
+
+    return Boolean(association);
+};
 
 // Get all vacant properties for marketplace (accessible to all authenticated users)
 export const getMarketplaceProperties = async (req, res) => {
@@ -8,14 +93,86 @@ export const getMarketplaceProperties = async (req, res) => {
             .populate("landlordId", "name email phone")
             .sort({ createdAt: -1 });
 
+        const decoratedProperties = await decoratePropertyPayloads(properties);
+        const requestedDistrict = resolveNepalDistrict({
+            district: req.query?.district,
+        });
+        const filteredProperties = requestedDistrict
+            ? decoratedProperties.filter((property) => property.district === requestedDistrict)
+            : decoratedProperties;
+
         res.status(200).json({
             success: true,
-            properties
+            properties: filteredProperties,
         });
     } catch (error) {
         res.status(500).json({
             success: false,
             message: error.message
+        });
+    }
+};
+
+export const getMarketplacePropertyById = async (req, res) => {
+    try {
+        const property = await Property.findById(req.params.id).populate(
+            "landlordId",
+            "name email phone"
+        );
+
+        if (!property) {
+            return res.status(404).json({
+                success: false,
+                message: "Property not found",
+            });
+        }
+
+        const isVacant = property.status === "vacant";
+        const isLandlordOwner =
+            req.user.role === "landlord" &&
+            String(property.landlordId?._id || property.landlordId) === String(req.user._id);
+        const isAssociatedTenant =
+            req.user.role === "tenant"
+                ? await canTenantRateProperty(req.user._id, property._id)
+                : false;
+
+        if (!isVacant && !isLandlordOwner && !isAssociatedTenant) {
+            return res.status(403).json({
+                success: false,
+                message: "You are not authorized to view this property",
+            });
+        }
+
+        const [decoratedProperty] = await decoratePropertyPayloads([property]);
+        const recentRatings = await PropertyRating.find({ propertyId: property._id })
+            .populate("userId", "name")
+            .sort({ updatedAt: -1 })
+            .limit(6);
+
+        let currentUserRating = null;
+        let canRate = false;
+
+        if (req.user.role === "tenant") {
+            currentUserRating = await PropertyRating.findOne({
+                propertyId: property._id,
+                userId: req.user._id,
+            }).select("rating review updatedAt");
+            canRate = await canTenantRateProperty(req.user._id, property._id);
+        }
+
+        res.status(200).json({
+            success: true,
+            property: {
+                ...decoratedProperty,
+                canRate,
+                currentUserRating,
+                recentRatings: serializeRecentRatings(recentRatings),
+            },
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message,
         });
     }
 };
@@ -52,7 +209,16 @@ export const getPropertyById = async (req, res) => {
             return res.status(401).json({ message: "User not authorized" });
         }
 
-        res.status(200).json(property);
+        const [decoratedProperty] = await decoratePropertyPayloads([property]);
+        const recentRatings = await PropertyRating.find({ propertyId: property._id })
+            .populate("userId", "name")
+            .sort({ updatedAt: -1 })
+            .limit(6);
+
+        res.status(200).json({
+            ...decoratedProperty,
+            recentRatings: serializeRecentRatings(recentRatings),
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -61,7 +227,18 @@ export const getPropertyById = async (req, res) => {
 
 // Create a new property
 export const createProperty = async (req, res) => {
-    const { title, address, type, units, splitMethod, roomSizes, amenities, rent, description } = req.body;
+    const {
+        title,
+        address,
+        district,
+        type,
+        units,
+        splitMethod,
+        roomSizes,
+        amenities,
+        rent,
+        description,
+    } = req.body;
 
     if (!title || !address || !type || !units) {
         return res.status(400).json({ message: "Please fill in all required fields" });
@@ -70,6 +247,11 @@ export const createProperty = async (req, res) => {
     try {
         if (req.user?.role !== "landlord") {
             return res.status(403).json({ message: "Only landlords can create properties" });
+        }
+
+        const normalizedDistrict = resolveNepalDistrict({ district, address });
+        if (!normalizedDistrict) {
+            return res.status(400).json({ message: "Please select a valid district in Nepal" });
         }
 
         // Handle uploaded images
@@ -111,6 +293,7 @@ export const createProperty = async (req, res) => {
         const property = await Property.create({
             title,
             address,
+            district: normalizedDistrict,
             type,
             units,
             splitMethod,
@@ -144,6 +327,15 @@ export const updateProperty = async (req, res) => {
         // Make sure the logged in user matches the property landlord
         if (property.landlordId.toString() !== req.user._id.toString()) {
             return res.status(401).json({ message: "User not authorized" });
+        }
+
+        const nextDistrict = resolveNepalDistrict({
+            district: req.body.district || property.district,
+            address: req.body.address || property.address,
+        });
+
+        if (!nextDistrict) {
+            return res.status(400).json({ message: "Please select a valid district in Nepal" });
         }
 
         // Handle uploaded images
@@ -187,11 +379,12 @@ export const updateProperty = async (req, res) => {
             req.params.id,
             {
                 ...req.body,
+                district: nextDistrict,
                 images: updatedImages,
                 roomSizes: parsedRoomSizes,
                 amenities: parsedAmenities,
             },
-            { new: true }
+            { new: true, runValidators: true }
         );
 
         res.status(200).json(updatedProperty);
@@ -230,10 +423,92 @@ export const deleteProperty = async (req, res) => {
             });
         }
 
-        await property.deleteOne();
+        await Promise.all([
+            PropertyRating.deleteMany({ propertyId: property._id }),
+            PropertyAssociation.deleteMany({ propertyId: property._id }),
+            property.deleteOne(),
+        ]);
 
         res.status(200).json({ id: req.params.id });
     } catch (error) {
         res.status(500).json({ message: error.message });
+    }
+};
+
+export const createOrUpdatePropertyRating = async (req, res) => {
+    try {
+        if (req.user?.role !== "tenant") {
+            return res.status(403).json({
+                success: false,
+                message: "Only tenants can rate properties",
+            });
+        }
+
+        const property = await Property.findById(req.params.id);
+        if (!property) {
+            return res.status(404).json({
+                success: false,
+                message: "Property not found",
+            });
+        }
+
+        const canRate = await canTenantRateProperty(req.user._id, property._id);
+        if (!canRate) {
+            return res.status(403).json({
+                success: false,
+                message: "Only current or previous tenants of this property can rate it",
+            });
+        }
+
+        const numericRating = Number(req.body?.rating);
+        if (!Number.isInteger(numericRating) || numericRating < 1 || numericRating > 5) {
+            return res.status(400).json({
+                success: false,
+                message: "Rating must be a whole number between 1 and 5",
+            });
+        }
+
+        const review = typeof req.body?.review === "string" ? req.body.review.trim() : "";
+
+        const rating = await PropertyRating.findOneAndUpdate(
+            { propertyId: property._id, userId: req.user._id },
+            {
+                $set: {
+                    rating: numericRating,
+                    review,
+                },
+            },
+            {
+                upsert: true,
+                new: true,
+                runValidators: true,
+                setDefaultsOnInsert: true,
+            }
+        );
+
+        const [ratingSummaryMap, recentRatings] = await Promise.all([
+            buildRatingSummaryMap([property._id]),
+            PropertyRating.find({ propertyId: property._id })
+                .populate("userId", "name")
+                .sort({ updatedAt: -1 })
+                .limit(6),
+        ]);
+
+        res.status(200).json({
+            success: true,
+            message: "Rating saved successfully",
+            rating,
+            ratingSummary:
+                ratingSummaryMap.get(String(property._id)) || {
+                    average: 0,
+                    count: 0,
+                },
+            recentRatings: serializeRecentRatings(recentRatings),
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message,
+        });
     }
 };

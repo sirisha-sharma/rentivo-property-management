@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { OFFICIAL_DISTRICTS } from "../utils/nepalDistricts.js";
 
 const propertySchema = mongoose.Schema(
     {
@@ -9,6 +10,11 @@ const propertySchema = mongoose.Schema(
         address: {
             type: String,
             required: [true, "Please add an address"],
+        },
+        district: {
+            type: String,
+            trim: true,
+            enum: OFFICIAL_DISTRICTS,
         },
         type: {
             type: String,
@@ -66,5 +72,7 @@ const propertySchema = mongoose.Schema(
         timestamps: true,
     }
 );
+
+propertySchema.index({ status: 1, district: 1, createdAt: -1 });
 
 export default mongoose.model("Property", propertySchema);

@@ -7,6 +7,8 @@ import {
     updateProperty,
     deleteProperty,
     getMarketplaceProperties,
+    getMarketplacePropertyById,
+    createOrUpdatePropertyRating,
 } from "../controllers/propertyController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import { requireLandlordSubscription } from "../middleware/subscriptionMiddleware.js";
@@ -14,6 +16,8 @@ import { uploadPropertyImages } from "../middleware/uploadMiddleware.js";
 import { SUBSCRIPTION_ACTIONS } from "../utils/subscriptionService.js";
 
 router.route("/marketplace").get(protect, getMarketplaceProperties);
+router.route("/marketplace/:id").get(protect, getMarketplacePropertyById);
+router.route("/:id/ratings").post(protect, createOrUpdatePropertyRating);
 router
     .route("/")
     .get(protect, getProperties)

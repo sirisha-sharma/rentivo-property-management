@@ -15,8 +15,10 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { PropertyContext } from "../../../context/PropertyContext";
 import { TopBar } from "../../../components/TopBar";
+import { LocationPickerField } from "../../../components/LocationPickerField";
 import { COLORS } from "../../../constants/theme";
 import { BASE_URL } from "../../../constants/config";
+import { normalizeLocationValue } from "../../../constants/nepalLocations";
 
 export default function EditProperty() {
     const { getPropertyById, updateProperty } = useContext(PropertyContext);
@@ -26,6 +28,7 @@ export default function EditProperty() {
     const [formData, setFormData] = useState({
         title: "",
         address: "",
+        district: "",
         type: "",
         units: "",
         splitMethod: "",
@@ -49,6 +52,7 @@ export default function EditProperty() {
             setFormData({
                 title: property.title || "",
                 address: property.address || "",
+                district: normalizeLocationValue(property.district || ""),
                 type: property.type || "",
                 units: property.units?.toString() || "",
                 splitMethod: property.splitMethod || "",
@@ -147,6 +151,7 @@ export default function EditProperty() {
         const newErrors = {};
         if (!formData.title.trim()) newErrors.title = "Property name is required";
         if (!formData.address.trim()) newErrors.address = "Address is required";
+        if (!formData.district) newErrors.district = "District is required";
         if (!formData.type) newErrors.type = "Type is required";
         if (!formData.units) newErrors.units = "Units required";
         if (!formData.splitMethod) newErrors.splitMethod = "Split method required";
@@ -162,6 +167,7 @@ export default function EditProperty() {
         try {
             await updateProperty(id, {
                 ...formData,
+                district: normalizeLocationValue(formData.district),
                 units: parseInt(formData.units),
                 rent: formData.rent ? parseFloat(formData.rent) : 0,
                 roomSizes: formData.splitMethod === "room-size" ? roomSizes : [],
@@ -242,6 +248,16 @@ export default function EditProperty() {
                     />
                     {errors.address && <Text style={styles.errorText}>{errors.address}</Text>}
                 </View>
+
+                <LocationPickerField
+                    label="District"
+                    title="Select District"
+                    placeholder="Choose a district in Nepal"
+                    value={formData.district}
+                    onChange={(value) => updateField("district", value)}
+                    helperText="Popular locations are pinned first, then the rest are ordered alphabetically."
+                    error={errors.district}
+                />
 
                 <Selector
                     label="Property Type"

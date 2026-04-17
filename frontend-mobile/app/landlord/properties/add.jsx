@@ -16,9 +16,11 @@ import * as ImagePicker from "expo-image-picker";
 import { PropertyContext } from "../../../context/PropertyContext";
 import { SubscriptionContext } from "../../../context/SubscriptionContext";
 import { TopBar } from "../../../components/TopBar";
+import { LocationPickerField } from "../../../components/LocationPickerField";
 import { SubscriptionGateBanner } from "../../../components/SubscriptionGateBanner";
 import { COLORS } from "../../../constants/theme";
 import { BASE_URL } from "../../../constants/config";
+import { normalizeLocationValue } from "../../../constants/nepalLocations";
 import {
     SUBSCRIPTION_ACTIONS,
     getSubscriptionActionAccess,
@@ -35,6 +37,7 @@ export default function AddProperty() {
     const [formData, setFormData] = useState({
         title: "",
         address: "",
+        district: "",
         type: "",
         units: "",
         splitMethod: "",
@@ -147,6 +150,7 @@ export default function AddProperty() {
         const newErrors = {};
         if (!formData.title.trim()) newErrors.title = "Property name is required";
         if (!formData.address.trim()) newErrors.address = "Address is required";
+        if (!formData.district) newErrors.district = "District is required";
         if (!formData.type) newErrors.type = "Type is required";
         if (!formData.units) newErrors.units = "Units required";
         if (!formData.splitMethod) newErrors.splitMethod = "Split method required";
@@ -179,6 +183,7 @@ export default function AddProperty() {
         try {
             await addProperty({
                 ...formData,
+                district: normalizeLocationValue(formData.district),
                 units: parseInt(formData.units),
                 rent: formData.rent ? parseFloat(formData.rent) : 0,
                 roomSizes: formData.splitMethod === "room-size" ? roomSizes : [],
@@ -287,6 +292,16 @@ export default function AddProperty() {
                     />
                     {errors.address && <Text className="text-xs text-destructive">{errors.address}</Text>}
                 </View>
+
+                <LocationPickerField
+                    label="District"
+                    title="Select District"
+                    placeholder="Choose a district in Nepal"
+                    value={formData.district}
+                    onChange={(value) => updateField("district", value)}
+                    helperText="Popular locations are pinned first, then the rest are ordered alphabetically."
+                    error={errors.district}
+                />
 
                 <View className="gap-2">
                     <Text className="text-sm font-medium text-foreground">Description</Text>

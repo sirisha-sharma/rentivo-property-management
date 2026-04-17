@@ -9,16 +9,19 @@ import {
   TouchableOpacity,
   Linking,
   Alert,
+  TextInput,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
 import { TopBar } from "../../../components/TopBar";
 import { EmptyState } from "../../../components/EmptyState";
 import { COLORS } from "../../../constants/theme";
-import { API_BASE_URL, BASE_URL } from "../../../constants/config";
+import { BASE_URL } from "../../../constants/config";
+import {
+  getMarketplacePropertyDetail,
+  submitPropertyRating,
+} from "../../../api/marketplace";
 
 function FactChip({ icon, label }) {
   return (
@@ -38,26 +41,49 @@ function SectionCard({ title, children }) {
   );
 }
 
+function RatingStars({ value, onChange, size = 20, readonly = false }) {
+  return (
+    <View style={styles.ratingStarsRow}>
+      {[1, 2, 3, 4, 5].map((star) => {
+        const active = star <= value;
+        return (
+          <TouchableOpacity
+            key={star}
+            activeOpacity={0.8}
+            disabled={readonly}
+            onPress={() => onChange?.(star)}
+          >
+            <Ionicons
+              name={active ? "star" : "star-outline"}
+              size={size}
+              color={active ? "#FBBF24" : COLORS.mutedForeground}
+            />
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
 export default function PropertyDetail() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [selectedRating, setSelectedRating] = useState(0);
+  const [reviewText, setReviewText] = useState("");
+  const [savingRating, setSavingRating] = useState(false);
 
   const fetchPropertyDetails = useCallback(async () => {
     try {
-      const userData = await AsyncStorage.getItem("user");
-      const user = userData ? JSON.parse(userData) : null;
-
-      const response = await axios.get(`${API_BASE_URL}/properties/marketplace`, {
-        headers: { Authorization: `Bearer ${user?.token}` },
-      });
-
-      const propertyData = response.data.properties.find((entry) => entry._id === id);
-      setProperty(propertyData || null);
-    } catch (_error) {
-      Alert.alert("Error", "Failed to load property details");
+      const response = await getMarketplacePropertyDetail(id);
+      const propertyData = response.property || null;
+      setProperty(propertyData);
+      setSelectedRating(propertyData?.currentUserRating?.rating || 0);
+      setReviewText(propertyData?.currentUserRating?.review || "");
+    } catch (error) {
+      Alert.alert("Error", error?.message || "Failed to load property details");
       router.back();
     } finally {
       setLoading(false);
@@ -74,6 +100,34 @@ export default function PropertyDetail() {
       return img;
     }
     return `${BASE_URL}${img}`;
+  };
+
+  const handleSaveRating = async () => {
+    if (!selectedRating) {
+      Alert.alert("Rating Required", "Select a star rating before submitting.");
+      return;
+    }
+
+    try {
+      setSavingRating(true);
+      const response = await submitPropertyRating(id, {
+        rating: selectedRating,
+        review: reviewText,
+      });
+
+      setProperty((previous) => ({
+        ...previous,
+        ratingSummary: response.ratingSummary,
+        recentRatings: response.recentRatings,
+        currentUserRating: response.rating,
+      }));
+
+      Alert.alert("Success", "Your rating has been saved.");
+    } catch (error) {
+      Alert.alert("Error", error?.message || "Failed to save rating");
+    } finally {
+      setSavingRating(false);
+    }
   };
 
   const handleCall = async () => {
@@ -112,13 +166,15 @@ export default function PropertyDetail() {
           icon="home-outline"
           title="Property not found"
           subtitle="This listing is unavailable or may have been removed."
-          action={{ label: "Back to Marketplace", onPress: () => router.back() }}
+          action={{ label: "Back", onPress: () => router.back() }}
         />
       </View>
     );
   }
 
   const hasImages = property.images && property.images.length > 0;
+  const ratingCount = property.ratingSummary?.count || 0;
+  const averageRating = property.ratingSummary?.average || 0;
 
   return (
     <View style={styles.container}>
@@ -172,11 +228,13 @@ export default function PropertyDetail() {
               <TouchableOpacity
                 style={[
                   styles.heroControlButton,
-                  currentImageIndex === property.images.length - 1
-                    && styles.heroControlButtonDisabled,
+                  currentImageIndex === property.images.length - 1 &&
+                    styles.heroControlButtonDisabled,
                 ]}
                 onPress={() =>
-                  setCurrentImageIndex((prev) => Math.min(property.images.length - 1, prev + 1))
+                  setCurrentImageIndex((prev) =>
+                    Math.min(property.images.length - 1, prev + 1)
+                  )
                 }
                 disabled={currentImageIndex === property.images.length - 1}
               >
@@ -211,6 +269,12 @@ export default function PropertyDetail() {
           <View style={styles.factChipRow}>
             <FactChip icon="business-outline" label={property.type || "Flexible"} />
             <FactChip icon="layers-outline" label={`${property.units || 0} units`} />
+            {property.district ? (
+              <FactChip icon="navigate-outline" label={property.district} />
+            ) : null}
+            {ratingCount ? (
+              <FactChip icon="star-outline" label={`${averageRating.toFixed(1)} / 5`} />
+            ) : null}
             {property.amenities?.length ? (
               <FactChip icon="sparkles-outline" label={`${property.amenities.length} perks`} />
             ) : null}
@@ -219,8 +283,109 @@ export default function PropertyDetail() {
 
         <SectionCard title="Overview">
           <Text style={styles.bodyText}>
-            {property.description || "This property listing does not include a detailed description yet."}
+            {property.description ||
+              "This property listing does not include a detailed description yet."}
           </Text>
+        </SectionCard>
+
+        <SectionCard title="Ratings">
+          <View style={styles.ratingSummaryCard}>
+            <View>
+              <Text style={styles.ratingSummaryValue}>
+                {ratingCount ? averageRating.toFixed(1) : "New"}
+              </Text>
+              <Text style={styles.ratingSummaryCaption}>
+                {ratingCount
+                  ? `${ratingCount} rating${ratingCount === 1 ? "" : "s"}`
+                  : "No ratings yet"}
+              </Text>
+            </View>
+            <View style={{ alignItems: "flex-end", gap: 8 }}>
+              <RatingStars value={Math.round(averageRating)} readonly size={18} />
+              <Text style={styles.ratingSummaryHint}>
+                Verified tenants can rate this property.
+              </Text>
+            </View>
+          </View>
+
+          {property.canRate ? (
+            <View style={styles.ratingForm}>
+              <Text style={styles.ratingFormTitle}>Rate this property</Text>
+              <RatingStars value={selectedRating} onChange={setSelectedRating} size={24} />
+              <TextInput
+                style={styles.ratingTextarea}
+                value={reviewText}
+                onChangeText={setReviewText}
+                placeholder="Share your experience (optional)"
+                placeholderTextColor={COLORS.faintForeground}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+                maxLength={600}
+              />
+              <TouchableOpacity
+                style={[styles.saveRatingButton, savingRating && styles.saveRatingButtonDisabled]}
+                onPress={() => void handleSaveRating()}
+                disabled={savingRating}
+                activeOpacity={0.85}
+              >
+                {savingRating ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <>
+                    <Ionicons name="star" size={16} color="#fff" />
+                    <Text style={styles.saveRatingText}>
+                      {property.currentUserRating ? "Update Rating" : "Submit Rating"}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.ratingNotice}>
+              <Ionicons
+                name="shield-checkmark-outline"
+                size={18}
+                color={COLORS.mutedForeground}
+              />
+              <Text style={styles.ratingNoticeText}>
+                Only tenants who currently rent or previously rented this property can
+                leave a rating.
+              </Text>
+            </View>
+          )}
+
+          <View style={styles.reviewsWrap}>
+            {property.recentRatings?.length ? (
+              property.recentRatings.map((rating) => (
+                <View key={rating._id} style={styles.reviewCard}>
+                  <View style={styles.reviewHeader}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.reviewName}>{rating.reviewerName}</Text>
+                      <Text style={styles.reviewDate}>
+                        {new Date(rating.updatedAt).toLocaleDateString()}
+                      </Text>
+                    </View>
+                    <RatingStars value={rating.rating} readonly size={16} />
+                  </View>
+                  <Text style={styles.reviewBody}>
+                    {rating.review || "Shared a rating without additional comments."}
+                  </Text>
+                </View>
+              ))
+            ) : (
+              <View style={styles.ratingNotice}>
+                <Ionicons
+                  name="chatbubble-ellipses-outline"
+                  size={18}
+                  color={COLORS.mutedForeground}
+                />
+                <Text style={styles.ratingNoticeText}>
+                  No written reviews yet for this property.
+                </Text>
+              </View>
+            )}
+          </View>
         </SectionCard>
 
         {property.amenities && property.amenities.length > 0 ? (
@@ -465,6 +630,11 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#fff",
   },
+  ratingStarsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
   sectionCard: {
     marginTop: 18,
     backgroundColor: COLORS.surface,
@@ -483,6 +653,125 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.mutedForeground,
     lineHeight: 22,
+  },
+  ratingSummaryCard: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 16,
+    padding: 16,
+    borderRadius: 18,
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  ratingSummaryValue: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: COLORS.foreground,
+    letterSpacing: -0.6,
+  },
+  ratingSummaryCaption: {
+    marginTop: 4,
+    fontSize: 13,
+    color: COLORS.mutedForeground,
+  },
+  ratingSummaryHint: {
+    fontSize: 12,
+    color: COLORS.mutedForeground,
+    textAlign: "right",
+  },
+  ratingForm: {
+    marginTop: 16,
+    gap: 12,
+    padding: 16,
+    borderRadius: 18,
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  ratingFormTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: COLORS.foreground,
+  },
+  ratingTextarea: {
+    minHeight: 104,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: COLORS.foreground,
+    lineHeight: 20,
+  },
+  saveRatingButton: {
+    minHeight: 46,
+    borderRadius: 14,
+    backgroundColor: COLORS.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  saveRatingButtonDisabled: {
+    opacity: 0.72,
+  },
+  saveRatingText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  ratingNotice: {
+    marginTop: 16,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    padding: 14,
+    borderRadius: 14,
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  ratingNoticeText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 20,
+    color: COLORS.mutedForeground,
+  },
+  reviewsWrap: {
+    marginTop: 16,
+    gap: 12,
+  },
+  reviewCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surfaceElevated,
+    padding: 14,
+    gap: 10,
+  },
+  reviewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  reviewName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: COLORS.foreground,
+  },
+  reviewDate: {
+    marginTop: 3,
+    fontSize: 12,
+    color: COLORS.mutedForeground,
+  },
+  reviewBody: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: COLORS.mutedForeground,
   },
   amenitiesWrap: {
     flexDirection: "row",

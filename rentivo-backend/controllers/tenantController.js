@@ -1,7 +1,31 @@
 import Tenant from "../models/tenantModel.js";
 import User from "../models/userModel.js";
 import Property from "../models/propertyModel.js";
+import PropertyAssociation from "../models/propertyAssociationModel.js";
 import { createNotification } from "./notificationController.js";
+
+const upsertPropertyAssociation = async (tenant) => {
+    if (!tenant?.userId || !tenant?.propertyId) {
+        return null;
+    }
+
+    const firstAssociatedAt = tenant.leaseStart || tenant.createdAt || new Date();
+    const lastAssociatedAt = tenant.leaseEnd || new Date();
+
+    return PropertyAssociation.findOneAndUpdate(
+        { userId: tenant.userId, propertyId: tenant.propertyId },
+        {
+            $setOnInsert: {
+                firstAssociatedAt,
+            },
+            $set: {
+                lastAssociatedAt,
+                endedAt: null,
+            },
+        },
+        { upsert: true, new: true }
+    );
+};
 
 // Invite or add a tenant to a property
 export const inviteTenant = async (req, res) => {
@@ -108,6 +132,7 @@ export const acceptInvitation = async (req, res) => {
 
         tenant.status = "Active";
         await tenant.save();
+        await upsertPropertyAssociation(tenant);
 
         const property = await Property.findById(tenant.propertyId).select("title landlordId");
         if (property?.landlordId) {
@@ -175,6 +200,22 @@ export const deleteTenant = async (req, res) => {
             "tenant",
             `Your tenancy for ${tenant.propertyId.title} has been removed by the landlord.`
         );
+
+        if (tenant.status === "Active") {
+            await PropertyAssociation.findOneAndUpdate(
+                { userId: tenant.userId, propertyId: tenant.propertyId._id },
+                {
+                    $setOnInsert: {
+                        firstAssociatedAt: tenant.leaseStart || tenant.createdAt || new Date(),
+                    },
+                    $set: {
+                        lastAssociatedAt: new Date(),
+                        endedAt: new Date(),
+                    },
+                },
+                { upsert: true, new: true }
+            );
+        }
 
         await tenant.deleteOne();
 

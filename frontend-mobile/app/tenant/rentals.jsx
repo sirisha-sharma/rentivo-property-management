@@ -206,6 +206,26 @@ export default function MyRentals() {
                                     <TouchableOpacity
                                         style={[
                                             styles.actionButton,
+                                            styles.secondaryButton,
+                                            isCompactActions && styles.actionButtonFull,
+                                        ]}
+                                        onPress={() => {
+                                            if (!rental.propertyId?._id) return;
+                                            router.push(`/tenant/property-detail/${rental.propertyId._id}`);
+                                        }}
+                                    >
+                                        <View style={styles.actionContent}>
+                                            <Ionicons
+                                                name="information-circle-outline"
+                                                size={16}
+                                                color={COLORS.foreground}
+                                            />
+                                            <Text style={styles.actionText}>Property Details</Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.actionButton,
                                             styles.primaryButton,
                                             isCompactActions && styles.actionButtonFull,
                                         ]}

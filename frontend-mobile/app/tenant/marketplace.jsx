@@ -1,11 +1,18 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
-  View, Text, FlatList, StyleSheet, ActivityIndicator,
-  RefreshControl, Image, TouchableOpacity,
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  ActivityIndicator,
+  RefreshControl,
+  Image,
+  TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { TopBar } from "../../components/TopBar";
+import { LocationPickerField } from "../../components/LocationPickerField";
 import { SearchBar } from "../../components/SearchBar";
 import { FilterChips } from "../../components/FilterChips";
 import { EmptyState } from "../../components/EmptyState";
@@ -27,6 +34,7 @@ export default function MarketplaceBrowse() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [typeFilter, setTypeFilter] = useState("all");
+  const [locationFilter, setLocationFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
   const fetchProperties = useCallback(async () => {
@@ -45,23 +53,30 @@ export default function MarketplaceBrowse() {
     let filtered = properties;
 
     if (typeFilter !== "all") {
-      filtered = filtered.filter(p =>
-        p.type?.toLowerCase() === typeFilter.toLowerCase()
+      filtered = filtered.filter(
+        (property) => property.type?.toLowerCase() === typeFilter.toLowerCase()
       );
     }
 
+    if (locationFilter) {
+      filtered = filtered.filter((property) => property.district === locationFilter);
+    }
+
     if (searchQuery) {
-      filtered = filtered.filter(p =>
-        p.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.address?.toLowerCase().includes(searchQuery.toLowerCase())
+      const normalizedQuery = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (property) =>
+          property.title?.toLowerCase().includes(normalizedQuery) ||
+          property.address?.toLowerCase().includes(normalizedQuery) ||
+          property.district?.toLowerCase().includes(normalizedQuery)
       );
     }
 
     setFilteredProperties(filtered);
-  }, [properties, searchQuery, typeFilter]);
+  }, [locationFilter, properties, searchQuery, typeFilter]);
 
   useEffect(() => {
-    fetchProperties();
+    void fetchProperties();
   }, [fetchProperties]);
 
   useEffect(() => {
@@ -74,14 +89,11 @@ export default function MarketplaceBrowse() {
     setRefreshing(false);
   };
 
-  // Helper function to construct proper image URI
   const getImageUri = (img) => {
     if (!img) return "";
-    // If it's already a full URL, return as-is
-    if (img.startsWith('http://') || img.startsWith('https://')) {
+    if (img.startsWith("http://") || img.startsWith("https://")) {
       return img;
     }
-    // Otherwise, it's a server path - prepend BASE_URL (not API_BASE_URL)
     return `${BASE_URL}${img}`;
   };
 
@@ -89,12 +101,10 @@ export default function MarketplaceBrowse() {
     <TouchableOpacity
       style={styles.propertyCard}
       onPress={() => router.push(`/tenant/property-detail/${item._id}`)}
+      activeOpacity={0.88}
     >
       {item.images && item.images.length > 0 ? (
-        <Image
-          source={{ uri: getImageUri(item.images[0]) }}
-          style={styles.propertyImage}
-        />
+        <Image source={{ uri: getImageUri(item.images[0]) }} style={styles.propertyImage} />
       ) : (
         <View style={styles.placeholderImage}>
           <Ionicons name="home-outline" size={48} color={COLORS.mutedForeground} />
@@ -105,10 +115,18 @@ export default function MarketplaceBrowse() {
         <Text style={styles.propertyTitle}>{item.title}</Text>
         <View style={styles.propertyDetail}>
           <Ionicons name="location-outline" size={14} color={COLORS.mutedForeground} />
-          <Text style={styles.propertyAddress} numberOfLines={1}>{item.address}</Text>
+          <Text style={styles.propertyAddress} numberOfLines={1}>
+            {item.address}
+          </Text>
         </View>
 
         <View style={styles.propertyMeta}>
+          {item.district ? (
+            <View style={styles.locationChip}>
+              <Ionicons name="navigate-outline" size={12} color={COLORS.accentLilac} />
+              <Text style={styles.locationText}>{item.district}</Text>
+            </View>
+          ) : null}
           <View style={styles.metaChip}>
             <Ionicons name="business-outline" size={12} color={COLORS.primary} />
             <Text style={styles.metaText}>{item.type}</Text>
@@ -117,16 +135,26 @@ export default function MarketplaceBrowse() {
             <Ionicons name="layers-outline" size={12} color={COLORS.primary} />
             <Text style={styles.metaText}>{item.units} units</Text>
           </View>
-          {item.rent > 0 && (
+          {item.rent > 0 ? (
             <View style={styles.rentBadge}>
               <Text style={styles.rentText}>NPR {item.rent.toLocaleString()}</Text>
             </View>
-          )}
+          ) : null}
         </View>
 
-        <View style={styles.landlordInfo}>
-          <Ionicons name="person-outline" size={14} color={COLORS.mutedForeground} />
-          <Text style={styles.landlordText}>{item.landlordId?.name || "Landlord"}</Text>
+        <View style={styles.footerRow}>
+          <View style={styles.landlordInfo}>
+            <Ionicons name="person-outline" size={14} color={COLORS.mutedForeground} />
+            <Text style={styles.landlordText}>{item.landlordId?.name || "Landlord"}</Text>
+          </View>
+          <View style={styles.ratingWrap}>
+            <Ionicons name="star" size={14} color="#FBBF24" />
+            <Text style={styles.ratingText}>
+              {item.ratingSummary?.count
+                ? `${item.ratingSummary.average.toFixed(1)} (${item.ratingSummary.count})`
+                : "New"}
+            </Text>
+          </View>
         </View>
       </View>
     </TouchableOpacity>
@@ -154,13 +182,24 @@ export default function MarketplaceBrowse() {
         style={{ marginHorizontal: 16, marginTop: 12 }}
       />
 
+      <View style={{ marginHorizontal: 16, marginTop: 12 }}>
+        <LocationPickerField
+          label="Location"
+          title="Filter by Location"
+          placeholder="All locations"
+          value={locationFilter}
+          onChange={setLocationFilter}
+          allowClear
+        />
+      </View>
+
       <FilterChips options={TYPE_FILTERS} selected={typeFilter} onSelect={setTypeFilter} />
 
       {filteredProperties.length === 0 ? (
         <EmptyState
           icon="home-outline"
           title="No properties found"
-          subtitle="Check back later for new listings"
+          subtitle="Try a different location or property type"
         />
       ) : (
         <FlatList
@@ -187,7 +226,7 @@ const styles = StyleSheet.create({
   listContainer: { padding: 16 },
   propertyCard: {
     backgroundColor: COLORS.card,
-    borderRadius: 12,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: COLORS.border,
     marginBottom: 16,
@@ -202,10 +241,34 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   propertyInfo: { padding: 16 },
-  propertyTitle: { fontSize: 18, fontWeight: "600", color: COLORS.foreground, marginBottom: 6 },
-  propertyDetail: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 10 },
+  propertyTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: COLORS.foreground,
+    marginBottom: 6,
+  },
+  propertyDetail: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 10,
+  },
   propertyAddress: { fontSize: 13, color: COLORS.mutedForeground, flex: 1 },
   propertyMeta: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 10 },
+  locationChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: COLORS.accentLilacSoft,
+    borderRadius: 6,
+  },
+  locationText: {
+    fontSize: 12,
+    color: COLORS.accentLilac,
+    fontWeight: "500",
+  },
   metaChip: {
     flexDirection: "row",
     alignItems: "center",
@@ -223,6 +286,28 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   rentText: { fontSize: 12, fontWeight: "600", color: COLORS.success },
-  landlordInfo: { flexDirection: "row", alignItems: "center", gap: 6 },
+  footerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  landlordInfo: { flexDirection: "row", alignItems: "center", gap: 6, flex: 1 },
   landlordText: { fontSize: 13, color: COLORS.mutedForeground },
+  ratingWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: COLORS.surfaceElevated,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  ratingText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: COLORS.foreground,
+  },
 });
