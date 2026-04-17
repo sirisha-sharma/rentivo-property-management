@@ -96,7 +96,11 @@ export default function MarketplaceBrowse() {
       activeOpacity={0.88}
     >
       {item.images && item.images.length > 0 ? (
-        <Image source={{ uri: resolveMediaUrl(item.images[0]) }} style={styles.propertyImage} />
+        <Image
+          source={{ uri: resolveMediaUrl(item.images[0]) }}
+          style={styles.propertyImage}
+          resizeMode="cover"
+        />
       ) : (
         <View style={styles.placeholderImage}>
           <Ionicons name="home-outline" size={48} color={COLORS.mutedForeground} />
@@ -174,7 +178,7 @@ export default function MarketplaceBrowse() {
         style={{ marginHorizontal: 16, marginTop: 12 }}
       />
 
-      <View style={{ marginHorizontal: 16, marginTop: 12 }}>
+      <View style={{ marginHorizontal: 16, marginTop: 12, marginBottom: 16 }}>
         <LocationPickerField
           label="Location"
           title="Filter by Location"
@@ -185,7 +189,12 @@ export default function MarketplaceBrowse() {
         />
       </View>
 
-      <FilterChips options={TYPE_FILTERS} selected={typeFilter} onSelect={setTypeFilter} />
+      <FilterChips
+        options={TYPE_FILTERS}
+        selected={typeFilter}
+        onSelect={setTypeFilter}
+        containerStyle={styles.filterChipsWrapper}
+      />
 
       {filteredProperties.length === 0 ? (
         <EmptyState
@@ -215,7 +224,8 @@ export default function MarketplaceBrowse() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  listContainer: { padding: 16 },
+  listContainer: { padding: 16, paddingTop: 8 },
+  filterChipsWrapper: { marginTop: 4, marginBottom: 12 },
   propertyCard: {
     backgroundColor: COLORS.card,
     borderRadius: 18,

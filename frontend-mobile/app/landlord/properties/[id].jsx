@@ -218,17 +218,17 @@ export default function PropertyDetails() {
                 <View className="flex-row gap-3 mb-4">
                     <View className="flex-1 bg-card rounded-xl border border-border p-3 items-center">
                         <Ionicons name="people" size={20} color={COLORS.primary} />
-                        <Text className="text-lg font-bold text-foreground my-1">{propertyTenants.length}</Text>
+                        <Text className="text-lg font-bold text-foreground my-1" numberOfLines={1} adjustsFontSizeToFit>{propertyTenants.length}</Text>
                         <Text className="text-[10px] text-mutedForeground">Tenants</Text>
                     </View>
                     <View className="flex-1 bg-card rounded-xl border border-border p-3 items-center">
                         <Ionicons name="cash-outline" size={20} color={COLORS.success} />
-                        <Text className="text-lg font-bold text-foreground my-1">{formatCurrency(property.rent)}</Text>
+                        <Text className="text-lg font-bold text-foreground my-1" numberOfLines={1} adjustsFontSizeToFit>{formatCurrency(property.rent)}</Text>
                         <Text className="text-[10px] text-mutedForeground">Monthly</Text>
                     </View>
                     <View className="flex-1 bg-card rounded-xl border border-border p-3 items-center">
                         <Ionicons name="construct-outline" size={20} color={COLORS.warning} />
-                        <Text className="text-lg font-bold text-foreground my-1">{unresolvedMaintenanceCount}</Text>
+                        <Text className="text-lg font-bold text-foreground my-1" numberOfLines={1} adjustsFontSizeToFit>{unresolvedMaintenanceCount}</Text>
                         <Text className="text-[10px] text-mutedForeground">Issues</Text>
                     </View>
                 </View>
@@ -252,10 +252,11 @@ export default function PropertyDetails() {
                     <Text className="text-sm font-semibold text-foreground">Current Tenants</Text>
                     <TouchableOpacity
                         onPress={() => router.push("/landlord/tenants/invite")}
-                        className="flex-row items-center py-1"
+                        className="flex-row items-center py-1.5 px-3 rounded-lg"
+                        style={{ backgroundColor: COLORS.primary + '15' }}
                     >
-                        <Ionicons name="add" size={16} color={COLORS.foreground} />
-                        <Text className="text-xs font-medium ml-1">Add Tenant</Text>
+                        <Ionicons name="add" size={16} color={COLORS.primary} />
+                        <Text className="text-xs font-bold ml-1" style={{ color: COLORS.primary }}>Add Tenant</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -263,17 +264,19 @@ export default function PropertyDetails() {
                     {propertyTenants.length === 0 ? (
                         <Text className="p-4 text-center text-mutedForeground">No tenants yet</Text>
                     ) : propertyTenants.map((t, index) => (
-                        <View key={t._id} className={`p-3 flex-row justify-between ${index !== propertyTenants.length - 1 ? 'border-b border-border' : ''}`}>
-                            <View>
-                                <Text className="text-sm font-medium text-foreground">{t.userId?.name || "Pending User"}</Text>
+                        <View key={t._id} className={`p-3 flex-row justify-between items-center ${index !== propertyTenants.length - 1 ? 'border-b border-border' : ''}`}>
+                            <View className="flex-1 pr-3">
+                                <Text className="text-sm font-medium text-foreground" numberOfLines={1}>{t.userId?.name || "Pending User"}</Text>
                                 <Text className="text-xs text-mutedForeground">{t.leaseEnd ? `Lease ends: ${new Date(t.leaseEnd).toLocaleDateString()}` : "Active"}</Text>
                                 <Text className="text-xs text-mutedForeground">Deposit: {formatDeposit(t.securityDeposit)}</Text>
                             </View>
-                            <View className="items-end">
-                                <StatusBadge status={t.status || "Active"} />
-                                <View className="flex-row items-center gap-1 justify-end mt-1">
+                            <View className="items-end" style={{ width: 100 }}>
+                                <View style={{ flexDirection: "row", justifyContent: "flex-end", width: "100%" }}>
+                                    <StatusBadge status={t.status || "Active"} />
+                                </View>
+                                <View className="flex-row items-center gap-1 justify-end mt-1 w-full">
                                     <Ionicons name="call-outline" size={12} color={COLORS.mutedForeground} />
-                                    <Text className="text-xs text-mutedForeground">{t.userId?.phone || "-"}</Text>
+                                    <Text className="text-xs text-mutedForeground text-right flex-shrink-1" numberOfLines={1} adjustsFontSizeToFit>{t.userId?.phone || "-"}</Text>
                                 </View>
                             </View>
                         </View>

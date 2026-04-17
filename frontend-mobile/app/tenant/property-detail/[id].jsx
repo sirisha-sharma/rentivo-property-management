@@ -178,6 +178,7 @@ export default function PropertyDetail() {
             <Image
               source={{ uri: resolveMediaUrl(property.images[currentImageIndex]) }}
               style={styles.heroImage}
+              resizeMode="cover"
             />
           ) : (
             <View style={styles.heroPlaceholder}>
@@ -292,7 +293,7 @@ export default function PropertyDetail() {
                   : "No ratings yet"}
               </Text>
             </View>
-            <View style={{ alignItems: "flex-end", gap: 8 }}>
+            <View style={styles.ratingSummaryRight}>
               <RatingStars value={Math.round(averageRating)} readonly size={18} />
               <Text style={styles.ratingSummaryHint}>
                 Verified tenants can rate this property.
@@ -550,8 +551,8 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
   summaryCard: {
-    marginTop: -30,
-    marginHorizontal: 12,
+    marginTop: 14,
+    marginHorizontal: 0,
     borderRadius: 26,
     padding: 20,
     borderWidth: 1,
@@ -627,6 +628,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+    flexWrap: "wrap",
   },
   sectionCard: {
     marginTop: 18,
@@ -650,13 +652,20 @@ const styles = StyleSheet.create({
   ratingSummaryCard: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
+    flexWrap: "wrap",
     gap: 16,
     padding: 16,
     borderRadius: 18,
     backgroundColor: COLORS.surfaceElevated,
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+  ratingSummaryRight: {
+    flexShrink: 1,
+    alignItems: "flex-start",
+    gap: 8,
+    maxWidth: "100%",
   },
   ratingSummaryValue: {
     fontSize: 28,

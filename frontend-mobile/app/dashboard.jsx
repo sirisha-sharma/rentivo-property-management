@@ -457,15 +457,15 @@ export default function DashboardScreen() {
   const TABS = isLandlord
     ? [
         { key: "home", label: "Home", icon: "home-outline", activeIcon: "home" },
+        { key: "actions", label: "Actions", icon: "apps-outline", activeIcon: "apps" },
         { key: "charts", label: "Analytics", icon: "stats-chart-outline", activeIcon: "stats-chart" },
         { key: "operations", label: "Operations", icon: "construct-outline", activeIcon: "construct" },
-        { key: "actions", label: "Actions", icon: "apps-outline", activeIcon: "apps" },
       ]
     : [
         { key: "home", label: "Home", icon: "home-outline", activeIcon: "home" },
+        { key: "actions", label: "Actions", icon: "apps-outline", activeIcon: "apps" },
         { key: "charts", label: "Analytics", icon: "stats-chart-outline", activeIcon: "stats-chart" },
         { key: "snapshot", label: "Snapshot", icon: "grid-outline", activeIcon: "grid" },
-        { key: "actions", label: "Actions", icon: "apps-outline", activeIcon: "apps" },
       ];
 
   // ── Invoice summary strip ─────────────────────────────────────────────────

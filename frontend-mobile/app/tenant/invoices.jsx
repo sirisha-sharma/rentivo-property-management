@@ -145,7 +145,12 @@ export default function TenantInvoices() {
                 </View>
             </View>
 
-            <FilterChips options={FILTERS} selected={filter} onSelect={setFilter} />
+            <FilterChips
+                options={FILTERS}
+                selected={filter}
+                onSelect={setFilter}
+                containerStyle={styles.filterChipsWrapper}
+            />
 
             {loading ? (
                 <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 20 }} />
@@ -178,7 +183,7 @@ const styles = StyleSheet.create({
     heroCard: {
         marginHorizontal: 16,
         marginTop: 16,
-        marginBottom: 8,
+        marginBottom: 18,
         flexDirection: "row",
         alignItems: "center",
         gap: 14,
@@ -211,6 +216,11 @@ const styles = StyleSheet.create({
     },
     listContent: {
         padding: 16,
+        paddingTop: 8,
+    },
+    filterChipsWrapper: {
+        marginTop: 4,
+        marginBottom: 12,
     },
     card: {
         backgroundColor: COLORS.card,
