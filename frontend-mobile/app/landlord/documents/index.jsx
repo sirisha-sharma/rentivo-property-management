@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from "react-native";
 import { DocumentContext } from "../../../context/DocumentContext";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -7,6 +7,7 @@ import { TopBar } from "../../../components/TopBar";
 import { FilterChips } from "../../../components/FilterChips";
 import { EmptyState } from "../../../components/EmptyState";
 import { COLORS } from "../../../constants/theme";
+import { downloadDocumentAsync } from "../../../utils/documentDownload";
 
 const FILTERS = [
     { key: "all", label: "All" },
@@ -19,6 +20,7 @@ export default function DocumentList() {
     const { documents, fetchDocuments, deleteDocument, loading } = useContext(DocumentContext);
     const router = useRouter();
     const [filter, setFilter] = useState("all");
+    const [activeDocumentId, setActiveDocumentId] = useState(null);
 
     useEffect(() => {
         fetchDocuments();
@@ -62,6 +64,26 @@ export default function DocumentList() {
         return new Date(dateStr).toLocaleDateString();
     };
 
+    const handleDownloadDocument = async (documentItem) => {
+        try {
+            setActiveDocumentId(documentItem._id);
+            const result = await downloadDocumentAsync(documentItem);
+
+            if (result.savedToDeviceStorage) {
+                Alert.alert("Download Complete", `${result.fileName} was saved to your device storage.`);
+                return;
+            }
+
+            if (!result.shared && !result.openedBrowserDownload) {
+                Alert.alert("Download Complete", `${result.fileName} was downloaded successfully.`);
+            }
+        } catch (_error) {
+            Alert.alert("Download Failed", "We couldn't download this document right now.");
+        } finally {
+            setActiveDocumentId(null);
+        }
+    };
+
     const renderItem = ({ item }) => {
         const typeColor = getTypeColor(item.type);
         return (
@@ -87,9 +109,25 @@ export default function DocumentList() {
 
                 <View style={styles.cardFooter}>
                     <Text style={styles.dateText}>Uploaded: {formatDate(item.createdAt)}</Text>
-                    <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item)}>
-                        <Ionicons name="trash-outline" size={16} color={COLORS.destructive} />
-                    </TouchableOpacity>
+                    <View style={styles.actionRow}>
+                        <TouchableOpacity
+                            style={styles.downloadBtn}
+                            onPress={() => handleDownloadDocument(item)}
+                            disabled={activeDocumentId === item._id}
+                        >
+                            {activeDocumentId === item._id ? (
+                                <ActivityIndicator size="small" color={COLORS.primary} />
+                            ) : (
+                                <>
+                                    <Ionicons name="download-outline" size={16} color={COLORS.primary} />
+                                    <Text style={styles.downloadBtnText}>Download</Text>
+                                </>
+                            )}
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item)}>
+                            <Ionicons name="trash-outline" size={16} color={COLORS.destructive} />
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </View>
         );
@@ -182,10 +220,32 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
+        gap: 12,
     },
     dateText: {
         fontSize: 12,
         color: COLORS.mutedForeground,
+    },
+    actionRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    downloadBtn: {
+        minWidth: 112,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 6,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        backgroundColor: COLORS.primarySoft,
+        borderRadius: 8,
+    },
+    downloadBtnText: {
+        fontSize: 13,
+        fontWeight: "700",
+        color: COLORS.primary,
     },
     deleteBtn: {
         paddingHorizontal: 10,

@@ -1,11 +1,12 @@
 import React, { useContext, useEffect, useState } from "react";
-import { View, Text, FlatList, StyleSheet } from "react-native";
+import { View, Text, FlatList, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from "react-native";
 import { DocumentContext } from "../../../context/DocumentContext";
 import { Ionicons } from "@expo/vector-icons";
 import { TopBar } from "../../../components/TopBar";
 import { FilterChips } from "../../../components/FilterChips";
 import { EmptyState } from "../../../components/EmptyState";
 import { COLORS } from "../../../constants/theme";
+import { downloadDocumentAsync } from "../../../utils/documentDownload";
 
 const FILTERS = [
     { key: "all", label: "All" },
@@ -17,6 +18,7 @@ const FILTERS = [
 export default function TenantDocumentList() {
     const { documents, fetchDocuments, loading } = useContext(DocumentContext);
     const [filter, setFilter] = useState("all");
+    const [activeDocumentId, setActiveDocumentId] = useState(null);
 
     useEffect(() => {
         fetchDocuments();
@@ -43,6 +45,26 @@ export default function TenantDocumentList() {
         return new Date(dateStr).toLocaleDateString();
     };
 
+    const handleDownloadDocument = async (documentItem) => {
+        try {
+            setActiveDocumentId(documentItem._id);
+            const result = await downloadDocumentAsync(documentItem);
+
+            if (result.savedToDeviceStorage) {
+                Alert.alert("Download Complete", `${result.fileName} was saved to your device storage.`);
+                return;
+            }
+
+            if (!result.shared && !result.openedBrowserDownload) {
+                Alert.alert("Download Complete", `${result.fileName} was downloaded successfully.`);
+            }
+        } catch (_error) {
+            Alert.alert("Download Failed", "We couldn't download this document right now.");
+        } finally {
+            setActiveDocumentId(null);
+        }
+    };
+
     const renderItem = ({ item }) => {
         const typeColor = getTypeColor(item.type);
         return (
@@ -66,7 +88,23 @@ export default function TenantDocumentList() {
 
                 <View style={styles.divider} />
 
-                <Text style={styles.dateText}>Uploaded: {formatDate(item.createdAt)}</Text>
+                <View style={styles.cardFooter}>
+                    <Text style={styles.dateText}>Uploaded: {formatDate(item.createdAt)}</Text>
+                    <TouchableOpacity
+                        style={styles.downloadBtn}
+                        onPress={() => handleDownloadDocument(item)}
+                        disabled={activeDocumentId === item._id}
+                    >
+                        {activeDocumentId === item._id ? (
+                            <ActivityIndicator size="small" color={COLORS.primary} />
+                        ) : (
+                            <>
+                                <Ionicons name="download-outline" size={16} color={COLORS.primary} />
+                                <Text style={styles.downloadBtnText}>Download</Text>
+                            </>
+                        )}
+                    </TouchableOpacity>
+                </View>
             </View>
         );
     };
@@ -147,8 +185,30 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.border,
         marginVertical: 12,
     },
+    cardFooter: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: 12,
+    },
     dateText: {
         fontSize: 12,
         color: COLORS.mutedForeground,
+    },
+    downloadBtn: {
+        minWidth: 112,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 6,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: 8,
+        backgroundColor: COLORS.primarySoft,
+    },
+    downloadBtnText: {
+        fontSize: 13,
+        fontWeight: "700",
+        color: COLORS.primary,
     },
 });

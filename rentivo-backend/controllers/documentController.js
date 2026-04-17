@@ -4,6 +4,24 @@ import Tenant from "../models/tenantModel.js";
 import fs from "fs";
 import { createNotification } from "./notificationController.js";
 
+const getPublicDocumentPath = (filePath = "") => {
+    const normalizedPath = String(filePath).replace(/\\/g, "/").replace(/^\.?\//, "");
+    const uploadsIndex = normalizedPath.indexOf("uploads/");
+
+    return uploadsIndex >= 0 ? normalizedPath.slice(uploadsIndex) : normalizedPath;
+};
+
+const serializeDocument = (req, document) => {
+    const documentObject = document.toObject ? document.toObject() : document;
+    const publicPath = getPublicDocumentPath(documentObject.filePath);
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+
+    return {
+        ...documentObject,
+        downloadUrl: publicPath ? `${baseUrl}/${publicPath}` : null,
+    };
+};
+
 // Upload a new document (landlord only)
 export const uploadDocument = async (req, res) => {
     try {
@@ -38,7 +56,7 @@ export const uploadDocument = async (req, res) => {
             );
         }
 
-        res.status(201).json(document);
+        res.status(201).json(serializeDocument(req, document));
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -60,7 +78,7 @@ export const getDocuments = async (req, res) => {
                 .sort({ createdAt: -1 });
         }
 
-        res.json(documents);
+        res.json(documents.map((document) => serializeDocument(req, document)));
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

@@ -9,6 +9,7 @@ import { FilterChips } from "../../../components/FilterChips";
 import { EmptyState } from "../../../components/EmptyState";
 import { COLORS } from "../../../constants/theme";
 import { useFocusEffect } from "@react-navigation/native";
+import { shareInvoicePdfAsync } from "../../../utils/invoicePdf";
 
 const FILTERS = [
     { key: "all", label: "All" },
@@ -22,6 +23,7 @@ export default function InvoiceList() {
     const router = useRouter();
     const { propertyId } = useLocalSearchParams();
     const [filter, setFilter] = useState("all");
+    const [activeInvoiceId, setActiveInvoiceId] = useState(null);
 
     useFocusEffect(
         React.useCallback(() => {
@@ -86,6 +88,26 @@ export default function InvoiceList() {
         return new Date(dateStr).toLocaleDateString();
     };
 
+    const handleDownloadInvoice = async (invoice) => {
+        try {
+            setActiveInvoiceId(invoice._id);
+            const result = await shareInvoicePdfAsync(invoice);
+
+            if (result.openedPrintDialog) {
+                Alert.alert("Print Ready", "The print dialog has been opened for this invoice.");
+                return;
+            }
+
+            if (!result.shared) {
+                Alert.alert("Invoice Saved", `${result.fileName} has been saved on your device.`);
+            }
+        } catch (_error) {
+            Alert.alert("Download Failed", "We couldn't create the invoice PDF right now.");
+        } finally {
+            setActiveInvoiceId(null);
+        }
+    };
+
     const renderItem = ({ item }) => (
         <View style={styles.card}>
             <View style={styles.cardHeader}>
@@ -124,6 +146,20 @@ export default function InvoiceList() {
             <View style={styles.cardFooter}>
                 <Text style={styles.dateText}>Due: {formatDate(item.dueDate)}</Text>
                 <View style={styles.actionRow}>
+                    <TouchableOpacity
+                        style={styles.downloadBtn}
+                        onPress={() => handleDownloadInvoice(item)}
+                        disabled={activeInvoiceId === item._id}
+                    >
+                        {activeInvoiceId === item._id ? (
+                            <ActivityIndicator size="small" color={COLORS.primary} />
+                        ) : (
+                            <>
+                                <Ionicons name="download-outline" size={16} color={COLORS.primary} />
+                                <Text style={styles.downloadBtnText}>PDF</Text>
+                            </>
+                        )}
+                    </TouchableOpacity>
                     {item.status !== "Paid" && (
                         <TouchableOpacity style={styles.paidBtn} onPress={() => handleMarkPaid(item)}>
                             <Ionicons name="checkmark-circle-outline" size={16} color={COLORS.success} />
@@ -267,6 +303,22 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         flexWrap: "wrap",
         gap: 8,
+    },
+    downloadBtn: {
+        minWidth: 78,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        backgroundColor: COLORS.primarySoft,
+        borderRadius: 8,
+    },
+    downloadBtnText: {
+        fontSize: 12,
+        color: COLORS.primary,
+        fontWeight: "700",
     },
     paidBtn: {
         flexDirection: "row",

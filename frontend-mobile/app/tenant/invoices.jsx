@@ -1,5 +1,5 @@
 import React, { useContext, useState } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from "react-native";
 import { InvoiceContext } from "../../context/InvoiceContext";
 import { Ionicons } from "@expo/vector-icons";
 import { TopBar } from "../../components/TopBar";
@@ -9,6 +9,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { COLORS } from "../../constants/theme";
 import { useRouter } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
+import { shareInvoicePdfAsync } from "../../utils/invoicePdf";
 
 const FILTERS = [
     { key: "all", label: "All" },
@@ -20,6 +21,7 @@ const FILTERS = [
 export default function TenantInvoices() {
     const { invoices, fetchInvoices, loading } = useContext(InvoiceContext);
     const [filter, setFilter] = useState("all");
+    const [activeInvoiceId, setActiveInvoiceId] = useState(null);
     const router = useRouter();
 
     useFocusEffect(
@@ -39,6 +41,26 @@ export default function TenantInvoices() {
     const formatDate = (dateStr) => {
         if (!dateStr) return "N/A";
         return new Date(dateStr).toLocaleDateString();
+    };
+
+    const handleDownloadInvoice = async (invoice) => {
+        try {
+            setActiveInvoiceId(invoice._id);
+            const result = await shareInvoicePdfAsync(invoice);
+
+            if (result.openedPrintDialog) {
+                Alert.alert("Print Ready", "The print dialog has been opened for this invoice.");
+                return;
+            }
+
+            if (!result.shared) {
+                Alert.alert("Invoice Saved", `${result.fileName} has been saved on your device.`);
+            }
+        } catch (_error) {
+            Alert.alert("Download Failed", "We couldn't create the invoice PDF right now.");
+        } finally {
+            setActiveInvoiceId(null);
+        }
     };
 
     const renderItem = ({ item }) => (
@@ -75,15 +97,32 @@ export default function TenantInvoices() {
                         </Text>
                     )}
                 </View>
-                {(item.status?.toLowerCase() === "pending" || item.status?.toLowerCase() === "overdue") && (
+                <View style={styles.actionRow}>
                     <TouchableOpacity
-                        style={styles.payButton}
-                        onPress={() => router.push(`/tenant/payment/${item._id}`)}
+                        style={styles.downloadButton}
+                        onPress={() => handleDownloadInvoice(item)}
+                        disabled={activeInvoiceId === item._id}
                     >
-                        <Ionicons name="card-outline" size={16} color="#fff" />
-                        <Text style={styles.payButtonText}>Pay Now</Text>
+                        {activeInvoiceId === item._id ? (
+                            <ActivityIndicator size="small" color={COLORS.primary} />
+                        ) : (
+                            <>
+                                <Ionicons name="download-outline" size={16} color={COLORS.primary} />
+                                <Text style={styles.downloadButtonText}>PDF</Text>
+                            </>
+                        )}
                     </TouchableOpacity>
-                )}
+
+                    {(item.status?.toLowerCase() === "pending" || item.status?.toLowerCase() === "overdue") && (
+                        <TouchableOpacity
+                            style={styles.payButton}
+                            onPress={() => router.push(`/tenant/payment/${item._id}`)}
+                        >
+                            <Ionicons name="card-outline" size={16} color="#fff" />
+                            <Text style={styles.payButtonText}>Pay Now</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
             </View>
         </View>
     );
@@ -210,6 +249,7 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
+        gap: 12,
     },
     dateText: {
         fontSize: 12,
@@ -222,6 +262,27 @@ const styles = StyleSheet.create({
         flex: 1,
         textAlign: "right",
         marginLeft: 8,
+    },
+    actionRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    downloadButton: {
+        minWidth: 78,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: COLORS.primarySoft,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: 8,
+        gap: 6,
+    },
+    downloadButtonText: {
+        color: COLORS.primary,
+        fontSize: 13,
+        fontWeight: "700",
     },
     payButton: {
         flexDirection: "row",
