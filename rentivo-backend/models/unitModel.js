@@ -26,6 +26,11 @@ const unitSchema = mongoose.Schema(
             type: String,
             default: "",
         },
+        currentTenant: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Tenant",
+            default: null,
+        },
     },
     {
         timestamps: true,

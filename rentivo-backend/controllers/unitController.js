@@ -1,6 +1,18 @@
 import Property from "../models/propertyModel.js";
 import Unit from "../models/unitModel.js";
+import Tenant from "../models/tenantModel.js";
 import { syncPropertyUnits } from "../utils/propertyUnits.js";
+
+// Re-evaluate and persist property.status based on active tenant count vs unit count.
+const refreshPropertyStatus = async (propertyId) => {
+    const [activeTenants, property] = await Promise.all([
+        Tenant.countDocuments({ propertyId, status: "Active" }),
+        Property.findById(propertyId).select("units status"),
+    ]);
+    if (!property) return;
+    property.status = activeTenants >= property.units ? "occupied" : "vacant";
+    await property.save();
+};
 
 // Shared: verify the property exists and the requesting landlord owns it.
 // Returns the property doc on success, or sends a 4xx response and returns null.
@@ -81,6 +93,7 @@ export const createUnit = async (req, res) => {
 
         // Keep property.units count in sync so syncPropertyUnits doesn't remove the new unit.
         await Property.findByIdAndUpdate(propertyId, { $inc: { units: 1 } });
+        await refreshPropertyStatus(propertyId);
 
         res.status(201).json(unit);
     } catch (error) {
@@ -134,6 +147,7 @@ export const deleteUnit = async (req, res) => {
 
         // Keep property.units count in sync.
         await Property.findByIdAndUpdate(unit.propertyId, { $inc: { units: -1 } });
+        await refreshPropertyStatus(unit.propertyId);
 
         res.status(200).json({ message: "Unit deleted successfully" });
     } catch (error) {

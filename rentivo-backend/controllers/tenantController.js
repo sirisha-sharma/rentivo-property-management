@@ -175,9 +175,9 @@ export const acceptInvitation = async (req, res) => {
         await upsertPropertyAssociation(tenant);
         await updatePropertyOccupancyStatus(tenant.propertyId);
 
-        // Mark the unit as occupied
+        // Mark the unit as occupied and link the current tenant
         if (tenant.unitId) {
-            await Unit.findByIdAndUpdate(tenant.unitId, { status: "occupied" });
+            await Unit.findByIdAndUpdate(tenant.unitId, { status: "occupied", currentTenant: tenant._id });
         }
 
         const property = await Property.findById(tenant.propertyId).select("title landlordId");
@@ -263,9 +263,9 @@ export const deleteTenant = async (req, res) => {
                 { upsert: true, new: true }
             );
 
-            // Mark the unit as vacant when an active tenancy is removed
+            // Mark the unit as vacant and clear the tenant link when an active tenancy is removed
             if (tenant.unitId) {
-                await Unit.findByIdAndUpdate(tenant.unitId, { status: "vacant" });
+                await Unit.findByIdAndUpdate(tenant.unitId, { status: "vacant", currentTenant: null });
             }
         }
 
