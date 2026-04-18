@@ -212,7 +212,7 @@ const TINTS = {
   orange: { bg: "rgba(251,146,60,0.16)", border: "rgba(251,146,60,0.3)", color: "#FB923C" },
 };
 
-// ─── Snapshot/Operations tile ──────────────────────────────────────────────
+// snapshot/operations tile
 
 function SnapshotTile({ label, value, sub, tint, icon }) {
   return (
@@ -275,7 +275,7 @@ function SnapshotTile({ label, value, sub, tint, icon }) {
   );
 }
 
-// ─── Main Component ────────────────────────────────────────────────────────
+// main component
 
 export default function DashboardScreen() {
   const { user, logout } = useContext(AuthContext);
@@ -453,7 +453,7 @@ export default function DashboardScreen() {
 
   const actions = isLandlord ? landlordActions : tenantActions;
 
-  // ── Tab definitions ──────────────────────────────────────────────────────
+  // tab definitions
   const TABS = isLandlord
     ? [
         { key: "home", label: "Home", icon: "home-outline", activeIcon: "home" },
@@ -468,7 +468,7 @@ export default function DashboardScreen() {
         { key: "snapshot", label: "Snapshot", icon: "grid-outline", activeIcon: "grid" },
       ];
 
-  // ── Invoice summary strip ─────────────────────────────────────────────────
+  // invoice summary strip
   const InvoiceSummaryStrip = () => (
     <SectionCard title={isLandlord ? "Invoice Summary" : "My Invoices"} style={{ marginTop: 12 }}>
       {loading ? (
@@ -503,7 +503,7 @@ export default function DashboardScreen() {
     </SectionCard>
   );
 
-  // ── Tab content renderers ────────────────────────────────────────────────
+  // tab content renderers
 
   const renderHomeTab = () => (
     <View style={{ gap: 12 }}>
@@ -787,14 +787,14 @@ export default function DashboardScreen() {
     }
   };
 
-  // ── Render ───────────────────────────────────────────────────────────────
+  // render
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.background }}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
       <SafeAreaView edges={["top"]} style={{ backgroundColor: COLORS.background }} />
 
-      {/* ── Hero Header (persistent) ── */}
+      {/* hero header (persistent)  */}
       <LinearGradient
         colors={[COLORS.primaryDeep, "#1544B8", COLORS.background]}
         start={{ x: 0, y: 0 }}
@@ -896,7 +896,7 @@ export default function DashboardScreen() {
         </View>
       </LinearGradient>
 
-      {/* ── Tab Content ── */}
+      {/* tab content  */}
       <ScrollView
         key={activeTab}
         style={{ flex: 1 }}
@@ -906,7 +906,7 @@ export default function DashboardScreen() {
         {renderContent()}
       </ScrollView>
 
-      {/* ── Bottom Tab Bar ── */}
+      {/* bottom tab bar  */}
       <View
         style={{
           flexDirection: "row",

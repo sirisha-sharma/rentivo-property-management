@@ -161,7 +161,7 @@ export default function LoginScreen() {
               alignSelf: "center",
             }}
           >
-            {/* ── Brand / Hero ── */}
+            {/* brand / hero  */}
             <View style={{ alignItems: "center", marginBottom: heroMarginBottom }}>
               <LinearGradient
                 colors={[COLORS.primary, COLORS.primaryDeep]}
@@ -236,7 +236,7 @@ export default function LoginScreen() {
                 elevation: 10,
               }}
             >
-              {/* ── Error Banner ── */}
+              {/* error banner  */}
               {error ? (
                 <View
                   style={{
@@ -293,7 +293,7 @@ export default function LoginScreen() {
                 </View>
               ) : null}
 
-              {/* ── Role Selector ── */}
+              {/* role selector  */}
               <View style={{ marginBottom: 24 }}>
                 <Text
                   style={{
@@ -368,7 +368,7 @@ export default function LoginScreen() {
                 </View>
               </View>
 
-              {/* ── Form ── */}
+              {/* form  */}
               <View style={{ gap: 16 }}>
                 <AuthInput
                   label="Email"

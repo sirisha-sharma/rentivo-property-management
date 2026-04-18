@@ -221,7 +221,7 @@ export default function RegisterScreen() {
               alignSelf: "center",
             }}
           >
-            {/* ── Brand / Hero ── */}
+            {/* brand / hero  */}
             <View
               style={{
                 alignItems: "center",
@@ -295,7 +295,7 @@ export default function RegisterScreen() {
                 elevation: 10,
               }}
             >
-              {/* ── API Error Banner ── */}
+              {/* api error banner  */}
               {errors._api ? (
                 <View
                   style={{
@@ -329,7 +329,7 @@ export default function RegisterScreen() {
                 </View>
               ) : null}
 
-              {/* ── Role Selector ── */}
+              {/* role selector  */}
               <View style={{ marginBottom: 24 }}>
                 <Text
                   style={{
@@ -404,7 +404,7 @@ export default function RegisterScreen() {
                 </View>
               </View>
 
-              {/* ── Form Fields ── */}
+              {/* form fields  */}
               <View style={{ gap: 16 }}>
                 <AuthInput
                   label="Full Name"

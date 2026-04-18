@@ -60,7 +60,7 @@ export default function ForgotPasswordScreen() {
     }
   };
 
-  // ── Success State ──
+  // success state
   if (sent) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
@@ -179,7 +179,7 @@ export default function ForgotPasswordScreen() {
     );
   }
 
-  // ── Form State ──
+  // form state
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />

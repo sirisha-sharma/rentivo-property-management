@@ -379,7 +379,7 @@ const EMPTY_OVERVIEW = {
   },
 };
 
-// ── Tab definitions ─────────────────────────────────────────────────────────
+// tab definitions
 const TABS = [
   { key: "home", label: "Home", icon: "home-outline", activeIcon: "home" },
   { key: "actions", label: "Actions", icon: "apps-outline", activeIcon: "apps" },
@@ -387,7 +387,7 @@ const TABS = [
   { key: "activity", label: "Activity", icon: "pulse-outline", activeIcon: "pulse" },
 ];
 
-// ── Main Component ──────────────────────────────────────────────────────────
+// main component
 
 export default function AdminDashboardScreen() {
   const { user, logout } = useContext(AuthContext);
@@ -475,7 +475,7 @@ export default function AdminDashboardScreen() {
     return null;
   }
 
-  // ── Invoice Summary Strip ──────────────────────────────────────────────────
+  // invoice summary strip
   const InvoiceSummaryStrip = () => (
     <SectionCard title="Invoice Summary" style={{ marginTop: 12 }}>
       {loading ? (
@@ -529,7 +529,7 @@ export default function AdminDashboardScreen() {
     </SectionCard>
   );
 
-  // ── Tab Content Renderers ──────────────────────────────────────────────────
+  // tab content renderers
 
   const renderHomeTab = () => (
     <View style={{ gap: 12 }}>
@@ -894,14 +894,14 @@ export default function AdminDashboardScreen() {
     }
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
+  // render
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.background }}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
       <SafeAreaView edges={["top"]} style={{ backgroundColor: COLORS.background }} />
 
-      {/* ── Hero Header (persistent) ── */}
+      {/* hero header (persistent)  */}
       <LinearGradient
         colors={[COLORS.primaryDeep, "#1544B8", COLORS.background]}
         start={{ x: 0, y: 0 }}
@@ -981,7 +981,7 @@ export default function AdminDashboardScreen() {
         </View>
       </LinearGradient>
 
-      {/* ── Tab Content ── */}
+      {/* tab content  */}
       <ScrollView
         key={activeTab}
         style={{ flex: 1 }}
@@ -991,7 +991,7 @@ export default function AdminDashboardScreen() {
         {renderContent()}
       </ScrollView>
 
-      {/* ── Bottom Tab Bar ── */}
+      {/* bottom tab bar  */}
       <View
         style={{
           flexDirection: "row",

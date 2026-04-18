@@ -108,7 +108,7 @@ export default function ResetPasswordScreen() {
     }
   };
 
-  // ── Success State ──
+  // success state
   if (success) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
@@ -191,7 +191,7 @@ export default function ResetPasswordScreen() {
     );
   }
 
-  // ── Form State ──
+  // form state
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
