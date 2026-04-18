@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useCallback } from "react";
+import React, { useState, useEffect, useContext, useCallback, useRef } from "react";
 import {
     View,
     Text,
@@ -8,6 +8,7 @@ import {
     Alert,
     ScrollView,
 } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
@@ -18,6 +19,25 @@ import { getPaymentById, initiatePayment } from "../../../api/payment";
 import { getInvoiceById } from "../../../api/invoice";
 import { InvoiceContext } from "../../../context/InvoiceContext";
 import { NotificationContext } from "../../../context/NotificationContext";
+import { AuthContext } from "../../../context/AuthContext";
+
+const pickErrorMessage = (error) => {
+    if (!error) return "";
+    if (typeof error === "string") return error;
+    if (typeof error === "object" && error.message) return String(error.message);
+    return "";
+};
+
+const isAuthOrSessionError = (error) => {
+    const text = pickErrorMessage(error).toLowerCase();
+    return (
+        text.includes("no authentication") ||
+        text.includes("login again") ||
+        text.includes("authentication token") ||
+        text.includes("unauthorized") ||
+        text.includes("not authorized")
+    );
+};
 
 export default function PaymentScreen() {
     const {
@@ -29,8 +49,22 @@ export default function PaymentScreen() {
         status: returnedStatus,
     } = useLocalSearchParams();
     const router = useRouter();
+    const { user } = useContext(AuthContext);
     const { fetchInvoices } = useContext(InvoiceContext);
     const { fetchNotifications } = useContext(NotificationContext);
+
+    const sessionTokenRef = useRef(user?.token);
+    sessionTokenRef.current = user?.token;
+
+    const paymentScreenFocusedRef = useRef(true);
+    useFocusEffect(
+        useCallback(() => {
+            paymentScreenFocusedRef.current = true;
+            return () => {
+                paymentScreenFocusedRef.current = false;
+            };
+        }, [])
+    );
 
     const [invoice, setInvoice] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -117,13 +151,34 @@ export default function PaymentScreen() {
     const checkBrowserPaymentResult = useCallback(async (paymentId) => {
         setProcessing(true);
 
+        let lastPayment = null;
+        let lastInvoice = null;
+
         try {
             for (let attempt = 0; attempt < 12; attempt++) {
-                const [{ payment }, invoiceResponse] = await Promise.all([
-                    getPaymentById(paymentId),
-                    getInvoiceById(invoiceId),
-                ]);
+                if (!paymentScreenFocusedRef.current || !sessionTokenRef.current) {
+                    return;
+                }
 
+                let payment;
+                let invoiceResponse;
+                try {
+                    [payment, invoiceResponse] = await Promise.all([
+                        getPaymentById(paymentId).then((r) => r.payment),
+                        getInvoiceById(invoiceId),
+                    ]);
+                } catch (pollError) {
+                    if (!paymentScreenFocusedRef.current || !sessionTokenRef.current) {
+                        return;
+                    }
+                    if (isAuthOrSessionError(pollError)) {
+                        return;
+                    }
+                    throw pollError;
+                }
+
+                lastPayment = payment;
+                lastInvoice = invoiceResponse?.invoice;
                 setInvoice(invoiceResponse.invoice);
 
                 if (invoiceResponse.invoice?.status === "Paid" || payment?.status === "completed") {
@@ -157,12 +212,34 @@ export default function PaymentScreen() {
                 await sleep(2000);
             }
 
-            Alert.alert(
-                "Payment Processing",
-                "Your payment is still being verified. Please check your invoices again in a moment.",
-                [{ text: "OK", onPress: () => router.replace("/tenant/invoices") }]
-            );
-        } catch (_error) {
+            if (!paymentScreenFocusedRef.current || !sessionTokenRef.current) {
+                return;
+            }
+
+            const abandonedCheckout =
+                lastPayment?.status === "initiated" && lastInvoice?.status !== "Paid";
+
+            if (abandonedCheckout) {
+                Alert.alert(
+                    "Payment not completed",
+                    "We did not receive a completed payment for this invoice. You can try again whenever you are ready.",
+                    [{ text: "OK", onPress: () => router.replace("/tenant/invoices") }]
+                );
+            } else {
+                Alert.alert(
+                    "Payment Processing",
+                    "Your payment is still being verified. Please check your invoices again in a moment.",
+                    [{ text: "OK", onPress: () => router.replace("/tenant/invoices") }]
+                );
+            }
+        } catch (error) {
+            if (!paymentScreenFocusedRef.current || !sessionTokenRef.current) {
+                return;
+            }
+            if (isAuthOrSessionError(error)) {
+                return;
+            }
+
             if (returnedResult === "failed" || returnedReason || returnedStatus) {
                 const failureMeta = getFailureMeta({
                     reason: returnedReason,
@@ -176,8 +253,9 @@ export default function PaymentScreen() {
             }
 
             Alert.alert(
-                "Payment Processing",
-                "Your payment is being processed. Please check your invoices again in a moment.",
+                "Could not verify payment",
+                pickErrorMessage(error) ||
+                    "We could not confirm the payment status. Check your invoices or try again.",
                 [{ text: "OK", onPress: () => router.replace("/tenant/invoices") }]
             );
         } finally {

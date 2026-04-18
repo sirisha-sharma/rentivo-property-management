@@ -1,8 +1,5 @@
-import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useContext, useEffect, useMemo, useState, useRef } from "react";
 import {
-
-// Screen module for subscription.
-
     View,
     Text,
     ScrollView,
@@ -20,6 +17,7 @@ import { TopBar } from "../../components/TopBar";
 import { COLORS } from "../../constants/theme";
 import { SubscriptionContext } from "../../context/SubscriptionContext";
 import { NotificationContext } from "../../context/NotificationContext";
+import { AuthContext } from "../../context/AuthContext";
 import { SubscriptionSummaryCard } from "../../components/SubscriptionSummaryCard";
 import { SubscriptionStatusPill } from "../../components/SubscriptionStatusPill";
 import {
@@ -56,6 +54,24 @@ const paymentStatusLabel = (status) => {
     }
 };
 
+const pickErrorMessage = (error) => {
+    if (!error) return "";
+    if (typeof error === "string") return error;
+    if (typeof error === "object" && error.message) return String(error.message);
+    return "";
+};
+
+const isAuthOrSessionError = (error) => {
+    const text = pickErrorMessage(error).toLowerCase();
+    return (
+        text.includes("no authentication") ||
+        text.includes("login again") ||
+        text.includes("authentication token") ||
+        text.includes("unauthorized") ||
+        text.includes("not authorized")
+    );
+};
+
 export default function LandlordSubscriptionScreen() {
     const {
         khaltiReturn,
@@ -64,6 +80,11 @@ export default function LandlordSubscriptionScreen() {
         reason: returnedReason,
         status: returnedStatus,
     } = useLocalSearchParams();
+    const { user } = useContext(AuthContext);
+    const sessionTokenRef = useRef(user?.token);
+    sessionTokenRef.current = user?.token;
+    const subscriptionScreenFocusedRef = useRef(true);
+
     const {
         subscription,
         plans,
@@ -91,11 +112,15 @@ export default function LandlordSubscriptionScreen() {
 
     useFocusEffect(
         React.useCallback(() => {
+            subscriptionScreenFocusedRef.current = true;
             void Promise.allSettled([
                 fetchSubscription(),
                 fetchPaymentHistory(),
                 fetchNotifications(),
             ]);
+            return () => {
+                subscriptionScreenFocusedRef.current = false;
+            };
         }, [fetchPaymentHistory, fetchNotifications, fetchSubscription])
     );
 
@@ -157,9 +182,28 @@ export default function LandlordSubscriptionScreen() {
     const checkBrowserPaymentResult = useCallback(async (paymentId) => {
         setProcessing(true);
 
+        let lastPayment = null;
+
         try {
             for (let attempt = 0; attempt < 12; attempt++) {
-                const { payment } = await getSubscriptionPaymentById(paymentId);
+                if (!subscriptionScreenFocusedRef.current || !sessionTokenRef.current) {
+                    return;
+                }
+
+                let payment;
+                try {
+                    ({ payment } = await getSubscriptionPaymentById(paymentId));
+                } catch (pollError) {
+                    if (!subscriptionScreenFocusedRef.current || !sessionTokenRef.current) {
+                        return;
+                    }
+                    if (isAuthOrSessionError(pollError)) {
+                        return;
+                    }
+                    throw pollError;
+                }
+
+                lastPayment = payment;
 
                 if (payment?.status === "completed") {
                     await refreshAfterPayment();
@@ -188,13 +232,33 @@ export default function LandlordSubscriptionScreen() {
                 await sleep(2000);
             }
 
+            if (!subscriptionScreenFocusedRef.current || !sessionTokenRef.current) {
+                return;
+            }
+
             await refreshAfterPayment();
-            Alert.alert(
-                "Payment Processing",
-                "Your subscription payment is still being verified. Refresh this screen in a moment to see the updated status.",
-                [{ text: "OK" }]
-            );
-        } catch (_error) {
+
+            if (lastPayment?.status === "initiated") {
+                Alert.alert(
+                    "Payment not completed",
+                    "We did not receive a completed subscription payment. You can try the upgrade again when you are ready.",
+                    [{ text: "OK" }]
+                );
+            } else {
+                Alert.alert(
+                    "Payment Processing",
+                    "Your subscription payment is still being verified. Refresh this screen in a moment to see the updated status.",
+                    [{ text: "OK" }]
+                );
+            }
+        } catch (error) {
+            if (!subscriptionScreenFocusedRef.current || !sessionTokenRef.current) {
+                return;
+            }
+            if (isAuthOrSessionError(error)) {
+                return;
+            }
+
             if (returnedResult === "failed" || returnedReason || returnedStatus) {
                 const failureMeta = getFailureMeta({
                     reason: returnedReason,
@@ -206,8 +270,9 @@ export default function LandlordSubscriptionScreen() {
             }
 
             Alert.alert(
-                "Payment Processing",
-                "Your subscription payment is being processed. Refresh this screen in a moment to see the updated status.",
+                "Could not verify payment",
+                pickErrorMessage(error) ||
+                    "We could not confirm the payment status. Refresh this screen or try again.",
                 [{ text: "OK" }]
             );
         } finally {
