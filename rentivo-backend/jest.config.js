@@ -1,7 +1,7 @@
 export default {
   testEnvironment: "node",
   transform: {},
-  testMatch: ["**/tests/**/*.test.js"],
+  testMatch: ["**/tests/unit/**/*.test.js", "**/tests/*.test.js"],
   collectCoverageFrom: [
     "utils/utilitySplit.js",
     "controllers/invoiceController.js",
