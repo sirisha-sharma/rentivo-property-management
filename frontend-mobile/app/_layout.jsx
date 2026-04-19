@@ -9,10 +9,31 @@ import { DocumentProvider } from "../context/DocumentContext";
 import { NotificationProvider } from "../context/NotificationContext";
 import { MessageProvider } from "../context/MessageContext";
 import { SubscriptionProvider } from "../context/SubscriptionContext";
+import { useFonts } from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
+import { useEffect, useState } from 'react';
+import AnimatedSplash from '../components/AnimatedSplash';
 
-// Screen module for layout.
+SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const [appReady, setAppReady] = useState(false);
+  const [showCustomSplash, setShowCustomSplash] = useState(true);
+
+  useEffect(() => {
+    async function prepare() {
+      try {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } finally {
+        setAppReady(true);
+        await SplashScreen.hideAsync();
+      }
+    }
+    prepare();
+  }, []);
+
+  if (!appReady) return null;
+
   return (
     <AuthProvider>
       <SubscriptionProvider>
@@ -32,6 +53,9 @@ export default function RootLayout() {
                         <Stack.Screen name="notifications" />
                         <Stack.Screen name="modal" />
                       </Stack>
+                      {showCustomSplash && (
+                        <AnimatedSplash onFinish={() => setShowCustomSplash(false)} />
+                      )}
                     </MessageProvider>
                   </NotificationProvider>
                 </DocumentProvider>

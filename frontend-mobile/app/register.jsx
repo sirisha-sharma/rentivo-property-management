@@ -2,6 +2,7 @@ import React, { useState, useRef } from "react";
 import {
   View,
   Text,
+  Image,
   TouchableOpacity,
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -14,7 +15,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import ExpoCheckbox from "expo-checkbox";
 import axios from "axios";
 import { API_BASE_URL } from "../constants/config";
@@ -228,30 +228,16 @@ export default function RegisterScreen() {
                 marginBottom: isCompactAndroid ? 24 : 32,
               }}
             >
-              <LinearGradient
-                colors={[COLORS.primary, COLORS.primaryDeep]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
+              <Image
+                source={require('../assets/images/icon-96.png')}
                 style={{
                   width: heroSize,
                   height: heroSize,
                   borderRadius: isCompactAndroid ? 16 : 18,
-                  alignItems: "center",
-                  justifyContent: "center",
                   marginBottom: 14,
-                  shadowColor: COLORS.primary,
-                  shadowOffset: { width: 0, height: 10 },
-                  shadowOpacity: 0.5,
-                  shadowRadius: 18,
-                  elevation: 10,
                 }}
-              >
-                <Ionicons
-                  name="home"
-                  size={isCompactAndroid ? 28 : 32}
-                  color="#fff"
-                />
-              </LinearGradient>
+                resizeMode="cover"
+              />
 
               <Text
                 style={{
