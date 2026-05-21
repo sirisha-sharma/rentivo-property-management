@@ -131,7 +131,10 @@ export default function MyRentals() {
                                         </Text>
                                         <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                                             <Ionicons name="location" size={14} color={COLORS.mutedForeground} />
-                                            <Text style={{ fontSize: 14, color: COLORS.mutedForeground }}>
+                                            <Text
+                                                style={{ fontSize: 14, color: COLORS.mutedForeground }}
+                                                numberOfLines={2}
+                                            >
                                                 {rental.propertyId?.address || "Address not available"}
                                             </Text>
                                         </View>
@@ -149,43 +152,43 @@ export default function MyRentals() {
                                     <Text style={{ fontSize: 13, fontWeight: "600", color: COLORS.foreground }}>
                                         Tenancy Details
                                     </Text>
-                                    <View style={{
-                                        flexDirection: "row",
-                                        flexWrap: "wrap",
-                                        gap: 16,
-                                    }}>
-                                    <View style={{ gap: 4 }}>
-                                        <Text style={{ fontSize: 12, color: COLORS.mutedForeground }}>
-                                            Property Type
-                                        </Text>
-                                        <Text style={{ fontSize: 14, fontWeight: "500", color: COLORS.foreground }}>
-                                            {rental.propertyId?.type || "N/A"}
-                                        </Text>
-                                    </View>
-                                    <View style={{ gap: 4 }}>
-                                        <Text style={{ fontSize: 12, color: COLORS.mutedForeground }}>
-                                            Lease Start
-                                        </Text>
-                                        <Text style={{ fontSize: 14, fontWeight: "500", color: COLORS.foreground }}>
-                                            {formatDate(rental.leaseStart)}
-                                        </Text>
-                                    </View>
-                                    <View style={{ gap: 4 }}>
-                                        <Text style={{ fontSize: 12, color: COLORS.mutedForeground }}>
-                                            Lease End
-                                        </Text>
-                                        <Text style={{ fontSize: 14, fontWeight: "500", color: COLORS.foreground }}>
-                                            {formatDate(rental.leaseEnd)}
-                                        </Text>
-                                    </View>
-                                    <View style={{ gap: 4 }}>
-                                        <Text style={{ fontSize: 12, color: COLORS.mutedForeground }}>
-                                            Security Deposit
-                                        </Text>
-                                        <Text style={{ fontSize: 14, fontWeight: "500", color: COLORS.foreground }}>
-                                            {formatCurrency(rental.securityDeposit)}
-                                        </Text>
-                                    </View>
+                                    <View style={{ gap: 12 }}>
+                                        <View style={{ flexDirection: "row", gap: 16 }}>
+                                            <View style={{ flex: 1, gap: 4 }}>
+                                                <Text style={{ fontSize: 12, color: COLORS.mutedForeground }}>
+                                                    Property Type
+                                                </Text>
+                                                <Text style={{ fontSize: 14, fontWeight: "500", color: COLORS.foreground }}>
+                                                    {rental.propertyId?.type || "N/A"}
+                                                </Text>
+                                            </View>
+                                            <View style={{ flex: 1, gap: 4 }}>
+                                                <Text style={{ fontSize: 12, color: COLORS.mutedForeground }}>
+                                                    Lease Start
+                                                </Text>
+                                                <Text style={{ fontSize: 14, fontWeight: "500", color: COLORS.foreground }}>
+                                                    {formatDate(rental.leaseStart)}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                        <View style={{ flexDirection: "row", gap: 16 }}>
+                                            <View style={{ flex: 1, gap: 4 }}>
+                                                <Text style={{ fontSize: 12, color: COLORS.mutedForeground }}>
+                                                    Lease End
+                                                </Text>
+                                                <Text style={{ fontSize: 14, fontWeight: "500", color: COLORS.foreground }}>
+                                                    {formatDate(rental.leaseEnd)}
+                                                </Text>
+                                            </View>
+                                            <View style={{ flex: 1, gap: 4 }}>
+                                                <Text style={{ fontSize: 12, color: COLORS.mutedForeground }}>
+                                                    Security Deposit
+                                                </Text>
+                                                <Text style={{ fontSize: 14, fontWeight: "500", color: COLORS.foreground }}>
+                                                    {formatCurrency(rental.securityDeposit)}
+                                                </Text>
+                                            </View>
+                                        </View>
                                     </View>
                                 </View>
 
@@ -320,6 +323,7 @@ const styles = StyleSheet.create({
     },
     actionsColumn: {
         flexDirection: "column",
+        flexWrap: "nowrap",
     },
     actionButton: {
         flex: 1,
@@ -331,10 +335,8 @@ const styles = StyleSheet.create({
         justifyContent: "center",
     },
     actionButtonFull: {
+        flex: 0,
         width: "100%",
-        flexBasis: "100%",
-        flexGrow: 0,
-        flexShrink: 0,
     },
     actionContent: {
         flexDirection: "row",
