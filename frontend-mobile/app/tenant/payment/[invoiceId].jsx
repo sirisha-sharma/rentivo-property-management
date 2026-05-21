@@ -137,8 +137,9 @@ export default function PaymentScreen() {
             const data = await getInvoiceById(invoiceId);
             setInvoice(data.invoice);
         } catch (error) {
-            Alert.alert("Error", error.message || "Failed to load invoice details");
-            router.back();
+            Alert.alert("Error", error.message || "Failed to load invoice details", [
+                { text: "OK", onPress: () => router.back() },
+            ]);
         } finally {
             setLoading(false);
         }

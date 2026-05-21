@@ -32,8 +32,9 @@ export default function TenantMaintenanceDetail() {
             const data = await getRequestById(id);
             setRequest(data);
         } catch (_err) {
-            Alert.alert("Error", "Failed to load maintenance request");
-            router.back();
+            Alert.alert("Error", "Failed to load maintenance request", [
+                { text: "OK", onPress: () => router.back() },
+            ]);
         } finally {
             setPageLoading(false);
         }

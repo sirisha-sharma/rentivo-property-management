@@ -17,6 +17,7 @@ export default function PropertyDetails() {
 
     const [property, setProperty] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [fetchError, setFetchError] = useState(null);
     const { tenants, fetchTenants } = useContext(TenantContext);
     const { getPropertyById, deleteProperty } = useContext(PropertyContext);
     const { requests, fetchRequests } = useContext(MaintenanceContext);
@@ -25,12 +26,18 @@ export default function PropertyDetails() {
     const getDisplayMaintenanceStatus = (status) => (status === "Pending" ? "Open" : status);
 
     const fetchPropertyDetails = useCallback(async () => {
+        setFetchError(null);
+        setLoading(true);
         try {
             await Promise.allSettled([fetchTenants(), fetchRequests(), fetchInvoices()]);
             const data = await getPropertyById(id);
             setProperty(data);
         } catch (error) {
-            console.log(error);
+            const message =
+                error?.response?.data?.message ||
+                error?.message ||
+                "Failed to load property details. Please try again.";
+            setFetchError(message);
         } finally {
             setLoading(false);
         }
@@ -123,12 +130,44 @@ export default function PropertyDetails() {
 
     if (!property) {
         return (
-            <View className="flex-1 bg-background justify-center items-center">
-                <Ionicons name="alert-circle-outline" size={48} color={COLORS.border} />
-                <Text className="text-base text-mutedForeground mt-3">Property not found</Text>
-                <TouchableOpacity className="mt-4 px-6 py-2.5 bg-primary rounded-lg" onPress={() => router.back()}>
-                    <Text className="text-white font-semibold">Go Back</Text>
-                </TouchableOpacity>
+            <View className="flex-1 bg-background">
+                <TopBar title="Property Details" showBack />
+                <View className="flex-1 justify-center items-center px-8">
+                    <Ionicons name="alert-circle-outline" size={48} color={COLORS.border} />
+                    <Text className="text-base font-semibold text-foreground mt-3 text-center">
+                        {fetchError ? "Could not load property" : "Property not found"}
+                    </Text>
+                    {fetchError ? (
+                        <Text className="text-sm text-mutedForeground mt-2 text-center">{fetchError}</Text>
+                    ) : null}
+                    <View style={{ flexDirection: "row", gap: 12, marginTop: 20 }}>
+                        {fetchError ? (
+                            <TouchableOpacity
+                                style={{
+                                    paddingHorizontal: 20,
+                                    paddingVertical: 10,
+                                    backgroundColor: COLORS.primary,
+                                    borderRadius: 10,
+                                }}
+                                onPress={() => void fetchPropertyDetails()}
+                            >
+                                <Text style={{ color: "#fff", fontWeight: "600" }}>Retry</Text>
+                            </TouchableOpacity>
+                        ) : null}
+                        <TouchableOpacity
+                            style={{
+                                paddingHorizontal: 20,
+                                paddingVertical: 10,
+                                borderWidth: 1,
+                                borderColor: COLORS.border,
+                                borderRadius: 10,
+                            }}
+                            onPress={() => router.back()}
+                        >
+                            <Text style={{ color: COLORS.foreground, fontWeight: "600" }}>Go Back</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
             </View>
         );
     }

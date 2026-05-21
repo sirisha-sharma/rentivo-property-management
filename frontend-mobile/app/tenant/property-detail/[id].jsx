@@ -86,8 +86,11 @@ export default function PropertyDetail() {
       setSelectedRating(propertyData?.currentUserRating?.rating || 0);
       setReviewText(propertyData?.currentUserRating?.review || "");
     } catch (error) {
-      Alert.alert("Error", error?.message || "Failed to load property details");
-      router.back();
+      Alert.alert(
+        "Error",
+        error?.message || "Failed to load property details",
+        [{ text: "OK", onPress: () => router.back() }]
+      );
     } finally {
       setLoading(false);
     }

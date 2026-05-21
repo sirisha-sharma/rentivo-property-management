@@ -5,7 +5,8 @@ import {
   isUtilitySplitValidationError,
 } from "../../utils/utilitySplit.js";
 
-// helpers
+
+// Helpers
 
 const makeTenant = (id, name = "Tenant", email = "t@test.com") => ({
   _id: { toString: () => id },
@@ -15,7 +16,7 @@ const makeTenant = (id, name = "Tenant", email = "t@test.com") => ({
 const UTILITIES_1000 = { other: 1000 };
 const UTILITIES_MIXED = { electricity: 300, water: 100, internet: 50, other: 50 };
 
-// roundCurrency tests
+// roundCurrency
 
 describe("roundCurrency", () => {
   test("rounds to 2 decimal places", () => {
@@ -49,7 +50,7 @@ describe("roundCurrency", () => {
   });
 });
 
-// calculateTotalUtilities tests
+// calculateTotalUtilities
 
 describe("calculateTotalUtilities", () => {
   test("sums all utility keys", () => {
@@ -83,9 +84,9 @@ describe("calculateTotalUtilities", () => {
   });
 });
 
-// equal split tests
+// buildUtilitySplitDetails — equal split
 
-describe("buildUtilitySplitDetails - equal split", () => {
+describe("buildUtilitySplitDetails — equal split", () => {
   test("splits equally between two tenants", () => {
     const tenants = [makeTenant("1", "Alice", "a@t.com"), makeTenant("2", "Bob", "b@t.com")];
     const result = buildUtilitySplitDetails({ splitMethod: "equal", tenants, utilities: UTILITIES_1000 });
@@ -98,7 +99,7 @@ describe("buildUtilitySplitDetails - equal split", () => {
   });
 
   test("totals always add up to the declared amount (rounding absorbed by last tenant)", () => {
-    // 1000 / 3 = 333.33 so last tenant gets the extra penny
+    // 1000 / 3 = 333.33... — check sum === 1000
     const tenants = [makeTenant("1"), makeTenant("2"), makeTenant("3")];
     const result = buildUtilitySplitDetails({ splitMethod: "equal", tenants, utilities: UTILITIES_1000 });
     const sum = result.splits.reduce((acc, s) => acc + s.totalAmount, 0);
@@ -136,9 +137,9 @@ describe("buildUtilitySplitDetails - equal split", () => {
   });
 });
 
-// room-size split tests
+// buildUtilitySplitDetails — room-size split
 
-describe("buildUtilitySplitDetails - room-size split", () => {
+describe("buildUtilitySplitDetails — room-size split", () => {
   const tenants = [makeTenant("1", "Alice", "a@t.com"), makeTenant("2", "Bob", "b@t.com")];
 
   test("splits proportionally by room size", () => {
@@ -206,9 +207,9 @@ describe("buildUtilitySplitDetails - room-size split", () => {
   });
 });
 
-// occupancy split tests
+// buildUtilitySplitDetails — occupancy split
 
-describe("buildUtilitySplitDetails - occupancy split", () => {
+describe("buildUtilitySplitDetails — occupancy split", () => {
   const tenants = [makeTenant("t1", "Alice", "a@t.com"), makeTenant("t2", "Bob", "b@t.com")];
 
   test("splits proportionally by occupant count", () => {
@@ -282,9 +283,9 @@ describe("buildUtilitySplitDetails - occupancy split", () => {
   });
 });
 
-// custom split tests
+// buildUtilitySplitDetails — custom split
 
-describe("buildUtilitySplitDetails - custom split", () => {
+describe("buildUtilitySplitDetails — custom split", () => {
   const tenants = [makeTenant("t1", "Alice", "a@t.com"), makeTenant("t2", "Bob", "b@t.com")];
 
   test("assigns custom amounts to each tenant", () => {
@@ -345,9 +346,9 @@ describe("buildUtilitySplitDetails - custom split", () => {
   });
 });
 
-// edge cases - invalid method, null tenants etc
+// buildUtilitySplitDetails — invalid method / no tenants
 
-describe("buildUtilitySplitDetails - edge cases", () => {
+describe("buildUtilitySplitDetails — edge cases", () => {
   test("throws for unknown split method", () => {
     const tenants = [makeTenant("1")];
     expect(() =>
@@ -368,7 +369,7 @@ describe("buildUtilitySplitDetails - edge cases", () => {
   });
 });
 
-// isUtilitySplitValidationError tests
+// isUtilitySplitValidationError
 
 describe("isUtilitySplitValidationError", () => {
   const knownMessages = [

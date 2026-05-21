@@ -1,9 +1,9 @@
-// Stage 4 — Critical financial endpoint tests: invoicing
+// Critical financial endpoint tests: invoicing
 // Native ESM with jest.unstable_mockModule. No Babel needed.
 
 import { jest } from "@jest/globals";
 
-// --- Mock functions ---
+// Mock functions
 
 const mockInvoiceFindById = jest.fn();
 const mockInvoiceFind = jest.fn();
@@ -14,7 +14,7 @@ const mockTenantFind = jest.fn();
 const mockTenantFindById = jest.fn();
 const mockCreateNotification = jest.fn();
 
-// --- Module mocks (before any dynamic imports) ---
+// Module mocks (before any dynamic imports)
 
 jest.unstable_mockModule("../middleware/authMiddleware.js", () => ({
     protect: (req, res, next) => {
@@ -64,19 +64,19 @@ jest.unstable_mockModule("multer-storage-cloudinary", () => ({
     CloudinaryStorage: jest.fn().mockImplementation(() => ({})),
 }));
 
-// --- Dynamic imports (after mocks) ---
+// Dynamic imports (after mocks)
 
 const { default: express } = await import("express");
 const { default: request } = await import("supertest");
 const { default: invoiceRoutes } = await import("../routes/invoiceRoutes.js");
 
-// --- App ---
+// App
 
 const app = express();
 app.use(express.json());
 app.use("/api/invoices", invoiceRoutes);
 
-// --- Helpers ---
+// Helpers
 
 function mockQuery(value) {
     const q = {
@@ -97,7 +97,7 @@ function createMockDoc(data) {
     };
 }
 
-// --- Test data ---
+// Test data
 
 const LANDLORD_ID = "507f1f77bcf86cd799439001";
 const TENANT_USER_ID = "507f1f77bcf86cd799439002";
@@ -160,7 +160,7 @@ beforeEach(() => {
 
 const auth = () => ({ Authorization: "Bearer token" });
 
-// ========== POST /api/invoices ==========
+// POST /api/invoices
 
 describe("POST /api/invoices — createInvoice", () => {
     const payload = {
@@ -282,7 +282,7 @@ describe("POST /api/invoices — createInvoice", () => {
     });
 });
 
-// ========== GET /api/invoices ==========
+// GET /api/invoices
 
 describe("GET /api/invoices — getInvoices", () => {
     test("200 — landlord sees their issued invoices", async () => {
@@ -332,7 +332,7 @@ describe("GET /api/invoices — getInvoices", () => {
     });
 });
 
-// ========== GET /api/invoices/:id ==========
+// GET /api/invoices/:id
 
 describe("GET /api/invoices/:id — getInvoiceById", () => {
     test("200 — landlord views their own invoice", async () => {
@@ -378,7 +378,7 @@ describe("GET /api/invoices/:id — getInvoiceById", () => {
     });
 });
 
-// ========== PUT /api/invoices/:id/status ==========
+// PUT /api/invoices/:id/status
 
 describe("PUT /api/invoices/:id/status — updateInvoiceStatus", () => {
     test("200 — Pending → Paid sets paidDate", async () => {

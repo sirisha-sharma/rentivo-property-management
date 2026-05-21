@@ -77,8 +77,9 @@ export default function EditProperty() {
             setImages(dedupeItems(property.images || []));
             setAmenities(dedupeItems(property.amenities || []));
         } catch (_error) {
-            Alert.alert("Error", "Failed to load property");
-            router.back();
+            Alert.alert("Error", "Failed to load property", [
+                { text: "OK", onPress: () => router.back() },
+            ]);
         } finally {
             setLoading(false);
         }

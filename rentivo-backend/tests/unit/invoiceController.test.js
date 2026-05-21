@@ -218,7 +218,7 @@ describe("createInvoice", () => {
     expect(mockInvoiceCreate).toHaveBeenCalledTimes(1);
   });
 
-  test("201 success with valid breakdown (allows small rounding difference)", async () => {
+  test("201 success with valid breakdown (tolerates ≤0.01 rounding difference)", async () => {
     mockPropertyFindOne.mockResolvedValue(mockProperty);
     mockTenantFindOne.mockResolvedValue(mockTenant);
     const createdDoc = makeInvoiceDoc({ _id: "inv-new" });
